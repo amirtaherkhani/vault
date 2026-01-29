@@ -238,11 +238,12 @@ export class BinanceService
   }> {
     this.checkIfEnabled();
 
+    const upper = symbol.toUpperCase();
     const interval = BINANCE_PRESET_TO_INTERVAL[preset];
     const anchorStart = berlinCalendarAnchorStart(preset);
     const response = await this.http.get(BINANCE_KLINES_ENDPOINT, {
       params: {
-        symbol: symbol.toUpperCase(),
+        symbol: upper,
         interval,
         limit: 2,
         startTime: anchorStart,
