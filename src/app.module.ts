@@ -42,6 +42,8 @@ import { FireblocksCwWalletsModule } from './fireblocks-cw-wallets/fireblocks-cw
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { CmcModule } from './providers/cmc/cmc.module';
 import cmcConfig from './providers/cmc/config/cmc-config';
+import { BinanceModule } from './providers/binance/binance.module';
+import binanceConfig from './providers/binance/config/binance.config';
 import { ProvidersModule } from './providers/providers.module';
 import awsSecretsManagerConfig from './config/aws-secrets-manager.config';
 import fireblocksConfig from './providers/fireblocks/cw/config/fireblocks.config';
@@ -92,6 +94,7 @@ import { CacheModule } from './common/cache/cache.module';
         rabbitmqConfig,
         minioConfig,
         cmcConfig,
+        binanceConfig,
         awsSecretsManagerConfig,
         fireblocksConfig,
         queuedashConfig,
@@ -149,6 +152,7 @@ import { CacheModule } from './common/cache/cache.module';
     CacheModule,
     SocketIoModule,
     CmcModule,
+    BinanceModule,
     ProvidersModule,
   ],
   providers: [RabbitMQService],

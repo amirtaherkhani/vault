@@ -11,6 +11,7 @@ import { RabbitMQConfig } from 'src/communication/rabbitMQ/config/rabbitmq-confi
 import { MinIOConfig } from '../providers/minio/config/minio-config.type';
 import { SocketIOConfig } from '../communication/socketio/config/socketio-config.type';
 import { CmcConfig } from '../providers/cmc/config/cmc-config.type';
+import { BinanceConfig } from '../providers/binance/config/binance-config.type';
 import { AwsSecretsManagerConfig } from './types/aws-secrets-manager-config.type';
 import { FireblocksConfig } from '../providers/fireblocks/cw/config/fireblocks-config.type';
 import { QueueDashConfig } from '../common/queuedash/config/queuedash-config.type';
@@ -31,6 +32,7 @@ export type AllConfigType = {
   minIO: MinIOConfig;
   socketIO: SocketIOConfig;
   cmc: CmcConfig;
+  binance: BinanceConfig;
   awsSecretsManager: AwsSecretsManagerConfig;
   fireblocks: FireblocksConfig;
   queuedash: QueueDashConfig;
