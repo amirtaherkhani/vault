@@ -25,6 +25,8 @@ import { WsError, WsErrorCode } from './types/socketio-error.type';
 import { CHANNELS } from './types/socketio-enum.type';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from '../../config/config.type';
+import { BinanceSocketService } from '../../providers/binance/binance.socket.service';
+import { BinanceChartPreset } from '../../providers/binance/types/binance-const.type';
 import {
   SOCKETIO_DEFAULT_PING_INTERVAL,
   SOCKETIO_DEFAULT_PING_TIMEOUT,
@@ -80,6 +82,7 @@ export class SocketIoGateway
     private readonly auth: SocketIoAuthService,
     private readonly serverRef: SocketServerProvider,
     private readonly logger: LoggerService,
+    private readonly binanceSocket: BinanceSocketService,
   ) {}
 
   /** Sleep helper to ensure emits flush before disconnect */
@@ -585,6 +588,83 @@ export class SocketIoGateway
         SocketIoGateway.name,
       );
     }
+    try {
+      this.binanceSocket.handleDisconnect(socket);
+    } catch (err) {
+      this.logger.debug(
+        `binance socket disconnect cleanup failed: ${(err as Error)?.message}`,
+        SocketIoGateway.name,
+      );
+    }
+  }
+
+  @SubscribeMessage('subscribe')
+  handleSubscribe(
+    @MessageBody()
+    payload: { prices?: string[]; candles?: { symbol: string; interval: string }[]; allPrices?: boolean },
+    @ConnectedSocket() socket: Socket,
+  ) {
+    if (payload?.prices) {
+      this.binanceSocket.subscribePrices(socket, payload.prices);
+    }
+    if (payload?.candles) {
+      this.binanceSocket.subscribeCandles(socket, payload.candles);
+    }
+    if (payload?.allPrices) {
+      this.binanceSocket.subscribeAllPrices(socket);
+    }
+  }
+
+  @SubscribeMessage('subscribe:price')
+  handleSubscribePrice(
+    @MessageBody() symbols: string[],
+    @ConnectedSocket() socket: Socket,
+  ) {
+    this.binanceSocket.subscribePrices(socket, symbols);
+  }
+
+  @SubscribeMessage('subscribe:candle')
+  handleSubscribeCandle(
+    @MessageBody() payload: { symbol: string; interval: string },
+    @ConnectedSocket() socket: Socket,
+  ) {
+    if (!payload?.symbol || !payload?.interval) return;
+    this.binanceSocket.subscribeCandles(socket, [payload]);
+  }
+
+  @SubscribeMessage('subscribe:price:all')
+  handleSubscribePriceAll(@ConnectedSocket() socket: Socket) {
+    this.binanceSocket.subscribeAllPrices(socket);
+  }
+
+  @SubscribeMessage('chart:subscribe:mid')
+  handleSubscribeMid(
+    @MessageBody() symbols: string[],
+    @ConnectedSocket() socket: Socket,
+  ) {
+    this.binanceSocket.subscribeMidPrices(socket, symbols);
+  }
+
+  @SubscribeMessage('chart:subscribe:series')
+  async handleSubscribeSeries(
+    @MessageBody()
+    payload: {
+      symbol: string;
+      preset: BinanceChartPreset;
+      limit?: number;
+      includeLive?: boolean;
+    },
+    @ConnectedSocket() socket: Socket,
+  ) {
+    await this.binanceSocket.subscribeChartSeries(socket, payload);
+  }
+
+  @SubscribeMessage('chart:unsubscribe:series')
+  handleUnsubscribeSeries(
+    @MessageBody() payload: { symbol: string; preset: BinanceChartPreset },
+    @ConnectedSocket() socket: Socket,
+  ) {
+    this.binanceSocket.unsubscribeChartSeries(socket, payload);
   }
 
   @SubscribeMessage('ping')

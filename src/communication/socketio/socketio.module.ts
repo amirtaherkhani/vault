@@ -9,10 +9,16 @@ import { SocketServerProvider } from './utils/socketio.provider';
 import { SocketIoController } from './socketio.controller';
 import { SocketIoService } from './socketio.service';
 import { EnableGuard } from '../../common/guards/service-enabled.guard';
+import { BinanceModule } from '../../providers/binance/binance.module';
 
 @Global()
 @Module({
-  imports: [AuthModule, LoggerModule, forwardRef(() => UsersModule)],
+  imports: [
+    AuthModule,
+    LoggerModule,
+    forwardRef(() => UsersModule),
+    BinanceModule,
+  ],
   providers: [
     SocketIoGateway,
     SocketIoAuthService,
