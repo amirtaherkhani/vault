@@ -6,8 +6,11 @@
   // Keep script output readable in the terminal.
   "npm.runSilent": false,
   "cSpell.words": [
+    "amqp",
     "AVAXCCHAIN",
     "AVAXTEST",
+    "dpage",
+    "healthz",
     "MAXLEN",
     "mhdw",
     "Ohlcv",

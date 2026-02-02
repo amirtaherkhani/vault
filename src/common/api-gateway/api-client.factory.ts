@@ -4,6 +4,7 @@ import {
   AnyApiGatewayConfig,
   ApiFunction,
   RequestInput,
+  RetryOptions,
 } from './types/api-gateway.type';
 
 type Envelope<T = any> = {
@@ -28,6 +29,12 @@ export class ApiClientFactory {
       timeout: 5000,
       headers: config.headers || {},
       responseType: 'json',
+      ...(config.transport?.httpAgent
+        ? { httpAgent: config.transport.httpAgent }
+        : {}),
+      ...(config.transport?.httpsAgent
+        ? { httpsAgent: config.transport.httpsAgent }
+        : {}),
     });
   }
 
@@ -82,8 +89,10 @@ export class ApiClientFactory {
         }
 
         try {
-          const response: AxiosResponse =
-            await this.axiosInstance.request(axiosCfg);
+          const response: AxiosResponse = await this.requestWithRetry(
+            axiosCfg,
+            endpoint.options?.retry ?? this.config.retry,
+          );
 
           const envelope: Envelope = {
             statusCode: response.status,
@@ -115,6 +124,59 @@ export class ApiClientFactory {
     });
 
     return client;
+  }
+
+  private async requestWithRetry(
+    axiosCfg: any,
+    retry?: RetryOptions,
+  ): Promise<AxiosResponse> {
+    const retries = retry?.retries ?? 0;
+    const delayMs = retry?.delayMs ?? 200;
+    const maxDelayMs = retry?.maxDelayMs ?? 2_000;
+    const factor = retry?.factor ?? 2;
+    const retryOnStatuses = retry?.retryOnStatuses ?? [
+      408, 429, 500, 502, 503, 504,
+    ];
+    const retryOnMethods = (retry?.retryOnMethods ?? [
+      'GET',
+      'HEAD',
+      'OPTIONS',
+    ]).map((value) => String(value).toUpperCase());
+    const method = String(axiosCfg.method ?? 'GET').toUpperCase();
+
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      try {
+        return await this.axiosInstance.request(axiosCfg);
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const canRetryStatus =
+          typeof status === 'number' && retryOnStatuses.includes(status);
+        const canRetryMethod = retryOnMethods.includes(method);
+        const canRetryNetwork = !error?.response;
+
+        const shouldRetry =
+          attempt < retries &&
+          canRetryMethod &&
+          (canRetryStatus || canRetryNetwork);
+
+        if (!shouldRetry) {
+          throw error;
+        }
+
+        const backoff = Math.min(
+          delayMs * Math.pow(factor, attempt),
+          maxDelayMs,
+        );
+        await this.sleep(backoff);
+      }
+    }
+
+    // Should be unreachable, but keeps TS happy.
+    return this.axiosInstance.request(axiosCfg);
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /** Replace /param/{id}/detail → /param/123/detail using input.param */

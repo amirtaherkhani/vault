@@ -29,7 +29,7 @@ services:
 
   #  Uncomment to use redis
   redis:
-    image: redis:8-alpine
+    image: redis:8.4-alpine
     hostname: redis
     env_file:
       - env-example-relational
@@ -56,3 +56,4 @@ services:
 networks:
   default:
     name: next-block-net
+    external: true

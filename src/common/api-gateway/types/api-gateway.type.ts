@@ -25,6 +25,32 @@ export interface RequestInput {
 export type MapResponseFn<T = any> = (raw: any) => T;
 
 /**
+ * Retry strategy for API gateway requests.
+ */
+export type RetryOptions = {
+  /** Number of retries after the initial attempt. */
+  retries?: number;
+  /** Initial delay (ms) before retrying. */
+  delayMs?: number;
+  /** Max delay (ms) cap for backoff. */
+  maxDelayMs?: number;
+  /** Backoff multiplier. */
+  factor?: number;
+  /** HTTP status codes eligible for retry. */
+  retryOnStatuses?: number[];
+  /** HTTP methods eligible for retry. */
+  retryOnMethods?: HttpMethod[];
+};
+
+/**
+ * Optional HTTP transport overrides.
+ */
+export type TransportOptions = {
+  httpAgent?: any;
+  httpsAgent?: any;
+};
+
+/**
  * Optional endpoint-specific settings.
  */
 export interface EndpointOptions {
@@ -32,6 +58,8 @@ export interface EndpointOptions {
   mapResponse?: MapResponseFn;
   /** Optional per-endpoint timeout (in ms) */
   timeoutMs?: number;
+  /** Optional per-endpoint retry strategy override */
+  retry?: RetryOptions;
 }
 
 /**
@@ -62,6 +90,8 @@ export type AnyApiGatewayConfig = {
   baseUrl: string;
   headers?: Record<string, string>;
   endpoints: EndpointDefinition[];
+  retry?: RetryOptions;
+  transport?: TransportOptions;
 };
 
 //TODO: apply to all provider responses in the api-gateway module

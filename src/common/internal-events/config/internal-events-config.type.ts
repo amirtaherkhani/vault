@@ -11,6 +11,7 @@ import {
   INTERNAL_EVENTS_DEFAULT_PENDING_CLAIM_AFTER_MS,
   INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_MAX_MS,
   INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_STEP_MS,
+  INTERNAL_EVENTS_DEFAULT_REDIS_MAX_RETRIES_PER_REQUEST,
   INTERNAL_EVENTS_DEFAULT_REDIS_URL,
   INTERNAL_EVENTS_DEFAULT_SERVICE_NAME,
   INTERNAL_EVENTS_DEFAULT_STREAM_NAME,
@@ -34,6 +35,7 @@ export type InternalEventsOptions = {
   streamTrimMaxLen?: number;
   redisRetryStepMs: number;
   redisRetryMaxMs: number;
+  redisMaxRetriesPerRequest: number;
 };
 
 export type InternalEventsModuleOptions = InternalEventsOptions;
@@ -56,6 +58,8 @@ export const INTERNAL_EVENTS_DEFAULT_OPTIONS: InternalEventsOptions = {
   streamTrimMaxLen: INTERNAL_EVENTS_DEFAULT_STREAM_TRIM_MAX_LEN,
   redisRetryStepMs: INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_STEP_MS,
   redisRetryMaxMs: INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_MAX_MS,
+  redisMaxRetriesPerRequest:
+    INTERNAL_EVENTS_DEFAULT_REDIS_MAX_RETRIES_PER_REQUEST,
 };
 
 export function buildInternalEventsOptions(

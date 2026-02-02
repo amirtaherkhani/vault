@@ -1,11 +1,21 @@
 import { ApiGatewayConfig } from 'src/common/api-gateway/api-gateway-config';
 import { GORUSH_URL } from '../types/gorush-const.type';
 import { HttpMethod } from '../../../common/api-gateway/types/api-gateway-enum.type';
+import https from 'https';
 
 export class GorushApiConfig extends ApiGatewayConfig {
   constructor(baseUrl: string = GORUSH_URL) {
     // Default Base URL
-    super(baseUrl, {});
+    super(
+      baseUrl,
+      {},
+      {
+        retry: { retries: 2, delayMs: 200, maxDelayMs: 2000 },
+        transport: {
+          httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+        },
+      },
+    );
 
     this.name = 'GORUSH'; // Custom identifier for the API instance
 
@@ -17,7 +27,7 @@ export class GorushApiConfig extends ApiGatewayConfig {
     this.addEndpoint('sendPushNotification', HttpMethod.POST, '/api/push');
     this.addEndpoint('getMetrics', HttpMethod.GET, '/metrics');
     this.addEndpoint('checkHealth', HttpMethod.GET, '/healthz');
-    this.addEndpoint('checkHealthHead', HttpMethod.HEAD, '/healthz');
+    this.addEndpoint('checkHealthDuplicate', HttpMethod.GET, '/healthz');
     this.addEndpoint('getVersion', HttpMethod.GET, '/version');
     this.addEndpoint('getRoot', HttpMethod.GET, '/');
   }

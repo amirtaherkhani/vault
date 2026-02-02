@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiGatewayConfig } from '../api-gateway/api-gateway-config';
+import type {
+  RetryOptions,
+  TransportOptions,
+} from '../api-gateway/types/api-gateway.type';
 
 /**
  * Base class for services requiring ConfigService with type support.
@@ -23,8 +27,9 @@ export abstract class ConfigurableApiGatewayConfig<
     configService: ConfigService<T>,
     baseUrl: string,
     headers?: Record<string, string>,
+    options?: { retry?: RetryOptions; transport?: TransportOptions },
   ) {
-    super(baseUrl, headers);
+    super(baseUrl, headers, options);
     this.configService = configService;
   }
 }

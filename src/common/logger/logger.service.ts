@@ -61,7 +61,7 @@ export class LoggerService implements NestLoggerService {
   }
 
   verbose(message: any, context?: string, loadTime?: number) {
-    console.trace(
+    console.debug(
       this.format(
         LoggerType.DEV,
         message,

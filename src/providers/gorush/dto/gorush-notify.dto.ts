@@ -7,9 +7,10 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+@Exclude()
 export class PushNotificationDto {
   @ApiPropertyOptional({
     description:
@@ -17,24 +18,29 @@ export class PushNotificationDto {
   })
   @IsString()
   @IsOptional()
+  @Expose()
   notif_id?: string;
 
   @ApiProperty({ description: 'Device tokens' })
   @IsArray()
   @IsString({ each: true })
+  @Expose()
   tokens: string[];
 
   @ApiProperty({ description: 'Platform (1=iOS, 2=Android, 3=Huawei)' })
   @IsInt()
+  @Expose()
   platform: number;
 
   @ApiProperty({ description: 'Message for the notification' })
   @IsString()
+  @Expose()
   message: string;
 
   @ApiPropertyOptional({ description: 'Notification title' })
   @IsOptional()
   @IsString()
+  @Expose()
   title?: string;
 
   @ApiPropertyOptional({
@@ -42,16 +48,19 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   priority?: string;
 
   @ApiPropertyOptional({ description: 'Data messages wake the app by default' })
   @IsOptional()
   @IsBoolean()
+  @Expose()
   content_available?: boolean;
 
   @ApiPropertyOptional({ description: 'Sound settings for iOS notifications' })
   @IsOptional()
   @IsObject()
+  @Expose()
   sound?: {
     name?: string;
     volume?: number;
@@ -63,6 +72,7 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsObject()
+  @Expose()
   data?: Record<string, any>;
 
   @ApiPropertyOptional({
@@ -70,6 +80,7 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   huawei_data?: string;
 
   @ApiPropertyOptional({
@@ -77,16 +88,19 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsInt()
+  @Expose()
   retry?: number;
 
   @ApiPropertyOptional({ description: 'Send messages to topics' })
   @IsOptional()
   @IsString()
+  @Expose()
   topic?: string;
 
   @ApiPropertyOptional({ description: 'Image URL to show in notification' })
   @IsOptional()
   @IsString()
+  @Expose()
   image?: string;
 
   @ApiPropertyOptional({
@@ -95,11 +109,13 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   to?: string;
 
   @ApiPropertyOptional({ description: 'Key for collapsing notifications' })
   @IsOptional()
   @IsString()
+  @Expose()
   collapse_key?: string;
 
   @ApiPropertyOptional({
@@ -107,11 +123,13 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsInt()
+  @Expose()
   huawei_collapse_key?: number;
 
   @ApiPropertyOptional({ description: 'Flag for device idling' })
   @IsOptional()
   @IsBoolean()
+  @Expose()
   delay_while_idle?: boolean;
 
   @ApiPropertyOptional({
@@ -119,6 +137,7 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsInt()
+  @Expose()
   time_to_live?: number;
 
   @ApiPropertyOptional({
@@ -126,6 +145,7 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   huawei_ttl?: string;
 
   @ApiPropertyOptional({
@@ -133,6 +153,7 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   restricted_package_name?: string;
 
   @ApiPropertyOptional({
@@ -141,9 +162,11 @@ export class PushNotificationDto {
   })
   @IsOptional()
   @IsBoolean()
+  @Expose()
   dry_run?: boolean;
 }
 
+@Exclude()
 export class PushNotificationRequestDto {
   @ApiProperty({
     description: 'Array of notifications to be sent',
@@ -152,23 +175,28 @@ export class PushNotificationRequestDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PushNotificationDto) // Ensure class-transformer properly processes this
+  @Expose()
   notifications: PushNotificationDto[];
 }
 
+@Exclude()
 export class PushNotificationResponseDto {
   @ApiProperty({
     description: 'Indicates if the notification request was successful',
   })
   @IsString()
+  @Expose()
   success: boolean;
 
   @ApiProperty({ description: 'Total number of notifications sent' })
   @IsInt()
+  @Expose()
   count: number;
 
   @ApiPropertyOptional({ description: 'Logs for failed push notifications' })
   @IsArray()
   @IsOptional()
+  @Expose()
   logs?: Array<{
     type: string;
     platform: string;

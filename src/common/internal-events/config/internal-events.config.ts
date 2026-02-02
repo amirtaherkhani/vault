@@ -13,6 +13,7 @@ import {
   INTERNAL_EVENTS_DEFAULT_PENDING_CLAIM_AFTER_MS,
   INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_MAX_MS,
   INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_STEP_MS,
+  INTERNAL_EVENTS_DEFAULT_REDIS_MAX_RETRIES_PER_REQUEST,
   INTERNAL_EVENTS_DEFAULT_REDIS_URL,
   INTERNAL_EVENTS_DEFAULT_SERVICE_NAME,
   INTERNAL_EVENTS_DEFAULT_STREAM_NAME,
@@ -100,6 +101,11 @@ class InternalEventsEnvValidator {
   @Min(0)
   @IsOptional()
   INTERNAL_EVENTS_REDIS_RETRY_MAX_MS?: number;
+
+  @IsInt()
+  @Min(-1)
+  @IsOptional()
+  INTERNAL_EVENTS_REDIS_MAX_RETRIES_PER_REQUEST?: number;
 }
 
 function buildDefaults(): InternalEventsConfig {
@@ -120,6 +126,8 @@ function buildDefaults(): InternalEventsConfig {
     streamTrimMaxLen: INTERNAL_EVENTS_DEFAULT_STREAM_TRIM_MAX_LEN,
     redisRetryStepMs: INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_STEP_MS,
     redisRetryMaxMs: INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_MAX_MS,
+    redisMaxRetriesPerRequest:
+      INTERNAL_EVENTS_DEFAULT_REDIS_MAX_RETRIES_PER_REQUEST,
   };
 }
 
@@ -184,6 +192,10 @@ export default createToggleableConfig<
       env.INTERNAL_EVENTS_REDIS_RETRY_MAX_MS,
       INTERNAL_EVENTS_DEFAULT_REDIS_RETRY_MAX_MS,
     );
+    const redisMaxRetriesPerRequest = numberValidator(
+      env.INTERNAL_EVENTS_REDIS_MAX_RETRIES_PER_REQUEST,
+      INTERNAL_EVENTS_DEFAULT_REDIS_MAX_RETRIES_PER_REQUEST,
+    );
 
     return {
       serviceName,
@@ -201,6 +213,7 @@ export default createToggleableConfig<
       streamTrimMaxLen,
       redisRetryStepMs,
       redisRetryMaxMs,
+      redisMaxRetriesPerRequest,
     } satisfies Partial<InternalEventsConfig>;
   },
   mapDisabledConfig: () => ({

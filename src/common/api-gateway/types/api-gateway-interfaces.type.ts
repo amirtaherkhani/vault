@@ -11,4 +11,16 @@ export interface ApiGatewayConfig {
   baseUrl: string;
   endpoints: ApiEndpoint[];
   headers?: Record<string, string>; // Optional global headers
+  retry?: {
+    retries?: number;
+    delayMs?: number;
+    maxDelayMs?: number;
+    factor?: number;
+    retryOnStatuses?: number[];
+    retryOnMethods?: HttpMethod[];
+  };
+  transport?: {
+    httpAgent?: any;
+    httpsAgent?: any;
+  };
 }

@@ -36,6 +36,7 @@ import {
 
 import {
   GoRushCoreStatusResponseDto,
+  GorushInfoDto,
   GoRushVersionResponseDto,
 } from './dto/gorush-info.dto';
 import { GORUSH_SDK_VERSION } from './types/gorush-const.type';
@@ -52,7 +53,7 @@ import {
 @Roles(RoleEnum.admin)
 @ApiTags('GoRush-Notification')
 @Controller({
-  path: 'gorush',
+  path: 'notification',
   version: GORUSH_SDK_VERSION,
 })
 export class GorushController {
@@ -210,7 +211,10 @@ export class GorushController {
    * Health check for Gorush service
    */
   @ApiOperation({ summary: 'Check Gorush service health' })
-  @ApiOkResponse({ description: 'Gorush service health status' })
+  @ApiOkResponse({
+    description: 'Gorush service health status',
+    type: GorushInfoDto,
+  })
   @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: 'Internal server error',
@@ -225,7 +229,7 @@ export class GorushController {
   })
   @HttpCode(HttpStatus.OK)
   @Get('healthz')
-  async checkHealth(): Promise<any> {
+  async checkHealth(): Promise<GorushInfoDto> {
     return this.gorushService.checkHealth();
   }
 

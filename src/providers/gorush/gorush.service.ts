@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   GoRushCoreStatusResponseDto,
+  GorushInfoDto,
   GoRushVersionResponseDto,
 } from './dto/gorush-info.dto';
 import {
@@ -31,6 +32,8 @@ import {
 } from './infrastructure/persistence/relational/mappers/gorush.mapper';
 import { BaseToggleableService } from 'src/common/base/base-toggleable.service';
 import { stringifyJson } from '../../common/logger/utils/logger.helper';
+import { GroupPlainToInstance } from 'src/utils/transformers/class.transformer';
+import { RoleEnum } from 'src/roles/roles.enum';
 
 @SerializeOptions({
   groups: ['admin'],
@@ -49,7 +52,7 @@ export class GorushService
   ) {
     super(
       GorushService.name,
-      configService.get('gorush.enable', { infer: true }) ?? false,
+      configService.get('gorush.enable', false, { infer: true }),
     );
 
     if (apiClient) {
@@ -99,6 +102,7 @@ export class GorushService
       this.logger.log(`Checking connection... ${healthCheck.status}`);
       if (healthCheck.status === HttpStatus.OK) {
         this.logger.debug('Gorush server is reachable.');
+        this.logger.log('Gorush service connected successfully.');
         return true;
       } else {
         this.logger.warn(
@@ -130,21 +134,36 @@ export class GorushService
    * Get Gorush global statistics
    */
   async globalStats(): Promise<GoRushCoreStatusResponseDto> {
-    return this.apiClient.getGoStats();
+    const payload = await this.apiClient.getGoStats();
+    return GroupPlainToInstance(
+      GoRushCoreStatusResponseDto,
+      this.unwrapPayload(payload),
+      [RoleEnum.admin],
+    );
   }
 
   /**
    * Get Gorush app statistics
    */
   async appStats(): Promise<GoRushAppStatusResponseDto> {
-    return this.apiClient.getAppStats();
+    const payload = await this.apiClient.getAppStats();
+    return GroupPlainToInstance(
+      GoRushAppStatusResponseDto,
+      this.unwrapPayload(payload),
+      [RoleEnum.admin],
+    );
   }
 
   /**
    * Get system statistics
    */
   async systemStats(): Promise<GoRushSystemStatsResponseDto> {
-    return this.apiClient.getSysStats();
+    const payload = await this.apiClient.getSysStats();
+    return GroupPlainToInstance(
+      GoRushSystemStatsResponseDto,
+      this.unwrapPayload(payload),
+      [RoleEnum.admin],
+    );
   }
 
   /**
@@ -168,13 +187,17 @@ export class GorushService
         body: mappedPayload,
       });
 
-      const mappedResponse = mapPushNotificationResponse(response);
+      const mappedResponse = mapPushNotificationResponse(
+        this.unwrapPayload(response),
+      );
 
       this.logger.verbose(
         `Push notification sent successfully. Count: ${mappedResponse.count}`,
       );
 
-      return mappedResponse;
+      return GroupPlainToInstance(PushNotificationResponseDto, mappedResponse, [
+        RoleEnum.admin,
+      ]);
     } catch (error) {
       this.logger.error(
         `Push notification failed: ${error.message}`,
@@ -192,16 +215,28 @@ export class GorushService
   ): Promise<GoRushMetricsResponseDto | GoRushMetricsJsonResponseDto> {
     try {
       const response = await this.apiClient.getMetrics();
-      if (!response || !response.data) {
+      const payload = this.unwrapPayload<string>(response);
+      if (!payload) {
         throw new Error('Empty response from Gorush metrics endpoint.');
+      }
+      if (typeof payload !== 'string') {
+        throw new Error('Unexpected metrics payload type from Gorush.');
       }
 
       if (asJson) {
-        const parsedMetrics = parseMetrics(response.data);
-        return { metrics: parsedMetrics };
+        const parsedMetrics = parseMetrics(payload);
+        return GroupPlainToInstance(
+          GoRushMetricsJsonResponseDto,
+          { metrics: parsedMetrics },
+          [RoleEnum.admin],
+        );
       }
 
-      return { metrics: response.data };
+      return GroupPlainToInstance(
+        GoRushMetricsResponseDto,
+        { metrics: payload },
+        [RoleEnum.admin],
+      );
     } catch (error) {
       this.logger.error('Failed to fetch Gorush metrics', error.message);
       throw error;
@@ -211,22 +246,52 @@ export class GorushService
   /**
    * Check health status
    */
-  async checkHealth(): Promise<{ status: number; message: string }> {
+  async checkHealth(): Promise<GorushInfoDto> {
     try {
-      const response: any = await this.apiClient.checkHealth();
+      const response: any = await this.callHealthEndpoint();
       this.logger.verbose(`Checking ${stringifyJson(response)}`);
+      const now = Math.floor(Date.now() / 1000);
       if (response.statusCode === HttpStatus.OK) {
-        return { status: HttpStatus.OK, message: 'Gorush server is healthy' };
+        return GroupPlainToInstance(
+          GorushInfoDto,
+          {
+            status: HttpStatus.OK,
+            message: 'Gorush server is healthy',
+            timestamp: now,
+          },
+          [RoleEnum.admin],
+        );
       }
-      return {
-        status: HttpStatus.SERVICE_UNAVAILABLE,
-        message: 'Gorush health check failed',
-      };
+      return GroupPlainToInstance(
+        GorushInfoDto,
+        {
+          status: HttpStatus.SERVICE_UNAVAILABLE,
+          message: 'Gorush health check failed',
+          timestamp: now,
+        },
+        [RoleEnum.admin],
+      );
     } catch (error) {
-      return {
-        status: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: `Gorush Server not Available: ${error.message}`,
-      };
+      return GroupPlainToInstance(
+        GorushInfoDto,
+        {
+          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: `Gorush Server not Available: ${error.message}`,
+          timestamp: Math.floor(Date.now() / 1000),
+        },
+        [RoleEnum.admin],
+      );
+    }
+  }
+
+  private async callHealthEndpoint(): Promise<any> {
+    try {
+      return await this.apiClient.checkHealth();
+    } catch (error) {
+      if (this.apiClient?.checkHealthDuplicate) {
+        return await this.apiClient.checkHealthDuplicate();
+      }
+      throw error;
     }
   }
 
@@ -238,6 +303,23 @@ export class GorushService
       this.logger.error('getVersion function is missing in API client.');
       throw new Error('Gorush API client is not initialized properly.');
     }
-    return this.apiClient.getVersion();
+    const payload = await this.apiClient.getVersion();
+    return GroupPlainToInstance(
+      GoRushVersionResponseDto,
+      this.unwrapPayload(payload),
+      [RoleEnum.admin],
+    );
+  }
+
+  private unwrapPayload<T>(payload: any): T {
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      'data' in payload &&
+      'statusCode' in payload
+    ) {
+      return payload.data as T;
+    }
+    return payload as T;
   }
 }

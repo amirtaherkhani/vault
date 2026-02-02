@@ -3,6 +3,8 @@ import {
   AnyApiGatewayConfig,
   EndpointDefinition,
   EndpointOptions,
+  RetryOptions,
+  TransportOptions,
 } from './types/api-gateway.type';
 
 export class ApiGatewayConfig implements AnyApiGatewayConfig {
@@ -10,10 +12,18 @@ export class ApiGatewayConfig implements AnyApiGatewayConfig {
   public headers?: Record<string, string>;
   public endpoints: EndpointDefinition[] = [];
   public name = '';
+  public retry?: RetryOptions;
+  public transport?: TransportOptions;
 
-  constructor(baseUrl: string, headers?: Record<string, string>) {
+  constructor(
+    baseUrl: string,
+    headers?: Record<string, string>,
+    options?: { retry?: RetryOptions; transport?: TransportOptions },
+  ) {
     this.baseUrl = baseUrl;
     this.headers = headers;
+    this.retry = options?.retry;
+    this.transport = options?.transport;
   }
 
   /**

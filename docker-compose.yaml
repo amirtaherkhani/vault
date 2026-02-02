@@ -26,7 +26,7 @@ services:
       retries: 20
 
   redis:
-    image: redis:8-alpine
+    image: redis:8.4-alpine
     container_name: next-block-redis
     restart: unless-stopped
     networks:
@@ -98,4 +98,4 @@ volumes:
 networks:
   next-block-net:
     name: next-block-net
-    driver: bridge
+    external: true

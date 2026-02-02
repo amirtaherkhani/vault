@@ -1,26 +1,36 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { InternalEventEntity as InternalEventOutboxEntity } from '../../internal-events/infrastructure/persistence/relational/entities/internal-event.entity';
 import { EmitInternalEventDto } from './dto/emit-internal-event.dto';
-import { INTERNAL_EVENTS_OPTIONS } from './types/internal-events-constants.type';
-import { InternalEventsOptions } from './config/internal-events-config.type';
 import { LoggerService } from '../logger/logger.service';
 import { InternalEventMapper } from '../../internal-events/infrastructure/persistence/relational/mappers/internal-event.mapper';
 import { InternalEvent } from '../../internal-events/domain/internal-event';
+import { ConfigService } from '@nestjs/config';
+import { AllConfigType } from '../../config/config.type';
+import { INTERNAL_EVENTS_DEFAULT_ENABLE } from './types/internal-events-const.type';
+import { BaseToggleableService } from '../base/base-toggleable.service';
 
 @Injectable()
-export class InternalEventsService {
+export class InternalEventsService extends BaseToggleableService {
   constructor(
-    @Inject(INTERNAL_EVENTS_OPTIONS)
-    private readonly options: InternalEventsOptions,
     private readonly loggerService: LoggerService,
-  ) {}
+    private readonly configService: ConfigService<AllConfigType>,
+  ) {
+    super(
+      InternalEventsService.name,
+      configService.get(
+        'internalEvents.enable',
+        INTERNAL_EVENTS_DEFAULT_ENABLE,
+        { infer: true },
+      ),
+    );
+  }
 
   async emit(
     manager: EntityManager,
     event: EmitInternalEventDto,
   ): Promise<InternalEvent> {
-    if (!this.options.enable) {
+    if (!this.isEnabled) {
       this.loggerService.warn(
         'Internal events are disabled; skipping emit.',
         InternalEventsService.name,

@@ -3,7 +3,6 @@ export enum NotificationCategory {
   TRANSACTION = 'transaction',
   SECURITY = 'security',
   SYSTEM = 'system',
-  PRICE = 'price',
   WITHDRAWAL = 'withdrawal',
   DEPOSIT = 'deposit',
   AUTHENTICATION = 'authentication',
