@@ -35,7 +35,6 @@ import {
   ListFilesResponseDto,
   ListBucketsResponseDto,
 } from './dto/response.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { UploadFileDto } from './dto/upload-file.dto';
 import { DownloadFileDto } from './dto/download-file.dto';
 import { DeleteFileDto } from './dto/delete-file.dto';
@@ -46,8 +45,9 @@ import {
 } from 'src/utils/decorators/service-toggleable.decorators';
 import { RolesGuard } from 'src/roles/roles.guard';
 import { EnableGuard } from 'src/common/guards/service-enabled.guard';
+import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('minIO.enable') // config-based toggle
 @RequireServiceReady(MinioService) // service readiness check
 @ApiTags('MinIO-Storage')

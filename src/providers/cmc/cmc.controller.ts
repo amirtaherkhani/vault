@@ -7,7 +7,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 
 import { CmcService } from './cmc.service';
 import { RolesGuard } from '../../roles/roles.guard';
@@ -59,10 +58,11 @@ import {
   CmcTrendingMostVisitedV1Dto,
 } from './dto/cmc-cryptocurrency.dto';
 import { ResponseModel } from '../../common/api-gateway/response/decorators/response-model.decorator';
+import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 
 @ResponseModel('CMC')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('cmc.enable') // config-based toggle
 @RequireServiceReady(CmcService) // service readiness check
 @ApiTags('CoinMarketCap')

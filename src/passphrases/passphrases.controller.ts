@@ -27,7 +27,6 @@ import {
   ApiBadRequestResponse,
 } from '@nestjs/swagger';
 import { Passphrase } from './domain/passphrase';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -41,10 +40,11 @@ import { PassphraseUserResponseDto } from './dto/passphrase-response.dto';
 import { TypeMessage } from '../utils/types/message.type';
 import { QueryPassphraseDto } from './dto/query-passphrase.dto';
 import { ApiInfinityPaginatedResponse } from '../utils/decorators/paginated-response.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Passphrases')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'passphrases',
   version: '1',

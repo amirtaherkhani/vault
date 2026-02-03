@@ -11,7 +11,6 @@ import {
 import { GorushService } from './gorush.service';
 import { RolesGuard } from 'src/roles/roles.guard';
 import { RoleEnum } from 'src/roles/roles.enum';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -45,8 +44,9 @@ import {
   RequireEnabled,
   RequireServiceReady,
 } from 'src/utils/decorators/service-toggleable.decorators';
+import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('gorush.enable') // config-based toggle
 @RequireServiceReady(GorushService) // service readiness check
 @ApiBearerAuth()

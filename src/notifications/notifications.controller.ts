@@ -23,7 +23,6 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { Notification } from './domain/notification';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -31,10 +30,11 @@ import {
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllNotificationsDto } from './dto/find-all-notifications.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'notifications',
   version: '1',

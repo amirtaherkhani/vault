@@ -20,17 +20,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Message } from './domain/message';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
 } from '../utils/dto/infinity-pagination-response.dto';
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllMessagesDto } from './dto/find-all-messages.dto';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Messages')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'messages',
   version: '1',

@@ -9,6 +9,7 @@
 - [Auth via Apple](#auth-via-apple)
 - [Auth via Facebook](#auth-via-facebook)
 - [Auth via Google](#auth-via-google)
+- [Auth via Vero](#auth-via-vero)
 - [About JWT strategy](#about-jwt-strategy)
 - [Refresh token flow](#refresh-token-flow)
   - [Video example](#video-example)
@@ -120,6 +121,31 @@ For auth with external services or social networks you need:
    GOOGLE_CLIENT_ID=abc
    GOOGLE_CLIENT_SECRET=abc
    ```
+
+## Auth via Vero
+
+Vero authentication supports two modes:
+
+1. **Default mode (internal JWT issued):** The API validates the Vero token, upserts the user, and returns an internal JWT.
+2. **External token mode (Vero token reused):** The API validates the Vero token against Vero's `/me/profile` endpoint, upserts the user, and returns the same Vero token verbatim for subsequent API calls.
+
+To enable external token mode, set:
+
+```text
+AUTH_VERO_USE_EXTERNAL_TOKEN=true
+```
+
+If Vero is not hosted at the default gateway, override the base URL used for the profile check:
+
+```text
+VERO_API_BASE_URL=https://gateway.veroapi.com/veritas
+```
+
+When external token mode is enabled, the client should:
+
+1. Obtain a Vero JWT externally.
+2. Call `POST /api/v1/auth/vero/login` with the Vero token.
+3. Reuse the same Vero token in the `Authorization: Bearer <token>` header for all protected APIs.
 
 ## About JWT strategy
 

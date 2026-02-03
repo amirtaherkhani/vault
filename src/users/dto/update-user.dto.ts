@@ -24,6 +24,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
 
   socialId?: string | null;
 
+  veroId?: string | null;
+
   @ApiPropertyOptional({ example: 'John', type: String })
   @IsOptional()
   firstName?: string | null;

@@ -24,6 +24,7 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { DynamicAuthGuard } from './guards/dynamic-auth.guard';
 
 @ApiTags('Auth')
 @Controller({
@@ -89,7 +90,7 @@ export class AuthController {
     groups: ['me'],
   })
   @Get('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @ApiOkResponse({
     type: User,
   })
@@ -117,7 +118,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Post('logout')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   public async logout(@Request() request): Promise<void> {
     await this.service.logout({
@@ -130,7 +131,7 @@ export class AuthController {
     groups: ['me'],
   })
   @Patch('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: User,
@@ -144,7 +145,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Delete('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   public async delete(@Request() request): Promise<void> {
     return this.service.softDelete(request.user);

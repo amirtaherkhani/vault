@@ -31,6 +31,7 @@ export abstract class UserRepository {
     socialId: User['socialId'],
   ): Promise<NullableType<User>>;
   abstract findBySocialIds(socialIds: User['socialId'][]): Promise<User[]>;
+  abstract findByVeroId(veroId: User['veroId']): Promise<NullableType<User>>;
   abstract findBySocialIdAndProvider({
     socialId,
     provider,

@@ -13,6 +13,7 @@ export class UserMapper {
     domainEntity.password = raw.password;
     domainEntity.provider = raw.provider;
     domainEntity.socialId = raw.socialId;
+    domainEntity.veroId = raw.veroId;
     domainEntity.firstName = raw.firstName;
     domainEntity.lastName = raw.lastName;
     if (raw.photo) {
@@ -59,6 +60,7 @@ export class UserMapper {
     persistenceEntity.password = domainEntity.password;
     persistenceEntity.provider = domainEntity.provider;
     persistenceEntity.socialId = domainEntity.socialId;
+    persistenceEntity.veroId = domainEntity.veroId;
     persistenceEntity.firstName = domainEntity.firstName;
     persistenceEntity.lastName = domainEntity.lastName;
     persistenceEntity.photo = photo;

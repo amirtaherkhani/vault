@@ -20,7 +20,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { SleevesTransaction } from './domain/sleeves-transaction';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -28,10 +27,11 @@ import {
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllSleevesTransactionsDto } from './dto/find-all-sleeves-transactions.dto';
 import { DisabledEndpoint } from '../utils/decorators/disabled-endpoint.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Sleeves-Transactions')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'sleeves-transactions',
   version: '1',

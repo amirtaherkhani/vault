@@ -19,7 +19,6 @@ import {
   ApiNoContentResponse,
 } from '@nestjs/swagger';
 import { ApiOperationRoles } from '../../utils/decorators/swagger.decorator';
-import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../roles/roles.guard';
 import { Roles } from '../../roles/roles.decorator';
 import { RoleEnum } from '../../roles/roles.enum';
@@ -46,6 +45,7 @@ import {
   RequireEnabled,
   RequireServiceReady,
 } from '../../utils/decorators/service-toggleable.decorators';
+import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 
 @RegisterApiTag(
   'SocketIO',
@@ -55,7 +55,7 @@ import {
 @RequireEnabled('socketIO.enable')
 @RequireServiceReady(SocketIoService)
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @Roles(RoleEnum.admin)
 @Controller({ path: 'socketio', version: '1' })
 export class SocketIoController {

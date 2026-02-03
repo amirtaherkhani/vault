@@ -26,7 +26,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AddressBookDto } from './dto/address-book.dto';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -41,9 +40,10 @@ import { RolesGuard } from '../roles/roles.guard';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
 import { ApiOperationRoles } from '../utils/decorators/swagger.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard)
 @ApiTags('AddressBooks')
 @Controller({ path: 'address-books', version: '1' })
 export class AddressBooksController {

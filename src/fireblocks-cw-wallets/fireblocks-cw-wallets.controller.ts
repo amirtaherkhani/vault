@@ -19,7 +19,6 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { FireblocksCwWallet } from './domain/fireblocks-cw-wallet';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -27,6 +26,7 @@ import {
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllFireblocksCwWalletsDto } from './dto/find-all-fireblocks-cw-wallets.dto';
 import { RegisterApiTag } from '../common/api-docs/decorators/register-api-tag.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @RegisterApiTag(
   'Fireblocks-CW',
@@ -34,7 +34,7 @@ import { RegisterApiTag } from '../common/api-docs/decorators/register-api-tag.d
   // 'https://developers.fireblocks.com/docs/create-direct-custody-wallets',
 )
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'fireblocks/cw',
   version: '1',

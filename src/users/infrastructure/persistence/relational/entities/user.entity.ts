@@ -39,6 +39,10 @@ export class UserEntity extends EntityRelationalHelper {
   @Column({ type: String, nullable: true })
   socialId?: string | null;
 
+  @Index({ unique: true })
+  @Column({ type: String, nullable: true })
+  veroId?: string | null;
+
   @Index()
   @Column({ type: String, nullable: true })
   firstName: string | null;

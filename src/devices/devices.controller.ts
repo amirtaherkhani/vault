@@ -25,7 +25,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Device } from './domain/device';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -38,10 +37,11 @@ import {
 import { TypeMessage } from '../utils/types/message.type';
 import { DeviceUserResponseDto } from './dto/device-response.dto';
 import { QueryDeviceDto } from './dto/query-device.dto';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Devices')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'devices',
   version: '1',

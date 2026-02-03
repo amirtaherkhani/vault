@@ -23,10 +23,10 @@ import { AuthVeroBulkCreateDto } from './dto/auth-vero-bulk-create.dto';
 import { AuthVeroBulkUpdateDto } from './dto/auth-vero-bulk-update.dto';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
-import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../roles/roles.guard';
 import { User } from '../users/domain/user';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Auth')
 @Controller({
@@ -48,6 +48,9 @@ export class AuthVeroController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: AuthVeroLoginDto): Promise<LoginResponseDto> {
+    if (this.authVeroService.isExternalTokenMode()) {
+      return this.authVeroService.loginWithExternalToken(loginDto);
+    }
     const { profile, exp } =
       await this.authVeroService.getProfileByToken(loginDto);
     return this.authService.validateSocialLogin(
@@ -59,7 +62,7 @@ export class AuthVeroController {
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiCreatedResponse({
     type: User,
   })
@@ -74,7 +77,7 @@ export class AuthVeroController {
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiCreatedResponse({
     type: User,
     isArray: true,
@@ -92,7 +95,7 @@ export class AuthVeroController {
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiOkResponse({
     type: User,
     isArray: true,

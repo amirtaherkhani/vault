@@ -20,17 +20,17 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { InternalEvent } from './domain/internal-event';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
 } from '../utils/dto/infinity-pagination-response.dto';
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllInternalEventsDto } from './dto/find-all-internal-events.dto';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Internal-events')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'internal-events',
   version: '1',

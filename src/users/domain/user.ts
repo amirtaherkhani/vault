@@ -38,6 +38,12 @@ export class User {
 
   @ApiProperty({
     type: String,
+    example: 'vero-user-id',
+  })
+  veroId?: string | null;
+
+  @ApiProperty({
+    type: String,
     example: 'John',
   })
   firstName: string | null;
