@@ -9,6 +9,8 @@ import {
   UseGuards,
   Query,
   HttpStatus,
+  Request,
+  HttpCode,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -22,7 +24,6 @@ import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
-import { Notification } from './domain/notification';
 import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
@@ -31,6 +32,11 @@ import {
 import { infinityPagination } from '../utils/infinity-pagination';
 import { FindAllNotificationsDto } from './dto/find-all-notifications.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
+import { RequestWithUser } from '../utils/types/object.type';
+import { ApiOperationRoles } from '../utils/decorators/swagger.decorator';
+import { RoleEnum } from '../roles/roles.enum';
+import { NotificationResponseDto } from './dto/notification-response.dto';
+import { NotificationBulkResultDto } from './dto/notification-bulk-result.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -43,20 +49,22 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post()
+  @ApiOperationRoles('Create notification', [RoleEnum.admin])
   @ApiCreatedResponse({
-    type: Notification,
+    type: NotificationResponseDto,
   })
   create(@Body() createNotificationDto: CreateNotificationDto) {
     return this.notificationsService.create(createNotificationDto);
   }
 
   @Get()
+  @ApiOperationRoles('List notifications with pagination', [RoleEnum.admin])
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Notification),
+    type: InfinityPaginationResponse(NotificationResponseDto),
   })
   async findAll(
     @Query() query: FindAllNotificationsDto,
-  ): Promise<InfinityPaginationResponseDto<Notification>> {
+  ): Promise<InfinityPaginationResponseDto<NotificationResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) {
@@ -73,27 +81,117 @@ export class NotificationsController {
       { page, limit },
     );
   }
-  @Get(':id')
+
+  @Get('me/device/:deviceId')
+  @ApiOperationRoles('Get notifications for current user and device', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiParam({ name: 'deviceId', type: String, required: true })
+  @ApiOkResponse({
+    type: InfinityPaginationResponse(NotificationResponseDto),
+    description: 'All notifications for the current user and device',
+  })
+  async findAllByDeviceIdForMe(
+    @Request() req: RequestWithUser,
+    @Param('deviceId') deviceId: string,
+    @Query() query: FindAllNotificationsDto,
+  ): Promise<InfinityPaginationResponseDto<NotificationResponseDto>> {
+    const page = query?.page ?? 1;
+    let limit = query?.limit ?? 10;
+    if (limit > 50) limit = 50;
+
+    const result = await this.notificationsService.findAllByDeviceIdForMe(
+      deviceId,
+      req.user.id,
+      { page, limit },
+    );
+
+    return infinityPagination(result, { page, limit });
+  }
+
+  @Patch('me/device/:deviceId/read')
+  @ApiOperationRoles('Mark delivered notifications as read for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiParam({ name: 'deviceId', type: String, required: true })
+  @ApiOkResponse({
+    type: NotificationBulkResultDto,
+    description: 'Marked all delivered notifications as read for this device',
+  })
+  @HttpCode(HttpStatus.OK)
+  markReadAllDeliveredByDeviceIdForMe(
+    @Request() req: RequestWithUser,
+    @Param('deviceId') deviceId: string,
+  ) {
+    return this.notificationsService.markReadAllDeliveredByDeviceIdForMe(
+      deviceId,
+      req.user.id,
+    );
+  }
+
+  @Patch('me/:id/read')
+  @ApiOperationRoles('Mark notification as read for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiParam({
     name: 'id',
     type: String,
     required: true,
   })
   @ApiOkResponse({
-    type: Notification,
+    type: NotificationResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  markReadByIdForMe(@Request() req: RequestWithUser, @Param('id') id: string) {
+    return this.notificationsService.markReadByIdForMe(id, req.user.id);
+  }
+
+  @Patch('me/:id/delivered')
+  @ApiOperationRoles('Mark notification as delivered for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiParam({
+    name: 'id',
+    type: String,
+    required: true,
+  })
+  @ApiOkResponse({
+    type: NotificationResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  markDeliveredByIdForMe(
+    @Request() req: RequestWithUser,
+    @Param('id') id: string,
+  ) {
+    return this.notificationsService.markDeliveredByIdForMe(id, req.user.id);
+  }
+  @Get(':id')
+  @ApiOperationRoles('Get notification by ID', [RoleEnum.admin])
+  @ApiParam({
+    name: 'id',
+    type: String,
+    required: true,
+  })
+  @ApiOkResponse({
+    type: NotificationResponseDto,
   })
   findById(@Param('id') id: string) {
     return this.notificationsService.findById(id);
   }
 
   @Patch(':id')
+  @ApiOperationRoles('Update notification by ID', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
     required: true,
   })
   @ApiOkResponse({
-    type: Notification,
+    type: NotificationResponseDto,
   })
   update(
     @Param('id') id: string,
@@ -103,6 +201,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
+  @ApiOperationRoles('Delete notification by ID', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -112,8 +211,9 @@ export class NotificationsController {
     return this.notificationsService.remove(id);
   }
   @Get('search')
+  @ApiOperationRoles('Filter notifications', [RoleEnum.admin])
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Notification),
+    type: InfinityPaginationResponse(NotificationResponseDto),
     description: 'Successfully retrieved filtered notification list',
   })
   @ApiBadRequestResponse({
@@ -141,7 +241,7 @@ export class NotificationsController {
   })
   async findMany(
     @Query() query: QueryNotificationDto,
-  ): Promise<InfinityPaginationResponseDto<Notification>> {
+  ): Promise<InfinityPaginationResponseDto<NotificationResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
@@ -155,15 +255,16 @@ export class NotificationsController {
     return infinityPagination(result, { page, limit });
   }
   @Get('device/:deviceId')
+  @ApiOperationRoles('Get notifications by device ID', [RoleEnum.admin])
   @ApiParam({ name: 'deviceId', type: String, required: true })
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Notification),
+    type: InfinityPaginationResponse(NotificationResponseDto),
     description: 'All notifications for a device',
   })
   async findAllByDeviceId(
     @Param('deviceId') deviceId: string,
     @Query() query: FindAllNotificationsDto,
-  ): Promise<InfinityPaginationResponseDto<Notification>> {
+  ): Promise<InfinityPaginationResponseDto<NotificationResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
@@ -177,15 +278,16 @@ export class NotificationsController {
   }
 
   @Get('device/:deviceId/unread')
+  @ApiOperationRoles('Get unread notifications by device ID', [RoleEnum.admin])
   @ApiParam({ name: 'deviceId', type: String, required: true })
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Notification),
+    type: InfinityPaginationResponse(NotificationResponseDto),
     description: 'All unread notifications for a device',
   })
   async findUnreadByDeviceId(
     @Param('deviceId') deviceId: string,
     @Query() query: FindAllNotificationsDto,
-  ): Promise<InfinityPaginationResponseDto<Notification>> {
+  ): Promise<InfinityPaginationResponseDto<NotificationResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;

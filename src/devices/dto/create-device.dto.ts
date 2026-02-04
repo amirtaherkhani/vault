@@ -1,5 +1,3 @@
-import { NotificationDto } from '../../notifications/dto/notification.dto';
-
 import { UserDto } from '../../users/dto/user.dto';
 
 import { Type } from 'class-transformer';
@@ -11,7 +9,6 @@ import {
   IsOptional,
   IsEnum,
   IsBoolean,
-  IsArray,
 } from 'class-validator';
 
 import { ApiProperty } from '@nestjs/swagger';
@@ -67,16 +64,6 @@ export class BaseCreateDeviceDto {
 }
 
 export class CreateDeviceDto extends BaseCreateDeviceDto {
-  @ApiProperty({
-    required: false,
-    type: () => [NotificationDto],
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => NotificationDto)
-  @IsArray()
-  notifications?: NotificationDto[] | null;
-
   @ApiProperty({
     required: true,
     type: () => UserDto,

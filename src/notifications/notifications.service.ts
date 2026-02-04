@@ -18,6 +18,14 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { NotificationCategory } from './types/notification-enum.type';
+import { User } from '../users/domain/user';
+import {
+  GroupPlainToInstance,
+  GroupPlainToInstances,
+} from '../utils/transformers/class.transformer';
+import { RoleEnum } from '../roles/roles.enum';
+import { NotificationResponseDto } from './dto/notification-response.dto';
+import { NotificationBulkResultDto } from './dto/notification-bulk-result.dto';
 
 @Injectable()
 export class NotificationsService {
@@ -33,7 +41,7 @@ export class NotificationsService {
     // Do not remove comment below.
     // <creating-property />
 
-    const deviceObject = await this.deviceService.findById(
+    const deviceObject = await this.deviceService.findEntityById(
       createNotificationDto.device.id,
     );
     if (!deviceObject) {
@@ -46,7 +54,7 @@ export class NotificationsService {
     }
     const device = deviceObject;
 
-    return this.notificationRepository.create({
+    const created = await this.notificationRepository.create({
       // Do not remove comment below.
       // <creating-property-payload />
       category: createNotificationDto.category || NotificationCategory.GENERAL,
@@ -65,27 +73,48 @@ export class NotificationsService {
 
       device,
     });
+    return GroupPlainToInstance(NotificationResponseDto, created, [
+      RoleEnum.admin,
+    ]);
   }
 
   findAllWithPagination({
     paginationOptions,
   }: {
     paginationOptions: IPaginationOptions;
-  }) {
-    return this.notificationRepository.findAllWithPagination({
-      paginationOptions: {
-        page: paginationOptions.page,
-        limit: paginationOptions.limit,
-      },
-    });
+  }): Promise<NotificationResponseDto[]> {
+    return this.notificationRepository
+      .findAllWithPagination({
+        paginationOptions: {
+          page: paginationOptions.page,
+          limit: paginationOptions.limit,
+        },
+      })
+      .then((notifications) =>
+        GroupPlainToInstances(NotificationResponseDto, notifications, [
+          RoleEnum.admin,
+        ]),
+      );
   }
 
-  findById(id: Notification['id']) {
-    return this.notificationRepository.findById(id);
+  async findById(
+    id: Notification['id'],
+  ): Promise<NotificationResponseDto | null> {
+    const notification = await this.notificationRepository.findById(id);
+    return notification
+      ? GroupPlainToInstance(NotificationResponseDto, notification, [
+          RoleEnum.admin,
+        ])
+      : null;
   }
 
-  findByIds(ids: Notification['id'][]) {
-    return this.notificationRepository.findByIds(ids);
+  async findByIds(
+    ids: Notification['id'][],
+  ): Promise<NotificationResponseDto[]> {
+    const notifications = await this.notificationRepository.findByIds(ids);
+    return GroupPlainToInstances(NotificationResponseDto, notifications, [
+      RoleEnum.admin,
+    ]);
   }
 
   async update(
@@ -99,7 +128,7 @@ export class NotificationsService {
     let device: Device | undefined = undefined;
 
     if (updateNotificationDto.device) {
-      const deviceObject = await this.deviceService.findById(
+      const deviceObject = await this.deviceService.findEntityById(
         updateNotificationDto.device.id,
       );
       if (!deviceObject) {
@@ -113,7 +142,7 @@ export class NotificationsService {
       device = deviceObject;
     }
 
-    return this.notificationRepository.update(id, {
+    const updated = await this.notificationRepository.update(id, {
       // Do not remove comment below.
       // <updating-property-payload />
       category: updateNotificationDto.category,
@@ -132,6 +161,9 @@ export class NotificationsService {
 
       device,
     });
+    return updated
+      ? GroupPlainToInstance(NotificationResponseDto, updated, [RoleEnum.admin])
+      : null;
   }
 
   remove(id: Notification['id']) {
@@ -146,12 +178,18 @@ export class NotificationsService {
     filterOptions?: FilterNotificationDto | null;
     sortOptions?: SortNotificationDto[] | null;
     paginationOptions: IPaginationOptions;
-  }): Promise<Notification[]> {
-    return this.notificationRepository.findManyWithPagination({
-      filterOptions,
-      sortOptions,
-      paginationOptions,
-    });
+  }): Promise<NotificationResponseDto[]> {
+    return this.notificationRepository
+      .findManyWithPagination({
+        filterOptions,
+        sortOptions,
+        paginationOptions,
+      })
+      .then((notifications) =>
+        GroupPlainToInstances(NotificationResponseDto, notifications, [
+          RoleEnum.admin,
+        ]),
+      );
   }
 
   findByDeviceIdWithPagination({
@@ -164,31 +202,150 @@ export class NotificationsService {
     filterOptions?: FilterNotificationDto | null;
     sortOptions?: SortNotificationDto[] | null;
     paginationOptions: IPaginationOptions;
-  }): Promise<Notification[]> {
-    return this.notificationRepository.findByDeviceIdWithPagination({
-      deviceId,
-      filterOptions,
-      sortOptions,
-      paginationOptions,
-    });
+  }): Promise<NotificationResponseDto[]> {
+    return this.notificationRepository
+      .findByDeviceIdWithPagination({
+        deviceId,
+        filterOptions,
+        sortOptions,
+        paginationOptions,
+      })
+      .then((notifications) =>
+        GroupPlainToInstances(NotificationResponseDto, notifications, [
+          RoleEnum.admin,
+        ]),
+      );
   }
   findAllByDeviceId(
     deviceId: string,
     paginationOptions: IPaginationOptions,
-  ): Promise<Notification[]> {
-    return this.notificationRepository.findAllByDeviceId(
-      deviceId,
-      paginationOptions,
-    );
+  ): Promise<NotificationResponseDto[]> {
+    return this.notificationRepository
+      .findAllByDeviceId(deviceId, paginationOptions)
+      .then((notifications) =>
+        GroupPlainToInstances(NotificationResponseDto, notifications, [
+          RoleEnum.admin,
+        ]),
+      );
   }
 
   findUnreadByDeviceId(
     deviceId: string,
     paginationOptions: IPaginationOptions,
-  ): Promise<Notification[]> {
-    return this.notificationRepository.findUnreadByDeviceId(
+  ): Promise<NotificationResponseDto[]> {
+    return this.notificationRepository
+      .findUnreadByDeviceId(deviceId, paginationOptions)
+      .then((notifications) =>
+        GroupPlainToInstances(NotificationResponseDto, notifications, [
+          RoleEnum.admin,
+        ]),
+      );
+  }
+
+  async findAllByDeviceIdForMe(
+    deviceId: string,
+    userId: User['id'],
+    paginationOptions: IPaginationOptions,
+  ): Promise<NotificationResponseDto[]> {
+    await this.requireDeviceForUser(deviceId, userId);
+    const notifications = await this.notificationRepository.findAllByDeviceId(
       deviceId,
       paginationOptions,
     );
+    return GroupPlainToInstances(NotificationResponseDto, notifications, [
+      RoleEnum.user,
+    ]);
+  }
+
+  async markReadAllDeliveredByDeviceIdForMe(
+    deviceId: string,
+    userId: User['id'],
+  ): Promise<NotificationBulkResultDto> {
+    await this.requireDeviceForUser(deviceId, userId);
+    const affected =
+      await this.notificationRepository.markReadAllDeliveredByDeviceId(
+        deviceId,
+      );
+    return GroupPlainToInstance(NotificationBulkResultDto, { affected }, [
+      RoleEnum.user,
+    ]);
+  }
+
+  async markReadByIdForMe(
+    id: Notification['id'],
+    userId: User['id'],
+  ): Promise<NotificationResponseDto> {
+    const notification =
+      await this.notificationRepository.findByIdWithDevice(id);
+    if (!notification || notification.device?.user?.id !== userId) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          notification: 'notExists',
+        },
+      });
+    }
+
+    const updated = await this.notificationRepository.update(id, {
+      isRead: true,
+    });
+    if (!updated) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          notification: 'notExists',
+        },
+      });
+    }
+    return GroupPlainToInstance(NotificationResponseDto, updated, [
+      RoleEnum.user,
+    ]);
+  }
+
+  async markDeliveredByIdForMe(
+    id: Notification['id'],
+    userId: User['id'],
+  ): Promise<NotificationResponseDto> {
+    const notification =
+      await this.notificationRepository.findByIdWithDevice(id);
+    if (!notification || notification.device?.user?.id !== userId) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          notification: 'notExists',
+        },
+      });
+    }
+
+    const updated = await this.notificationRepository.update(id, {
+      isDelivered: true,
+    });
+    if (!updated) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          notification: 'notExists',
+        },
+      });
+    }
+    return GroupPlainToInstance(NotificationResponseDto, updated, [
+      RoleEnum.user,
+    ]);
+  }
+
+  private async requireDeviceForUser(
+    deviceId: string,
+    userId: User['id'],
+  ): Promise<Device> {
+    const device = await this.deviceService.findEntityById(deviceId);
+    if (!device || device.user?.id !== userId) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          device: 'notExists',
+        },
+      });
+    }
+    return device;
   }
 }

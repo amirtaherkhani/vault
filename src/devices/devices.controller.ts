@@ -10,11 +10,16 @@ import {
   Query,
   HttpStatus,
   Request,
+  HttpCode,
 } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { CreateDeviceUserDto } from './dto/create-device.dto';
-import { UpdateDeviceDto } from './dto/update-device.dto';
+import {
+  UpdateDeviceDto,
+  UpdateDeviceStatusDto,
+  UpdateDeviceTokenDto,
+} from './dto/update-device.dto';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -24,7 +29,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { Device } from './domain/device';
 import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
@@ -36,8 +40,13 @@ import {
   FindAllDevicesUserDto,
 } from './dto/find-all-devices.dto';
 import { TypeMessage } from '../utils/types/message.type';
-import { DeviceUserResponseDto } from './dto/device-response.dto';
+import {
+  DeviceAdminResponseDto,
+  DeviceUserResponseDto,
+} from './dto/device-response.dto';
 import { QueryDeviceDto } from './dto/query-device.dto';
+import { ApiOperationRoles } from '../utils/decorators/swagger.decorator';
+import { RoleEnum } from '../roles/roles.enum';
 
 @ApiTags('Devices')
 @ApiBearerAuth()
@@ -51,20 +60,22 @@ export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
   @Post()
+  @ApiOperationRoles('Create device', [RoleEnum.admin])
   @ApiCreatedResponse({
-    type: Device,
+    type: DeviceAdminResponseDto,
   })
   create(@Body() createDeviceDto: CreateDeviceDto) {
     return this.devicesService.create(createDeviceDto);
   }
 
   @Get()
+  @ApiOperationRoles('List devices with pagination', [RoleEnum.admin])
   @ApiOkResponse({
-    type: InfinityPaginationResponse(Device),
+    type: InfinityPaginationResponse(DeviceAdminResponseDto),
   })
   async findAll(
     @Query() query: FindAllDevicesDto,
-  ): Promise<InfinityPaginationResponseDto<Device>> {
+  ): Promise<InfinityPaginationResponseDto<DeviceAdminResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) {
@@ -83,32 +94,35 @@ export class DevicesController {
   }
 
   @Get(':id')
+  @ApiOperationRoles('Get device by ID', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
     required: true,
   })
   @ApiOkResponse({
-    type: Device,
+    type: DeviceAdminResponseDto,
   })
   findById(@Param('id') id: string) {
     return this.devicesService.findById(id);
   }
 
   @Patch(':id')
+  @ApiOperationRoles('Update device by ID', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
     required: true,
   })
   @ApiOkResponse({
-    type: Device,
+    type: DeviceAdminResponseDto,
   })
   update(@Param('id') id: string, @Body() updateDeviceDto: UpdateDeviceDto) {
     return this.devicesService.update(id, updateDeviceDto);
   }
 
   @Delete(':id')
+  @ApiOperationRoles('Delete device by ID', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -119,8 +133,12 @@ export class DevicesController {
   }
 
   @Post('me')
+  @ApiOperationRoles('Create device for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiCreatedResponse({
-    type: Device,
+    type: DeviceUserResponseDto,
   })
   async createByUser(
     @Request() request,
@@ -129,7 +147,51 @@ export class DevicesController {
     return this.devicesService.createByUser(createDeviceUserDto, request.user);
   }
 
+  @Patch('me/:deviceId/token')
+  @ApiOperationRoles('Update device token for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiParam({ name: 'deviceId', type: String, required: true })
+  @ApiOkResponse({ type: DeviceUserResponseDto })
+  @HttpCode(HttpStatus.OK)
+  updateDeviceTokenByMe(
+    @Request() request,
+    @Param('deviceId') deviceId: string,
+    @Body() body: UpdateDeviceTokenDto,
+  ) {
+    return this.devicesService.updateDeviceTokenByMe(
+      deviceId,
+      body.deviceToken,
+      request.user,
+    );
+  }
+
+  @Patch('me/:deviceId/status')
+  @ApiOperationRoles('Update device active status for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiParam({ name: 'deviceId', type: String, required: true })
+  @ApiOkResponse({ type: DeviceUserResponseDto })
+  @HttpCode(HttpStatus.OK)
+  updateDeviceStatusByMe(
+    @Request() request,
+    @Param('deviceId') deviceId: string,
+    @Body() body: UpdateDeviceStatusDto,
+  ) {
+    return this.devicesService.updateDeviceActiveStatusByMe(
+      deviceId,
+      body.isActive,
+      request.user,
+    );
+  }
+
   @Get('me')
+  @ApiOperationRoles('Get devices for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
     type: DeviceUserResponseDto,
     description: 'Successfully retrieved devices for the user',
@@ -148,12 +210,28 @@ export class DevicesController {
       },
     },
   })
-  @ApiOkResponse({ type: Device, isArray: true })
+  @ApiOkResponse({ type: DeviceUserResponseDto, isArray: true })
   async findAllByMe(@Request() request): Promise<DeviceUserResponseDto[]> {
     return this.devicesService.findByme(request.user);
   }
 
+  @Get('me/actives')
+  @ApiOperationRoles('Get active devices for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiOkResponse({
+    type: DeviceUserResponseDto,
+    description: 'Successfully retrieved active devices for the user',
+    isArray: true,
+  })
+  @HttpCode(HttpStatus.OK)
+  async findActivesByMe(@Request() request): Promise<DeviceUserResponseDto[]> {
+    return this.devicesService.findActiveByMe(request.user);
+  }
+
   @Get('user/:userId')
+  @ApiOperationRoles('Get devices by user ID', [RoleEnum.admin])
   @ApiParam({
     name: 'userId',
     type: Number,
@@ -162,7 +240,7 @@ export class DevicesController {
     example: 1,
   })
   @ApiOkResponse({
-    type: DeviceUserResponseDto,
+    type: DeviceAdminResponseDto,
     description: 'Successfully retrieved devices for the user',
     isArray: true,
   })
@@ -192,13 +270,14 @@ export class DevicesController {
   })
   async findAllByUserId(
     @Param() params: FindAllDevicesUserDto,
-  ): Promise<DeviceUserResponseDto[]> {
+  ): Promise<DeviceAdminResponseDto[]> {
     return this.devicesService.findByUserId(params.userId);
   }
 
   @Get('search')
+  @ApiOperationRoles('Filter devices', [RoleEnum.admin])
   @ApiOkResponse({
-    type: InfinityPaginationResponse(DeviceUserResponseDto),
+    type: InfinityPaginationResponse(DeviceAdminResponseDto),
     description: 'Successfully retrieved filtered device list',
   })
   @ApiBadRequestResponse({
@@ -228,7 +307,7 @@ export class DevicesController {
   })
   async findMany(
     @Query() query: QueryDeviceDto,
-  ): Promise<InfinityPaginationResponseDto<DeviceUserResponseDto>> {
+  ): Promise<InfinityPaginationResponseDto<DeviceAdminResponseDto>> {
     const page = query?.page ?? 1;
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;

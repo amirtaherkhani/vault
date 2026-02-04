@@ -1,7 +1,30 @@
-// Don't forget to use the class-validator decorators in the DTO properties.
-// import { Allow } from 'class-validator';
+import { PartialType, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BaseCreateDeviceDto } from './create-device.dto';
+import { UserDto } from '../../users/dto/user.dto';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
-import { PartialType } from '@nestjs/swagger';
-import { CreateDeviceDto } from './create-device.dto';
+export class UpdateDeviceDto extends PartialType(BaseCreateDeviceDto) {
+  @ApiPropertyOptional({ type: () => UserDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UserDto)
+  user?: UserDto;
+}
 
-export class UpdateDeviceDto extends PartialType(CreateDeviceDto) {}
+export class UpdateDeviceTokenDto {
+  @ApiProperty({ required: true, type: () => String })
+  @IsString()
+  deviceToken: string;
+}
+
+export class UpdateDeviceStatusDto {
+  @ApiProperty({ required: true, type: () => Boolean })
+  @IsBoolean()
+  isActive: boolean;
+}

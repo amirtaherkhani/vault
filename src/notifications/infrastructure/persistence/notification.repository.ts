@@ -22,6 +22,10 @@ export abstract class NotificationRepository {
     id: Notification['id'],
   ): Promise<NullableType<Notification>>;
 
+  abstract findByIdWithDevice(
+    id: Notification['id'],
+  ): Promise<NullableType<Notification>>;
+
   abstract findByIds(ids: Notification['id'][]): Promise<Notification[]>;
 
   abstract update(
@@ -53,4 +57,6 @@ export abstract class NotificationRepository {
     deviceId: string,
     paginationOptions: IPaginationOptions,
   ): Promise<Notification[]>;
+
+  abstract markReadAllDeliveredByDeviceId(deviceId: string): Promise<number>;
 }

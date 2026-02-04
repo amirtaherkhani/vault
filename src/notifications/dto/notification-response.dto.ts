@@ -1,61 +1,58 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  IsArray,
+  ApiProperty,
+  ApiPropertyOptional,
+} from '@nestjs/swagger';
+import {
   IsBoolean,
   IsDateString,
+  IsEnum,
+  IsObject,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { NotificationDto } from '../../notifications/dto/notification.dto';
-import { UserDto } from '../../users/dto/user.dto';
+import { ObjectData } from '../../utils/types/object.type';
+import { NotificationCategory } from '../types/notification-enum.type';
+import { DeviceAdminResponseDto } from '../../devices/dto/device-response.dto';
 
 @Exclude()
-class DeviceBaseResponseDto {
-  @ApiPropertyOptional({
-    type: () => [NotificationDto],
-    nullable: true,
+export class NotificationResponseDto {
+  @ApiProperty({
+    enum: NotificationCategory,
+    default: NotificationCategory.GENERAL,
+    nullable: false,
   })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => NotificationDto)
+  @IsEnum(NotificationCategory)
   @Expose({ groups: ['admin', 'user'] })
-  notifications?: NotificationDto[] | null;
+  category?: NotificationCategory = NotificationCategory.GENERAL;
 
   @ApiProperty({
     type: () => Boolean,
     nullable: false,
+    default: false,
   })
   @IsBoolean()
   @Expose({ groups: ['admin', 'user'] })
-  isActive?: boolean;
+  isRead?: boolean = false;
 
   @ApiProperty({
-    type: () => String,
+    type: () => Boolean,
     nullable: false,
+    default: false,
   })
-  @IsString()
+  @IsBoolean()
   @Expose({ groups: ['admin', 'user'] })
-  model: string;
-
-  @ApiProperty({
-    type: () => String,
-    nullable: false,
-  })
-  @IsString()
-  @Expose({ groups: ['admin', 'user'] })
-  appVersion: string;
+  isDelivered?: boolean = false;
 
   @ApiPropertyOptional({
-    type: () => String,
+    type: Object,
     nullable: true,
   })
   @IsOptional()
-  @IsString()
+  @IsObject()
   @Expose({ groups: ['admin', 'user'] })
-  osVersion?: string | null;
+  data?: ObjectData<any>;
 
   @ApiProperty({
     type: () => String,
@@ -63,7 +60,7 @@ class DeviceBaseResponseDto {
   })
   @IsString()
   @Expose({ groups: ['admin', 'user'] })
-  platform: string;
+  topic: string;
 
   @ApiProperty({
     type: () => String,
@@ -71,7 +68,25 @@ class DeviceBaseResponseDto {
   })
   @IsString()
   @Expose({ groups: ['admin', 'user'] })
-  deviceToken: string;
+  message: string;
+
+  @ApiProperty({
+    type: () => String,
+    nullable: false,
+  })
+  @IsString()
+  @Expose({ groups: ['admin', 'user'] })
+  title: string;
+
+  @ApiPropertyOptional({
+    type: () => DeviceAdminResponseDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DeviceAdminResponseDto)
+  @Expose({ groups: ['admin', 'user'] })
+  device?: DeviceAdminResponseDto;
 
   @ApiProperty({
     type: String,
@@ -90,18 +105,3 @@ class DeviceBaseResponseDto {
   @Expose({ groups: ['admin', 'user'] })
   updatedAt: Date;
 }
-
-@Exclude()
-export class DeviceAdminResponseDto extends DeviceBaseResponseDto {
-  @ApiProperty({
-    type: () => UserDto,
-    nullable: false,
-  })
-  @ValidateNested()
-  @Type(() => UserDto)
-  @Expose({ groups: ['admin'] })
-  user: UserDto;
-}
-
-@Exclude()
-export class DeviceUserResponseDto extends DeviceBaseResponseDto {}

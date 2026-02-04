@@ -52,6 +52,18 @@ export class NotificationRelationalRepository
     return entity ? NotificationMapper.toDomain(entity) : null;
   }
 
+  async findByIdWithDevice(
+    id: Notification['id'],
+  ): Promise<NullableType<Notification>> {
+    const entity = await this.notificationRepository.findOne({
+      where: { id },
+      relations: { device: { user: true } },
+      loadEagerRelations: false,
+    });
+
+    return entity ? NotificationMapper.toDomain(entity) : null;
+  }
+
   async findByIds(ids: Notification['id'][]): Promise<Notification[]> {
     const entities = await this.notificationRepository.find({
       where: { id: In(ids) },
@@ -205,5 +217,17 @@ export class NotificationRelationalRepository
     });
 
     return entities.map(NotificationMapper.toDomain);
+  }
+
+  async markReadAllDeliveredByDeviceId(deviceId: string): Promise<number> {
+    const result = await this.notificationRepository
+      .createQueryBuilder()
+      .update(NotificationEntity)
+      .set({ isRead: true })
+      .where('deviceId = :deviceId', { deviceId })
+      .andWhere('isDelivered = :isDelivered', { isDelivered: true })
+      .execute();
+
+    return result.affected ?? 0;
   }
 }
