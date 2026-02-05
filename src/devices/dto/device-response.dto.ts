@@ -10,6 +10,8 @@ import {
 } from 'class-validator';
 import { NotificationDto } from '../../notifications/dto/notification.dto';
 import { UserDto } from '../../users/dto/user.dto';
+import { RoleEnum } from '../../roles/roles.enum';
+import { RoleGroups } from '../../utils/transformers/enum.transformer';
 
 @Exclude()
 class DeviceBaseResponseDto {
@@ -21,7 +23,7 @@ class DeviceBaseResponseDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => NotificationDto)
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   notifications?: NotificationDto[] | null;
 
   @ApiProperty({
@@ -29,7 +31,7 @@ class DeviceBaseResponseDto {
     nullable: false,
   })
   @IsBoolean()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   isActive?: boolean;
 
   @ApiProperty({
@@ -37,7 +39,7 @@ class DeviceBaseResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   model: string;
 
   @ApiProperty({
@@ -45,7 +47,7 @@ class DeviceBaseResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   appVersion: string;
 
   @ApiPropertyOptional({
@@ -54,7 +56,7 @@ class DeviceBaseResponseDto {
   })
   @IsOptional()
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   osVersion?: string | null;
 
   @ApiProperty({
@@ -62,7 +64,7 @@ class DeviceBaseResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   platform: string;
 
   @ApiProperty({
@@ -70,24 +72,24 @@ class DeviceBaseResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   deviceToken: string;
 
   @ApiProperty({
     type: String,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   id: string;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   createdAt: Date;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   updatedAt: Date;
 }
 
@@ -99,7 +101,7 @@ export class DeviceAdminResponseDto extends DeviceBaseResponseDto {
   })
   @ValidateNested()
   @Type(() => UserDto)
-  @Expose({ groups: ['admin'] })
+  @Expose(RoleGroups([RoleEnum.admin]))
   user: UserDto;
 }
 

@@ -20,15 +20,26 @@ export class ValidateEnumTransformer implements PipeTransform {
   }
 }
 
+export function SerializeGroups(
+  groups: Array<RoleEnum | string>,
+): { groups: string[] } {
+  const mapped = groups.map((group) => {
+    if (typeof group === 'string') {
+      return group;
+    }
+    const mappedGroup = RoleGroupsDict[group];
+    if (!mappedGroup) {
+      throw new Error(`Unknown RoleEnum value: ${group}`);
+    }
+    return mappedGroup;
+  });
+
+  return {
+    groups: Array.from(new Set(mapped)),
+  };
+}
+
 // Helper to get serialization groups from a list of roles
 export function RoleGroups(roles: RoleEnum[]): { groups: string[] } {
-  return {
-    groups: roles.map((role) => {
-      const group = RoleGroupsDict[role];
-      if (!group) {
-        throw new Error(`Unknown RoleEnum value: ${role}`);
-      }
-      return group;
-    }),
-  };
+  return SerializeGroups(roles);
 }

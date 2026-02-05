@@ -15,6 +15,8 @@ import {
 import { ObjectData } from '../../utils/types/object.type';
 import { NotificationCategory } from '../types/notification-enum.type';
 import { DeviceAdminResponseDto } from '../../devices/dto/device-response.dto';
+import { RoleEnum } from '../../roles/roles.enum';
+import { RoleGroups } from '../../utils/transformers/enum.transformer';
 
 @Exclude()
 export class NotificationResponseDto {
@@ -24,7 +26,7 @@ export class NotificationResponseDto {
     nullable: false,
   })
   @IsEnum(NotificationCategory)
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   category?: NotificationCategory = NotificationCategory.GENERAL;
 
   @ApiProperty({
@@ -33,7 +35,7 @@ export class NotificationResponseDto {
     default: false,
   })
   @IsBoolean()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   isRead?: boolean = false;
 
   @ApiProperty({
@@ -42,7 +44,7 @@ export class NotificationResponseDto {
     default: false,
   })
   @IsBoolean()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   isDelivered?: boolean = false;
 
   @ApiPropertyOptional({
@@ -51,7 +53,7 @@ export class NotificationResponseDto {
   })
   @IsOptional()
   @IsObject()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   data?: ObjectData<any>;
 
   @ApiProperty({
@@ -59,7 +61,7 @@ export class NotificationResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   topic: string;
 
   @ApiProperty({
@@ -67,7 +69,7 @@ export class NotificationResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   message: string;
 
   @ApiProperty({
@@ -75,7 +77,7 @@ export class NotificationResponseDto {
     nullable: false,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   title: string;
 
   @ApiPropertyOptional({
@@ -85,23 +87,23 @@ export class NotificationResponseDto {
   @IsOptional()
   @ValidateNested()
   @Type(() => DeviceAdminResponseDto)
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   device?: DeviceAdminResponseDto;
 
   @ApiProperty({
     type: String,
   })
   @IsString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   id: string;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   createdAt: Date;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @IsDateString()
-  @Expose({ groups: ['admin', 'user'] })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   updatedAt: Date;
 }

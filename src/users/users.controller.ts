@@ -35,6 +35,11 @@ import { User } from './domain/user';
 import { UsersService } from './users.service';
 import { RolesGuard } from '../roles/roles.guard';
 import { infinityPagination } from '../utils/infinity-pagination';
+import {
+  GroupPlainToInstance,
+  GroupPlainToInstances,
+} from '../utils/transformers/class.transformer';
+import { SerializeGroups } from '../utils/transformers/enum.transformer';
 
 @ApiBearerAuth()
 @Roles(RoleEnum.admin)
@@ -50,21 +55,18 @@ export class UsersController {
   @ApiCreatedResponse({
     type: User,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createProfileDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createProfileDto);
+  async create(@Body() createProfileDto: CreateUserDto): Promise<User> {
+    const result = await this.usersService.create(createProfileDto);
+    return GroupPlainToInstance(User, result, [RoleEnum.admin]);
   }
 
   @ApiOkResponse({
     type: InfinityPaginationResponse(User),
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Get()
   @HttpCode(HttpStatus.OK)
   async findAll(
@@ -76,25 +78,22 @@ export class UsersController {
       limit = 50;
     }
 
-    return infinityPagination(
-      await this.usersService.findManyWithPagination({
-        filterOptions: query?.filters,
-        sortOptions: query?.sort,
-        paginationOptions: {
-          page,
-          limit,
-        },
-      }),
-      { page, limit },
-    );
+    const users = await this.usersService.findManyWithPagination({
+      filterOptions: query?.filters,
+      sortOptions: query?.sort,
+      paginationOptions: {
+        page,
+        limit,
+      },
+    });
+    const serialized = GroupPlainToInstances(User, users, [RoleEnum.admin]);
+    return infinityPagination(serialized, { page, limit });
   }
 
   @ApiOkResponse({
     type: User,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({
@@ -102,16 +101,15 @@ export class UsersController {
     type: String,
     required: true,
   })
-  findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
-    return this.usersService.findById(id);
+  async findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
+    const result = await this.usersService.findById(id);
+    return result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null;
   }
 
   @ApiOkResponse({
     type: User,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({
@@ -119,11 +117,12 @@ export class UsersController {
     type: String,
     required: true,
   })
-  update(
+  async update(
     @Param('id') id: User['id'],
     @Body() updateProfileDto: UpdateUserDto,
   ): Promise<User | null> {
-    return this.usersService.update(id, updateProfileDto);
+    const result = await this.usersService.update(id, updateProfileDto);
+    return result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null;
   }
 
   @Delete(':id')

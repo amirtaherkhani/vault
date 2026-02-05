@@ -34,10 +34,9 @@ import { BaseToggleableService } from 'src/common/base/base-toggleable.service';
 import { stringifyJson } from '../../common/logger/utils/logger.helper';
 import { GroupPlainToInstance } from 'src/utils/transformers/class.transformer';
 import { RoleEnum } from 'src/roles/roles.enum';
+import { SerializeGroups } from 'src/utils/transformers/enum.transformer';
 
-@SerializeOptions({
-  groups: ['admin'],
-})
+@SerializeOptions(SerializeGroups([RoleEnum.admin]))
 @Injectable()
 export class GorushService
   extends BaseToggleableService

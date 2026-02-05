@@ -1,4 +1,6 @@
 import { Expose } from 'class-transformer';
+import { RoleEnum } from '../../../roles/roles.enum';
+import { RoleGroups } from '../../../utils/transformers/enum.transformer';
 
 export class BaseResponse<T = any> {
   @Expose()
@@ -7,7 +9,7 @@ export class BaseResponse<T = any> {
   @Expose()
   data: T;
 
-  @Expose({ groups: ['admin'] })
+  @Expose(RoleGroups([RoleEnum.admin]))
   headers?: Record<string, any>;
 
   constructor(statusCode: number, data: T, headers?: Record<string, any>) {

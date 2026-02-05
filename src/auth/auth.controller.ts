@@ -24,6 +24,9 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { GroupPlainToInstance } from '../utils/transformers/class.transformer';
+import { SerializeGroups } from '../utils/transformers/enum.transformer';
+import { GroupNames } from '../utils/types/role-groups-const.type';
 
 @ApiTags('Auth')
 @Controller({
@@ -33,16 +36,17 @@ import { RefreshResponseDto } from './dto/refresh-response.dto';
 export class AuthController {
   constructor(private readonly service: AuthService) {}
 
-  @SerializeOptions({
-    groups: ['me'],
-  })
   @Post('email/login')
+  @SerializeOptions(SerializeGroups([GroupNames.me]))
   @ApiOkResponse({
     type: LoginResponseDto,
   })
   @HttpCode(HttpStatus.OK)
-  public login(@Body() loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
-    return this.service.validateLogin(loginDto);
+  public async login(
+    @Body() loginDto: AuthEmailLoginDto,
+  ): Promise<LoginResponseDto> {
+    const result = await this.service.validateLogin(loginDto);
+    return GroupPlainToInstance(LoginResponseDto, result, [GroupNames.me]);
   }
 
   @Post('email/register')
@@ -85,34 +89,32 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @SerializeOptions({
-    groups: ['me'],
-  })
   @Get('me')
   @UseGuards(AuthGuard('jwt'))
+  @SerializeOptions(SerializeGroups([GroupNames.me]))
   @ApiOkResponse({
     type: User,
   })
   @HttpCode(HttpStatus.OK)
-  public me(@Request() request): Promise<NullableType<User>> {
-    return this.service.me(request.user);
+  public async me(@Request() request): Promise<NullableType<User>> {
+    const result = await this.service.me(request.user);
+    return result ? GroupPlainToInstance(User, result, [GroupNames.me]) : null;
   }
 
   @ApiBearerAuth()
   @ApiOkResponse({
     type: RefreshResponseDto,
   })
-  @SerializeOptions({
-    groups: ['me'],
-  })
   @Post('refresh')
   @UseGuards(AuthGuard('jwt-refresh'))
+  @SerializeOptions(SerializeGroups([GroupNames.me]))
   @HttpCode(HttpStatus.OK)
-  public refresh(@Request() request): Promise<RefreshResponseDto> {
-    return this.service.refreshToken({
+  public async refresh(@Request() request): Promise<RefreshResponseDto> {
+    const result = await this.service.refreshToken({
       sessionId: request.user.sessionId,
       hash: request.user.hash,
     });
+    return GroupPlainToInstance(RefreshResponseDto, result, [GroupNames.me]);
   }
 
   @ApiBearerAuth()
@@ -126,20 +128,19 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @SerializeOptions({
-    groups: ['me'],
-  })
   @Patch('me')
   @UseGuards(AuthGuard('jwt'))
+  @SerializeOptions(SerializeGroups([GroupNames.me]))
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: User,
   })
-  public update(
+  public async update(
     @Request() request,
     @Body() userDto: AuthUpdateDto,
   ): Promise<NullableType<User>> {
-    return this.service.update(request.user, userDto);
+    const result = await this.service.update(request.user, userDto);
+    return result ? GroupPlainToInstance(User, result, [GroupNames.me]) : null;
   }
 
   @ApiBearerAuth()

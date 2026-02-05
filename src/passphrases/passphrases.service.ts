@@ -16,7 +16,7 @@ import { IPaginationOptions } from '../utils/types/pagination-options.type';
 import { Passphrase } from './domain/passphrase';
 import { JwtPayloadType } from '../auth/strategies/types/jwt-payload.type';
 import { PassphraseUserResponseDto } from './dto/passphrase-response.dto';
-import { plainToInstance } from 'class-transformer';
+import { GroupPlainToInstance } from '../utils/transformers/class.transformer';
 import {
   FilterPassphraseDto,
   SortPassphraseDto,
@@ -130,14 +130,14 @@ export class PassphrasesService {
       userJwtPayload.id,
     );
     return passphrases.map((passphrase) =>
-      plainToInstance(PassphraseUserResponseDto, passphrase),
+      GroupPlainToInstance(PassphraseUserResponseDto, passphrase),
     );
   }
 
   async findByUserId(userId: User['id']): Promise<PassphraseUserResponseDto[]> {
     const passphrases = await this.passphraseRepository.findByUserId(userId);
     return passphrases.map((passphrase) =>
-      plainToInstance(PassphraseUserResponseDto, passphrase),
+      GroupPlainToInstance(PassphraseUserResponseDto, passphrase),
     );
   }
 

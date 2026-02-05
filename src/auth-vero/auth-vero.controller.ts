@@ -5,8 +5,8 @@ import {
   HttpStatus,
   Patch,
   Post,
-  SerializeOptions,
   UseGuards,
+  SerializeOptions,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -27,6 +27,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../roles/roles.guard';
 import { User } from '../users/domain/user';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
+import {
+  GroupPlainToInstance,
+  GroupPlainToInstances,
+} from '../utils/transformers/class.transformer';
+import { SerializeGroups } from '../utils/transformers/enum.transformer';
+import { GroupNames } from '../utils/types/role-groups-const.type';
 
 @ApiTags('Auth')
 @Controller({
@@ -42,19 +48,18 @@ export class AuthVeroController {
   @ApiOkResponse({
     type: LoginResponseDto,
   })
-  @SerializeOptions({
-    groups: ['me'],
-  })
+  @SerializeOptions(SerializeGroups([GroupNames.me]))
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: AuthVeroLoginDto): Promise<LoginResponseDto> {
     const { profile, exp } =
       await this.authVeroService.getProfileByToken(loginDto);
-    return this.authService.validateSocialLogin(
+    const result = await this.authService.validateSocialLogin(
       AuthProvidersEnum.vero,
       profile,
       exp,
     );
+    return GroupPlainToInstance(LoginResponseDto, result, [GroupNames.me]);
   }
 
   @ApiBearerAuth()
@@ -63,13 +68,12 @@ export class AuthVeroController {
   @ApiCreatedResponse({
     type: User,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Post('/register')
   @HttpCode(HttpStatus.CREATED)
-  createUser(@Body() createDto: AuthVeroCreateDto): Promise<User> {
-    return this.authVeroService.createUser(createDto);
+  async createUser(@Body() createDto: AuthVeroCreateDto): Promise<User> {
+    const result = await this.authVeroService.createUser(createDto);
+    return GroupPlainToInstance(User, result, [RoleEnum.admin]);
   }
 
   @ApiBearerAuth()
@@ -79,15 +83,14 @@ export class AuthVeroController {
     type: User,
     isArray: true,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Post('/register/bulk')
   @HttpCode(HttpStatus.CREATED)
-  bulkCreateUsers(
+  async bulkCreateUsers(
     @Body() bulkCreateDto: AuthVeroBulkCreateDto,
   ): Promise<User[]> {
-    return this.authVeroService.bulkCreateUsers(bulkCreateDto);
+    const result = await this.authVeroService.bulkCreateUsers(bulkCreateDto);
+    return GroupPlainToInstances(User, result, [RoleEnum.admin]);
   }
 
   @ApiBearerAuth()
@@ -97,14 +100,13 @@ export class AuthVeroController {
     type: User,
     isArray: true,
   })
-  @SerializeOptions({
-    groups: ['admin'],
-  })
+  @SerializeOptions(SerializeGroups([RoleEnum.admin]))
   @Patch('/users/bulk')
   @HttpCode(HttpStatus.OK)
-  bulkUpdateUsers(
+  async bulkUpdateUsers(
     @Body() bulkUpdateDto: AuthVeroBulkUpdateDto,
   ): Promise<User[]> {
-    return this.authVeroService.bulkUpdateUsers(bulkUpdateDto);
+    const result = await this.authVeroService.bulkUpdateUsers(bulkUpdateDto);
+    return GroupPlainToInstances(User, result, [RoleEnum.admin]);
   }
 }
