@@ -7,9 +7,9 @@ import { RoleGroupsDict } from '../types/role-groups-const.type';
 export function GroupPlainToInstance<T, V>(
   cls: new () => T,
   data: V,
-  rolesOrGroups: Array<RoleEnum | string> = [],
+  roles: Array<RoleEnum | string> = [],
 ): T {
-  const groups = rolesOrGroups.map((role) => {
+  const groups = roles.map((role) => {
     if (typeof role === 'string') {
       return role;
     }
@@ -28,9 +28,9 @@ export function GroupPlainToInstance<T, V>(
 export function GroupPlainToInstances<T, V>(
   cls: new () => T,
   data: V[],
-  rolesOrGroups: Array<RoleEnum | string> = [],
+  roles: Array<RoleEnum | string> = [],
 ): T[] {
-  const groups = rolesOrGroups.map((role) => {
+  const groups = roles.map((role) => {
     if (typeof role === 'string') {
       return role;
     }
