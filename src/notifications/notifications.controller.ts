@@ -101,13 +101,14 @@ export class NotificationsController {
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
 
-    const result = await this.notificationsService.findAllByDeviceIdForMe(
-      deviceId,
-      req.user.id,
+    return infinityPagination(
+      await this.notificationsService.findAllByDeviceIdForMe(
+        deviceId,
+        req.user.id,
+        { page, limit },
+      ),
       { page, limit },
     );
-
-    return infinityPagination(result, { page, limit });
   }
 
   @Patch('me/device/:deviceId/read')
@@ -246,13 +247,14 @@ export class NotificationsController {
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
 
-    const result = await this.notificationsService.findManyWithPagination({
-      filterOptions: query.filters,
-      sortOptions: query.sort,
-      paginationOptions: { page, limit },
-    });
-
-    return infinityPagination(result, { page, limit });
+    return infinityPagination(
+      await this.notificationsService.findManyWithPagination({
+        filterOptions: query.filters,
+        sortOptions: query.sort,
+        paginationOptions: { page, limit },
+      }),
+      { page, limit },
+    );
   }
   @Get('device/:deviceId')
   @ApiOperationRoles('Get notifications by device ID', [RoleEnum.admin])
@@ -269,12 +271,13 @@ export class NotificationsController {
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
 
-    const result = await this.notificationsService.findAllByDeviceId(deviceId, {
-      page,
-      limit,
-    });
-
-    return infinityPagination(result, { page, limit });
+    return infinityPagination(
+      await this.notificationsService.findAllByDeviceId(deviceId, {
+        page,
+        limit,
+      }),
+      { page, limit },
+    );
   }
 
   @Get('device/:deviceId/unread')
@@ -292,11 +295,12 @@ export class NotificationsController {
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
 
-    const result = await this.notificationsService.findUnreadByDeviceId(
-      deviceId,
+    return infinityPagination(
+      await this.notificationsService.findUnreadByDeviceId(deviceId, {
+        page,
+        limit,
+      }),
       { page, limit },
     );
-
-    return infinityPagination(result, { page, limit });
   }
 }

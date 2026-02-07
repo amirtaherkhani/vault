@@ -26,6 +26,7 @@ import { StatusEnum } from '../statuses/statuses.enum';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';
 import { User } from '../users/domain/user';
+import { GroupPlainToInstances } from '../utils/transformers/class.transformer';
 
 @Injectable()
 export class AuthVeroService {
@@ -294,7 +295,9 @@ export class AuthVeroService {
       }`,
     );
 
-    return [...existingUsers, ...createdUsers];
+    return GroupPlainToInstances(User, [...existingUsers, ...createdUsers], [
+      RoleEnum.admin,
+    ]);
   }
 
   async bulkUpdateUsers(bulkUpdateDto: AuthVeroBulkUpdateDto): Promise<User[]> {
@@ -413,7 +416,9 @@ export class AuthVeroService {
       }`,
     );
 
-    return [...updatedUsers, ...untouched];
+    return GroupPlainToInstances(User, [...updatedUsers, ...untouched], [
+      RoleEnum.admin,
+    ]);
   }
 
   private normalizeNameValue(value?: string | null): string | undefined {

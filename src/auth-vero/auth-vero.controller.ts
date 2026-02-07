@@ -27,12 +27,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../roles/roles.guard';
 import { User } from '../users/domain/user';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
-import {
-  GroupPlainToInstance,
-  GroupPlainToInstances,
-} from '../utils/transformers/class.transformer';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
-import { GroupNames } from '../utils/types/role-groups-const.type';
 
 @ApiTags('Auth')
 @Controller({
@@ -48,18 +43,17 @@ export class AuthVeroController {
   @ApiOkResponse({
     type: LoginResponseDto,
   })
-  @SerializeOptions(SerializeGroups([GroupNames.me]))
+  @SerializeOptions(SerializeGroups([RoleEnum.user]))
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: AuthVeroLoginDto): Promise<LoginResponseDto> {
     const { profile, exp } =
       await this.authVeroService.getProfileByToken(loginDto);
-    const result = await this.authService.validateSocialLogin(
+    return this.authService.validateSocialLogin(
       AuthProvidersEnum.vero,
       profile,
       exp,
     );
-    return GroupPlainToInstance(LoginResponseDto, result, [GroupNames.me]);
   }
 
   @ApiBearerAuth()
@@ -72,8 +66,7 @@ export class AuthVeroController {
   @Post('/register')
   @HttpCode(HttpStatus.CREATED)
   async createUser(@Body() createDto: AuthVeroCreateDto): Promise<User> {
-    const result = await this.authVeroService.createUser(createDto);
-    return GroupPlainToInstance(User, result, [RoleEnum.admin]);
+    return await this.authVeroService.createUser(createDto);
   }
 
   @ApiBearerAuth()
@@ -89,8 +82,7 @@ export class AuthVeroController {
   async bulkCreateUsers(
     @Body() bulkCreateDto: AuthVeroBulkCreateDto,
   ): Promise<User[]> {
-    const result = await this.authVeroService.bulkCreateUsers(bulkCreateDto);
-    return GroupPlainToInstances(User, result, [RoleEnum.admin]);
+    return await this.authVeroService.bulkCreateUsers(bulkCreateDto);
   }
 
   @ApiBearerAuth()
@@ -106,7 +98,6 @@ export class AuthVeroController {
   async bulkUpdateUsers(
     @Body() bulkUpdateDto: AuthVeroBulkUpdateDto,
   ): Promise<User[]> {
-    const result = await this.authVeroService.bulkUpdateUsers(bulkUpdateDto);
-    return GroupPlainToInstances(User, result, [RoleEnum.admin]);
+    return await this.authVeroService.bulkUpdateUsers(bulkUpdateDto);
   }
 }

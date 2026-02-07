@@ -24,6 +24,8 @@ import { SocialInterface } from '../social/interfaces/social.interface';
 import { AuthRegisterLoginDto } from './dto/auth-register-login.dto';
 import { NullableType } from '../utils/types/nullable.type';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { RefreshResponseDto } from './dto/refresh-response.dto';
+import { GroupPlainToInstance } from '../utils/transformers/class.transformer';
 import { ConfigService } from '@nestjs/config';
 import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.type';
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
@@ -114,12 +116,14 @@ export class AuthService {
     );
     this.logger.log(`Email login - userId: ${user.id}`);
 
-    return {
+    const result = {
       refreshToken,
       token,
       tokenExpires,
       user,
     };
+
+    return GroupPlainToInstance(LoginResponseDto, result, [RoleEnum.user]);
   }
 
   async validateSocialLogin(
@@ -240,12 +244,14 @@ export class AuthService {
       `Social login [${authProvider.toUpperCase()}] - userId: ${user.id}`,
     );
 
-    return {
+    const result = {
       refreshToken,
       token: jwtToken,
       tokenExpires,
       user,
     };
+
+    return GroupPlainToInstance(LoginResponseDto, result, [RoleEnum.user]);
   }
 
   private normalizeNameValue(value?: string | null): string | undefined {
@@ -483,7 +489,8 @@ export class AuthService {
   }
 
   async me(userJwtPayload: JwtPayloadType): Promise<NullableType<User>> {
-    return this.usersService.findById(userJwtPayload.id);
+    const user = await this.usersService.findById(userJwtPayload.id);
+    return user ? GroupPlainToInstance(User, user, [RoleEnum.user]) : null;
   }
 
   async update(
@@ -580,12 +587,15 @@ export class AuthService {
 
     await this.usersService.update(userJwtPayload.id, userDto);
 
-    return this.usersService.findById(userJwtPayload.id);
+    const updated = await this.usersService.findById(userJwtPayload.id);
+    return updated
+      ? GroupPlainToInstance(User, updated, [RoleEnum.user])
+      : null;
   }
 
   async refreshToken(
     data: Pick<JwtRefreshPayloadType, 'sessionId' | 'hash'>,
-  ): Promise<Omit<LoginResponseDto, 'user'>> {
+  ): Promise<RefreshResponseDto> {
     const session = await this.sessionService.findById(data.sessionId);
 
     if (!session) {
@@ -620,11 +630,13 @@ export class AuthService {
       hash,
     });
 
-    return {
+    const result = {
       token,
       refreshToken,
       tokenExpires,
     };
+
+    return GroupPlainToInstance(RefreshResponseDto, result, [RoleEnum.user]);
   }
 
   async softDelete(user: User): Promise<void> {

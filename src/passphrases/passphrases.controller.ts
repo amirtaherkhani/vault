@@ -227,13 +227,14 @@ export class PassphrasesController {
     let limit = query?.limit ?? 10;
     if (limit > 50) limit = 50;
 
-    const result = await this.passphrasesService.findManyWithPagination({
-      filterOptions: query.filters,
-      sortOptions: query.sort,
-      paginationOptions: { page, limit },
-    });
-
-    return infinityPagination(result, { page, limit });
+    return infinityPagination(
+      await this.passphrasesService.findManyWithPagination({
+        filterOptions: query.filters,
+        sortOptions: query.sort,
+        paginationOptions: { page, limit },
+      }),
+      { page, limit },
+    );
   }
 
   @Get(':id')

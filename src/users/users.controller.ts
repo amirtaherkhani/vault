@@ -59,8 +59,11 @@ export class UsersController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createProfileDto: CreateUserDto): Promise<User> {
-    const result = await this.usersService.create(createProfileDto);
-    return GroupPlainToInstance(User, result, [RoleEnum.admin]);
+    return GroupPlainToInstance(
+      User,
+      await this.usersService.create(createProfileDto),
+      [RoleEnum.admin],
+    );
   }
 
   @ApiOkResponse({
@@ -102,8 +105,9 @@ export class UsersController {
     required: true,
   })
   async findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
-    const result = await this.usersService.findById(id);
-    return result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null;
+    return await this.usersService.findById(id).then((result) =>
+      result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
+    );
   }
 
   @ApiOkResponse({
@@ -121,8 +125,9 @@ export class UsersController {
     @Param('id') id: User['id'],
     @Body() updateProfileDto: UpdateUserDto,
   ): Promise<User | null> {
-    const result = await this.usersService.update(id, updateProfileDto);
-    return result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null;
+    return await this.usersService.update(id, updateProfileDto).then((result) =>
+      result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
+    );
   }
 
   @Delete(':id')

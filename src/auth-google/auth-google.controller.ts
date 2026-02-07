@@ -11,9 +11,8 @@ import { AuthService } from '../auth/auth.service';
 import { AuthGoogleService } from './auth-google.service';
 import { AuthGoogleLoginDto } from './dto/auth-google-login.dto';
 import { LoginResponseDto } from '../auth/dto/login-response.dto';
-import { GroupPlainToInstance } from '../utils/transformers/class.transformer';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
-import { GroupNames } from '../utils/types/role-groups-const.type';
+import { RoleEnum } from '../roles/roles.enum';
 
 @ApiTags('Auth')
 @Controller({
@@ -29,16 +28,15 @@ export class AuthGoogleController {
   @ApiOkResponse({
     type: LoginResponseDto,
   })
-  @SerializeOptions(SerializeGroups([GroupNames.me]))
+  @SerializeOptions(SerializeGroups([RoleEnum.user]))
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: AuthGoogleLoginDto): Promise<LoginResponseDto> {
     const socialData = await this.authGoogleService.getProfileByToken(loginDto);
 
-    const result = await this.authService.validateSocialLogin(
+    return this.authService.validateSocialLogin(
       'google',
       socialData,
     );
-    return GroupPlainToInstance(LoginResponseDto, result, [GroupNames.me]);
   }
 }
