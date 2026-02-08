@@ -54,6 +54,8 @@ import { CmcEnvironmentType } from './types/cmc-enum.type';
 
 @Injectable()
 export class CmcService extends BaseToggleableService implements OnModuleInit {
+  static readonly displayName = 'CoinMarketCap';
+
   private apiClient: Record<string, ApiFunction> = {};
   private baseUrl = '';
 
@@ -80,6 +82,14 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     super(
       CmcService.name,
       configService.get('cmc.enable', CMC_ENABLE, { infer: true }),
+      {
+        id: 'coinmarketcap',
+        displayName: CmcService.displayName,
+        configKey: 'cmc.enable',
+        envKey: 'CMC_ENABLE',
+        description: 'CoinMarketCap provider.',
+        tags: ['provider', 'crypto'],
+      },
     );
     if (apiClient) this.apiClient = apiClient;
   }

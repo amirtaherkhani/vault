@@ -12,6 +12,8 @@ import { buildAwsSecretsOptionsFromEnv } from 'src/config/aws-secrets-manager.co
 
 @Injectable()
 export class AwsSecretsManagerService extends BaseToggleableService {
+  static readonly displayName = 'AWS Secrets Manager';
+
   private readonly secretsConfig: AwsSecretsManagerConfig;
 
   constructor(private readonly configService: ConfigService<AllConfigType>) {
@@ -20,7 +22,14 @@ export class AwsSecretsManagerService extends BaseToggleableService {
         infer: true,
       }) ?? buildAwsSecretsOptionsFromEnv();
 
-    super(AwsSecretsManagerService.name, config.enable);
+    super(AwsSecretsManagerService.name, config.enable, {
+      id: 'aws-secrets-manager',
+      displayName: AwsSecretsManagerService.displayName,
+      configKey: 'awsSecretsManager.enable',
+      envKey: 'AWS_SECRETS_MANAGER_ENABLE',
+      description: 'AWS Secrets Manager integration.',
+      tags: ['Manager'],
+    });
     this.secretsConfig = config;
   }
 

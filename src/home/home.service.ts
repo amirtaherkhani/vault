@@ -32,6 +32,9 @@ export class HomeService {
     this._databaseType = this.configService.get('database.type', 'postgres', {
       infer: true,
     });
+    this._name = APP.name;
+    this._version = APP.version;
+    this._nodeEnv = APP.nodeEnv;
     this._nodeVersion = process.version;
     this._frameworkVersion = nestPkg.version;
 
@@ -121,6 +124,7 @@ export class HomeService {
   versionInfo() {
     return {
       app: this._version,
+      env: this._nodeEnv,
       node: this._nodeVersion,
       framework: this._frameworkVersion,
       os: os.release(),
@@ -141,6 +145,19 @@ export class HomeService {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
+    };
+  }
+
+  servicesInfo() {
+    const services = globalThis.SERVICES_STATUS.getAll();
+    const enabled = services.filter((service) => service.enabled).length;
+
+    return {
+      total: services.length,
+      enabled,
+      disabled: services.length - enabled,
+      timestamp: new Date().toISOString(),
+      services,
     };
   }
 

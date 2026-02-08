@@ -1,7 +1,5 @@
 
-
 ## [1.2.0](https://github.com/brocoders/nestjs-boilerplate/compare/1.1.0...1.2.0) (2024-06-05)
-
 
 ### Features
 
@@ -11,7 +9,6 @@
 * **resource:** generate for hexagonal architecture ([81b54b1](https://github.com/brocoders/nestjs-boilerplate/commit/81b54b10c9542abc9ff537e5ebbc4616e4c0de7a))
 * **swagger:** add DTOs to responses [#1504](https://github.com/brocoders/nestjs-boilerplate/issues/1504) ([0071202](https://github.com/brocoders/nestjs-boilerplate/commit/0071202a90e9071eeb217326fefec4eccab85550))
 * **tests:** add separated container ([16c9f0b](https://github.com/brocoders/nestjs-boilerplate/commit/16c9f0b671c1f249511dbe5a8b3f4655381e6510))
-
 
 ### Bug Fixes
 
@@ -70,7 +67,6 @@
 * **tests:** overriding .env file ([d9a7fd9](https://github.com/brocoders/nestjs-boilerplate/commit/d9a7fd9a5ff74491e629ea9c5fca1e66ecea316b))
 * **users:** emailAlreadyExists error in update function ([ab530c4](https://github.com/brocoders/nestjs-boilerplate/commit/ab530c4da7559bf2487698982799920a4d10e345))
 
-
 ### Documentation
 
 * **architecture:** add new page [#1512](https://github.com/brocoders/nestjs-boilerplate/issues/1512) ([726d978](https://github.com/brocoders/nestjs-boilerplate/commit/726d978296dee03de40a8fec6633ea4776172df8))
@@ -82,7 +78,6 @@
 * update .all-contributorsrc ([d523e26](https://github.com/brocoders/nestjs-boilerplate/commit/d523e2638a649817883c57971914cdeccdd04bde))
 * update README.md ([37af8e8](https://github.com/brocoders/nestjs-boilerplate/commit/37af8e8e9695b4d0db919fd461e6aa4a8dd3995f))
 
-
 ### Code Refactoring
 
 * correct optional properties ([c108a30](https://github.com/brocoders/nestjs-boilerplate/commit/c108a30bc36787501cdee22de6e223ecb37824da))
@@ -90,18 +85,15 @@
 * replace http exception ([9b38243](https://github.com/brocoders/nestjs-boilerplate/commit/9b382431e4c432f1f2bc286afc0893de7f13a6c7))
 * **repositories:** simplify ([2896589](https://github.com/brocoders/nestjs-boilerplate/commit/2896589f52d2df025f12069ba82ba4fac1db8ebd))
 
-
 ### Tests
 
 * **user:** add test for updating email ([3110e44](https://github.com/brocoders/nestjs-boilerplate/commit/3110e449350f2808dc374a4f1fbbd6bec96c7849))
-
 
 ### Continuous Integration
 
 * add database selection ([e0a4f32](https://github.com/brocoders/nestjs-boilerplate/commit/e0a4f32711e7b0e5c821d67be6e3c7504320dcfd))
 
 ## 1.1.0 (2024-02-25)
-
 
 ### Features
 
@@ -130,7 +122,6 @@
 * use confirmation with JWT tokens ([48c9694](https://github.com/brocoders/nestjs-boilerplate/commit/48c96946bf6a5f41b8b16eb1d11809a0fb1a36c1))
 * **users:** added filtration and sorting ([7d14369](https://github.com/brocoders/nestjs-boilerplate/commit/7d143696b9a645ea49d56dd6ec445caf8a4d4661))
 * **validation:** new logic ([fb9c6a6](https://github.com/brocoders/nestjs-boilerplate/commit/fb9c6a6add9b780ce0fc130222b07a95b513346d))
-
 
 ### Bug Fixes
 

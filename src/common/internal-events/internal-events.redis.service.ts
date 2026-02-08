@@ -17,6 +17,8 @@ export class InternalEventsRedisService
   extends BaseToggleableService
   implements OnModuleDestroy, OnModuleInit
 {
+  static readonly displayName = 'Internal Events Storage';
+
   private readonly client: Redis;
   private isConnected = false;
   private lastErrorMessage = '';
@@ -58,6 +60,14 @@ export class InternalEventsRedisService
         INTERNAL_EVENTS_DEFAULT_ENABLE,
         { infer: true },
       ),
+      {
+        id: 'internal-events-redis',
+        displayName: InternalEventsRedisService.displayName,
+        configKey: 'internalEvents.enable',
+        envKey: 'INTERNAL_EVENTS_ENABLE',
+        description: 'Internal events Redis stream client.',
+        tags: ['Event', 'Manager'],
+      },
     );
     this.loggerService.debug(
       `Internal events Redis retry configured step=${this.redisRetryStepMs}ms max=${this.redisRetryMaxMs}ms`,

@@ -39,6 +39,8 @@ import {
 
 @Injectable()
 export class SocketIoService extends BaseToggleableService {
+  static readonly displayName = 'Socket.IO';
+
   constructor(
     private readonly serverRef: SocketServerProvider,
     private readonly usersService: UsersService,
@@ -48,6 +50,14 @@ export class SocketIoService extends BaseToggleableService {
       SocketIoService.name,
       configService.get('socketIO.enable', { infer: true }) ??
         SOCKETIO_DEFAULT_ENABLE,
+      {
+        id: 'socket-io',
+        displayName: SocketIoService.displayName,
+        configKey: 'socketIO.enable',
+        envKey: 'SOCKETIO_ENABLE',
+        description: 'Socket.IO realtime transport.',
+        tags: ['comminitucaion'],
+      },
     );
   }
 

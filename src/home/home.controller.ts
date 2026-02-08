@@ -33,6 +33,7 @@ export class HomeController {
     schema: {
       example: {
         app: '1.2.0',
+        env: 'production',
         node: 'v22.17.0',
         framework: '11.1.2',
         os: '25.0.0',
@@ -79,6 +80,39 @@ export class HomeController {
   })
   healthInfo() {
     return this.service.healthInfo();
+  }
+
+  @Get('services')
+  @ApiOperation({
+    summary: 'List toggleable services',
+    description:
+      'Returns services that extend BaseToggleableService and their enabled status.',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: {
+        total: 3,
+        enabled: 2,
+        disabled: 1,
+        timestamp: '2024-06-01T12:00:00Z',
+        services: [
+          {
+            id: 'socket-io',
+            name: 'SocketIoService',
+            displayName: 'Socket.IO',
+            enabled: true,
+            updatedAt: '2024-06-01T12:00:00Z',
+            configKey: 'socketIO.enable',
+            envKey: 'SOCKETIO_ENABLE',
+            description: 'Socket.IO realtime transport.',
+            tags: ['comminitucaion'],
+          },
+        ],
+      },
+    },
+  })
+  servicesInfo() {
+    return this.service.servicesInfo();
   }
 
   @Get('config')

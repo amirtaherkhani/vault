@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import './common/globals/runtime/app-info.global';
+import './common/globals/runtime/services-status.global';
 import {
   ClassSerializerInterceptor,
   ValidationPipe,

@@ -25,12 +25,22 @@ export class MinioService
   extends BaseToggleableService
   implements OnModuleInit
 {
+  static readonly displayName = 'MinIO';
+
   private minioClient: Client;
 
   constructor(private readonly configService: ConfigService<AllConfigType>) {
     super(
       MinioService.name,
       configService.get('minIO.enable', { infer: true }) ?? false,
+      {
+        id: 'minio',
+        displayName: MinioService.displayName,
+        configKey: 'minIO.enable',
+        envKey: 'MINIO_ENABLE',
+        description: 'MinIO object storage.',
+        tags: ['storgae'],
+      },
     );
   }
 

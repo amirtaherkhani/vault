@@ -16,7 +16,7 @@ export class APIDocs {
 
     // Apply Swagger Theme
     const theme = new SwaggerTheme();
-    const swaggerThemeCSS = theme.getBuffer(SwaggerThemeNameEnum.CLASSIC); // Use a dark theme base
+    const swaggerThemeCSS = theme.getBuffer(SwaggerThemeNameEnum.DRACULA); // Use a dark theme base
     const customCss = `
     ${swaggerThemeCSS}
 
@@ -112,7 +112,7 @@ export class APIDocs {
     app.use(
       '/docs/reference',
       apiReference({
-        theme: ScalarThemeEnum.DeepSpace,
+        theme: ScalarThemeEnum.Kepler,
         spec: {
           content: document,
         },

@@ -37,6 +37,8 @@ export class FireblocksCwService
   extends BaseToggleableService
   implements OnModuleInit, OnModuleDestroy
 {
+  static readonly displayName = 'Fireblocks Custodial Wallet';
+
   @ConfigGetOrThrow('fireblocks.apiKey', { inferEnvVar: true })
   private readonly apiKey?: string;
 
@@ -128,6 +130,14 @@ export class FireblocksCwService
       configService.get('fireblocks.enable', FIREBLOCKS_CW_ENABLE, {
         infer: true,
       }),
+      {
+        id: 'fireblocks-cw',
+        displayName: FireblocksCwService.displayName,
+        configKey: 'fireblocks.enable',
+        envKey: 'FIREBLOCKS_CW_ENABLE',
+        description: 'Fireblocks custodial wallet provider.',
+        tags: ['provider', 'crypto'],
+      },
     );
     this.options = this.buildOptions();
     this.logger.log(

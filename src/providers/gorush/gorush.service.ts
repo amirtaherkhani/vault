@@ -42,6 +42,8 @@ export class GorushService
   extends BaseToggleableService
   implements OnModuleInit
 {
+  static readonly displayName = 'Gorush';
+
   private apiClient: Record<string, ApiFunction> = {};
 
   constructor(
@@ -52,6 +54,14 @@ export class GorushService
     super(
       GorushService.name,
       configService.get('gorush.enable', false, { infer: true }),
+      {
+        id: 'gorush',
+        displayName: GorushService.displayName,
+        configKey: 'gorush.enable',
+        envKey: 'GORUSH_ENABLE',
+        description: 'Gorush push notifications.',
+        tags: ['Alert', 'comminitucaion'],
+      },
     );
 
     if (apiClient) {

@@ -12,6 +12,8 @@ import { BaseToggleableService } from '../base/base-toggleable.service';
 
 @Injectable()
 export class InternalEventsService extends BaseToggleableService {
+  static readonly displayName = 'Event Manager';
+
   constructor(
     private readonly loggerService: LoggerService,
     private readonly configService: ConfigService<AllConfigType>,
@@ -23,6 +25,14 @@ export class InternalEventsService extends BaseToggleableService {
         INTERNAL_EVENTS_DEFAULT_ENABLE,
         { infer: true },
       ),
+      {
+        id: 'internal-events',
+        displayName: InternalEventsService.displayName,
+        configKey: 'internalEvents.enable',
+        envKey: 'INTERNAL_EVENTS_ENABLE',
+        description: 'Internal events outbox publisher.',
+        tags: ['Event'],
+      },
     );
   }
 
