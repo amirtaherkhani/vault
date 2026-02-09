@@ -1,4 +1,4 @@
-name: Sync public repo to org private repo
+name: Sync Private Repo
 
 on:
   push:
