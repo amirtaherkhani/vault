@@ -6,94 +6,86 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: sync-private-keep-workflows
-  cancel-in-progress: true
-
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     env:
-      SOURCE_REPO: https://github.com/amirtaherkhani/net-block.git
-      SOURCE_BRANCH: main
-      TARGET_BRANCH: main
+      SRC_REPO: https://github.com/amirtaherkhani/next-block.git
+      SRC_BRANCH: main
+      DST_BRANCH: main
       KEEP_PATH: .github/workflows
 
     steps:
-      - name: Checkout private target branch
-        uses: actions/checkout@v4
+      - name: Checkout private repo (light)
+        uses: actions/checkout@v3
         with:
-          ref: ${{ env.TARGET_BRANCH }}
-          fetch-depth: 0
-          fetch-tags: true
+          ref: ${{ env.DST_BRANCH }}
+          fetch-depth: 1
+          fetch-tags: false
 
-      - name: Configure git identity
+      - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fetch private origin and public source
+      - name: Fetch origin with retry
         run: |
-          git fetch --prune origin "${TARGET_BRANCH}"
+          set -e
+          for i in 1 2 3 4 5; do
+            git fetch --prune origin "${DST_BRANCH}" && break
+            echo "origin fetch failed attempt $i, retrying..."
+            sleep 10
+            if [ "$i" = "5" ]; then exit 1; fi
+          done
+
+      - name: Add/fetch public with retry
+        run: |
           if git remote get-url public >/dev/null 2>&1; then
-            git remote set-url public "${SOURCE_REPO}"
+            git remote set-url public "${SRC_REPO}"
           else
-            git remote add public "${SOURCE_REPO}"
-          fi
-          git fetch --prune public "${SOURCE_BRANCH}"
-          git fetch --prune --tags public
-
-      - name: Save private workflow files from origin/main
-        run: |
-          rm -rf /tmp/keep-workflows
-          mkdir -p /tmp/keep-workflows
-          # Extract private repo workflows as they exist in origin/main
-          if git ls-tree -r --name-only "origin/${TARGET_BRANCH}" | grep -q "^${KEEP_PATH}/"; then
-            git archive "origin/${TARGET_BRANCH}" "${KEEP_PATH}" | tar -x -C /tmp/keep-workflows
-            echo "Found and saved private workflows."
-          else
-            echo "No ${KEEP_PATH} in origin/${TARGET_BRANCH}; nothing to preserve."
+            git remote add public "${SRC_REPO}"
           fi
 
-      - name: Force reset branch to public source
-        run: |
-          git checkout "${TARGET_BRANCH}"
-          git reset --hard "public/${SOURCE_BRANCH}"
+          set -e
+          for i in 1 2 3 4 5; do
+            git fetch --prune public "${SRC_BRANCH}" && git fetch --prune --tags public && break
+            echo "public fetch failed attempt $i, retrying..."
+            sleep 10
+            if [ "$i" = "5" ]; then exit 1; fi
+          done
 
-      - name: Restore private workflow files
+      - name: Backup private workflows
         run: |
-          if [ -d "/tmp/keep-workflows/${KEEP_PATH}" ]; then
+          rm -rf /tmp/keep && mkdir -p /tmp/keep
+          if git ls-tree -r --name-only "origin/${DST_BRANCH}" | grep -q "^${KEEP_PATH}/"; then
+            git archive "origin/${DST_BRANCH}" "${KEEP_PATH}" | tar -x -C /tmp/keep
+          fi
+
+      - name: Reset to public
+        run: |
+          git checkout "${DST_BRANCH}"
+          git reset --hard "public/${SRC_BRANCH}"
+
+      - name: Restore private workflows
+        run: |
+          if [ -d "/tmp/keep/${KEEP_PATH}" ]; then
             mkdir -p "${KEEP_PATH}"
-            cp -R /tmp/keep-workflows/${KEEP_PATH}/. "${KEEP_PATH}/"
-            git add "${KEEP_PATH}"
-          fi
-
-          # If public has workflows not in private, remove them from index/worktree
-          # so final state matches private workflows only.
-          if [ -d "${KEEP_PATH}" ] && [ -d "/tmp/keep-workflows/${KEEP_PATH}" ]; then
-            find "${KEEP_PATH}" -type f | while read -r f; do
-              rel="${f#./}"
-              if [ ! -f "/tmp/keep-workflows/${rel}" ]; then
-                git rm -f -- "${rel}" || true
-              fi
-            done
-            # Ensure preserved files are staged
+            cp -R /tmp/keep/${KEEP_PATH}/. "${KEEP_PATH}/"
             git add "${KEEP_PATH}" || true
           fi
 
-      - name: Commit preserved workflow restoration (if needed)
+      - name: Commit if workflow files changed
         run: |
           if ! git diff --cached --quiet; then
-            git commit -m "chore(sync): preserve private .github/workflows while syncing from public"
-          else
-            echo "No workflow changes to commit."
+            git commit -m "chore(sync): keep private workflows"
           fi
 
-      - name: Force push target branch
+      - name: Force push branch
         run: |
-          git push --force origin "${TARGET_BRANCH}"
+          git push --force origin "${DST_BRANCH}"
 
-      - name: Sync tags from public (optional; remove if not needed)
+      - name: Sync tags
         run: |
           git push --force origin --tags
