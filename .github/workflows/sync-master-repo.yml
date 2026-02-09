@@ -2,15 +2,12 @@ name: Sync Master Repo
 
 on:
   workflow_dispatch:
-  # Optional schedule (UTC)
-  # schedule:
-  #   - cron: "*/30 * * * *"
 
 permissions:
   contents: write
 
 concurrency:
-  group: sync-private-main-tags
+  group: sync-private-keep-workflows
   cancel-in-progress: true
 
 jobs:
@@ -21,6 +18,7 @@ jobs:
       SOURCE_REPO: https://github.com/amirtaherkhani/net-block.git
       SOURCE_BRANCH: main
       TARGET_BRANCH: main
+      KEEP_PATH: .github/workflows
 
     steps:
       - name: Checkout private target branch
@@ -28,7 +26,6 @@ jobs:
         with:
           ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
-          # important: fetch tags from origin too
           fetch-tags: true
 
       - name: Configure git identity
@@ -36,77 +33,67 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add and fetch public remote (branch + tags)
+      - name: Fetch private origin and public source
         run: |
+          git fetch --prune origin "${TARGET_BRANCH}"
           if git remote get-url public >/dev/null 2>&1; then
             git remote set-url public "${SOURCE_REPO}"
           else
             git remote add public "${SOURCE_REPO}"
           fi
-
-          # Fetch source branch and tags
           git fetch --prune public "${SOURCE_BRANCH}"
           git fetch --prune --tags public
 
-      - name: Show before/after target SHAs
+      - name: Save private workflow files from origin/main
         run: |
-          echo "Private ${TARGET_BRANCH} before: $(git rev-parse --short HEAD)"
-          echo "Public  ${SOURCE_BRANCH} head: $(git rev-parse --short public/${SOURCE_BRANCH})"
+          rm -rf /tmp/keep-workflows
+          mkdir -p /tmp/keep-workflows
+          # Extract private repo workflows as they exist in origin/main
+          if git ls-tree -r --name-only "origin/${TARGET_BRANCH}" | grep -q "^${KEEP_PATH}/"; then
+            git archive "origin/${TARGET_BRANCH}" "${KEEP_PATH}" | tar -x -C /tmp/keep-workflows
+            echo "Found and saved private workflows."
+          else
+            echo "No ${KEEP_PATH} in origin/${TARGET_BRANCH}; nothing to preserve."
+          fi
 
-      - name: Force reset private branch to public branch
+      - name: Force reset branch to public source
         run: |
           git checkout "${TARGET_BRANCH}"
           git reset --hard "public/${SOURCE_BRANCH}"
+
+      - name: Restore private workflow files
+        run: |
+          if [ -d "/tmp/keep-workflows/${KEEP_PATH}" ]; then
+            mkdir -p "${KEEP_PATH}"
+            cp -R /tmp/keep-workflows/${KEEP_PATH}/. "${KEEP_PATH}/"
+            git add "${KEEP_PATH}"
+          fi
+
+          # If public has workflows not in private, remove them from index/worktree
+          # so final state matches private workflows only.
+          if [ -d "${KEEP_PATH}" ] && [ -d "/tmp/keep-workflows/${KEEP_PATH}" ]; then
+            find "${KEEP_PATH}" -type f | while read -r f; do
+              rel="${f#./}"
+              if [ ! -f "/tmp/keep-workflows/${rel}" ]; then
+                git rm -f -- "${rel}" || true
+              fi
+            done
+            # Ensure preserved files are staged
+            git add "${KEEP_PATH}" || true
+          fi
+
+      - name: Commit preserved workflow restoration (if needed)
+        run: |
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(sync): preserve private .github/workflows while syncing from public"
+          else
+            echo "No workflow changes to commit."
+          fi
 
       - name: Force push target branch
         run: |
           git push --force origin "${TARGET_BRANCH}"
 
-      - name: Sync tags (create/update tags)
+      - name: Sync tags from public (optional; remove if not needed)
         run: |
-          # Push all tags from local (which now includes public tags)
           git push --force origin --tags
-
-      - name: Delete tags on private that no longer exist on public
-        run: |
-          set -euo pipefail
-
-          # All tags currently on private origin
-          git ls-remote --tags --refs origin \
-            | awk '{print $2}' \
-            | sed 's#refs/tags/##' \
-            | sort > /tmp/origin_tags.txt
-
-          # Tags currently available from source public remote
-          git ls-remote --tags --refs public \
-            | awk '{print $2}' \
-            | sed 's#refs/tags/##' \
-            | sort > /tmp/public_tags.txt
-
-          # Tags to delete from private = origin - public
-          comm -23 /tmp/origin_tags.txt /tmp/public_tags.txt > /tmp/delete_tags.txt || true
-
-          if [ -s /tmp/delete_tags.txt ]; then
-            echo "Deleting tags from private that are absent in public:"
-            cat /tmp/delete_tags.txt
-            while IFS= read -r tag; do
-              git push origin ":refs/tags/${tag}"
-            done < /tmp/delete_tags.txt
-          else
-            echo "No stale private tags to delete."
-          fi
-
-      - name: Version summary
-        run: |
-          set -euo pipefail
-          echo "Current commit on private ${TARGET_BRANCH}: $(git rev-parse --short HEAD)"
-
-          latest_tag="$(git tag --sort=-v:refname | head -n 1 || true)"
-          if [ -n "${latest_tag}" ]; then
-            echo "Latest semantic/version-like tag after sync: ${latest_tag}"
-          else
-            echo "No tags found after sync."
-          fi
-
-          echo "Top 10 tags:"
-          git tag --sort=-v:refname | head -n 10 || true
