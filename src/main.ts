@@ -29,7 +29,6 @@ import {
 import { QueueDashManager } from './common/queuedash/queuedash.manager';
 import {
   APP_DEFAULT_DOCS_HOST,
-  APP_DEFAULT_DOCS_PATH,
   APP_DEFAULT_HEADER_LANGUAGE,
   APP_DEFAULT_PORT,
 } from './config/types/app-const.type';
@@ -77,15 +76,17 @@ async function bootstrap() {
   bootstrapQueueDash(app);
 
   // --- API Docs (Swagger/Scalar) configuration
-  const docsUrl = configService.get(
+  const swaggerPath = '/docs/swagger';
+  const docsPath = '/docs';
+  const rawDocsUrl = configService.get(
     'app.docsUrl',
-    `${APP_DEFAULT_DOCS_HOST}:${APP.port}${APP_DEFAULT_DOCS_PATH}`,
-    {
-      infer: true,
-    },
+    `${APP_DEFAULT_DOCS_HOST}:${APP.port}${swaggerPath}`,
+    { infer: true },
   );
-  const openApiJsonUrl = docsUrl
-    .replace(/\/docs\/?$/, '')
+  const swaggerUrl = rawDocsUrl.replace(/\/docs\/?$/, swaggerPath);
+  const docsUrl = swaggerUrl.replace(/\/docs\/swagger\/?$/, docsPath);
+  const openApiJsonUrl = swaggerUrl
+    .replace(/\/docs\/swagger\/?$/, '')
     .concat('/openapi.json');
 
   const builder = new DocumentBuilder()
@@ -93,8 +94,8 @@ async function bootstrap() {
     .setDescription(
       [
         '[![NestJS](https://img.shields.io/badge/nestjs-%23E0234E.svg?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)',
-        `[![Swagger](https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&logo=swagger&logoColor=white)](${docsUrl})`,
-        `[![ReadTheDocs](https://img.shields.io/badge/Readthedocs-%23000000.svg?style=for-the-badge&logo=readthedocs&logoColor=white)](${docsUrl.concat('/reference')})`,
+        `[![Swagger](https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&logo=swagger&logoColor=white)](${swaggerUrl})`,
+        `[![ReadTheDocs](https://img.shields.io/badge/Readthedocs-%23000000.svg?style=for-the-badge&logo=readthedocs&logoColor=white)](${docsUrl})`,
         `[![OpenAPI JSON](https://img.shields.io/badge/OpenAPI-Download%20JSON-6BA539?style=for-the-badge&logo=openapi-initiative&logoColor=white)](${openApiJsonUrl})`,
       ].join(' '),
     )

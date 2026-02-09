@@ -93,14 +93,14 @@ export class APIDocs {
     }
   `;
 
-    SwaggerModule.setup('/docs/api', app, document, {
+    SwaggerModule.setup('/docs/swagger', app, document, {
       customCss: customCss, // Apply theme styles
       explorer: true,
       customSiteTitle: `${APP.name} API`,
     });
 
     app.getHttpAdapter().get('/api-docs', (_req, res) => {
-      res.redirect('/docs/api');
+      res.redirect('/docs/swagger');
     });
 
     // Serve OpenAPI JSON
@@ -158,7 +158,7 @@ export class APIDocs {
     try {
       let appUrl = await app.getUrl();
       appUrl = appUrl.replace('[::1]', 'localhost');
-      this.logger.log(`[Swagger] Docs available at: ${appUrl}/docs/api`);
+      this.logger.log(`[Swagger] Docs available at: ${appUrl}/docs/swagger`);
       this.logger.log(`[API] Reference available at: ${appUrl}/docs`);
       this.logger.log(`[OpenAPI] JSON available at: ${appUrl}/openapi.json`);
     } catch (error: unknown) {
