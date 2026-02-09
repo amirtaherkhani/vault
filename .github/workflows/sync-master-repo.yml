@@ -1,0 +1,112 @@
+name: Sync Master Repo
+
+on:
+  workflow_dispatch:
+  # Optional schedule (UTC)
+  # schedule:
+  #   - cron: "*/30 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-private-main-tags
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    env:
+      SOURCE_REPO: https://github.com/amirtaherkhani/net-block.git
+      SOURCE_BRANCH: main
+      TARGET_BRANCH: main
+
+    steps:
+      - name: Checkout private target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          # important: fetch tags from origin too
+          fetch-tags: true
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add and fetch public remote (branch + tags)
+        run: |
+          if git remote get-url public >/dev/null 2>&1; then
+            git remote set-url public "${SOURCE_REPO}"
+          else
+            git remote add public "${SOURCE_REPO}"
+          fi
+
+          # Fetch source branch and tags
+          git fetch --prune public "${SOURCE_BRANCH}"
+          git fetch --prune --tags public
+
+      - name: Show before/after target SHAs
+        run: |
+          echo "Private ${TARGET_BRANCH} before: $(git rev-parse --short HEAD)"
+          echo "Public  ${SOURCE_BRANCH} head: $(git rev-parse --short public/${SOURCE_BRANCH})"
+
+      - name: Force reset private branch to public branch
+        run: |
+          git checkout "${TARGET_BRANCH}"
+          git reset --hard "public/${SOURCE_BRANCH}"
+
+      - name: Force push target branch
+        run: |
+          git push --force origin "${TARGET_BRANCH}"
+
+      - name: Sync tags (create/update tags)
+        run: |
+          # Push all tags from local (which now includes public tags)
+          git push --force origin --tags
+
+      - name: Delete tags on private that no longer exist on public
+        run: |
+          set -euo pipefail
+
+          # All tags currently on private origin
+          git ls-remote --tags --refs origin \
+            | awk '{print $2}' \
+            | sed 's#refs/tags/##' \
+            | sort > /tmp/origin_tags.txt
+
+          # Tags currently available from source public remote
+          git ls-remote --tags --refs public \
+            | awk '{print $2}' \
+            | sed 's#refs/tags/##' \
+            | sort > /tmp/public_tags.txt
+
+          # Tags to delete from private = origin - public
+          comm -23 /tmp/origin_tags.txt /tmp/public_tags.txt > /tmp/delete_tags.txt || true
+
+          if [ -s /tmp/delete_tags.txt ]; then
+            echo "Deleting tags from private that are absent in public:"
+            cat /tmp/delete_tags.txt
+            while IFS= read -r tag; do
+              git push origin ":refs/tags/${tag}"
+            done < /tmp/delete_tags.txt
+          else
+            echo "No stale private tags to delete."
+          fi
+
+      - name: Version summary
+        run: |
+          set -euo pipefail
+          echo "Current commit on private ${TARGET_BRANCH}: $(git rev-parse --short HEAD)"
+
+          latest_tag="$(git tag --sort=-v:refname | head -n 1 || true)"
+          if [ -n "${latest_tag}" ]; then
+            echo "Latest semantic/version-like tag after sync: ${latest_tag}"
+          else
+            echo "No tags found after sync."
+          fi
+
+          echo "Top 10 tags:"
+          git tag --sort=-v:refname | head -n 10 || true
