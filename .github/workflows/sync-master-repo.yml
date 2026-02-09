@@ -6,86 +6,119 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: sync-private-no-checkout
+  cancel-in-progress: true
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     env:
-      SRC_REPO: https://github.com/amirtaherkhani/next-block.git
-      SRC_BRANCH: main
-      DST_BRANCH: main
+      PUBLIC_OWNER: amirtaherkhani
+      PUBLIC_REPO: next-block
+      PUBLIC_BRANCH: main
+
+      PRIVATE_OWNER: Metapolitanltd
+      PRIVATE_REPO: VeroVaultBackend
+      PRIVATE_BRANCH: main
+
       KEEP_PATH: .github/workflows
 
     steps:
-      - name: Checkout private repo (light)
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ env.DST_BRANCH }}
-          fetch-depth: 1
-          fetch-tags: false
-
-      - name: Configure git
+      - name: Prepare workspace
         run: |
+          set -euo pipefail
+          mkdir -p /tmp/sync-work
+          cd /tmp/sync-work
+
+      - name: Download public source tarball (with retry)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/sync-work
+          url="https://api.github.com/repos/${PUBLIC_OWNER}/${PUBLIC_REPO}/tarball/${PUBLIC_BRANCH}"
+
+          for i in 1 2 3 4 5; do
+            if curl -fL \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "$url" -o public.tar.gz; then
+              break
+            fi
+            echo "public tarball download failed ($i/5), retrying in 8s..."
+            sleep 8
+            [ "$i" -lt 5 ] || exit 1
+          done
+
+          mkdir public
+          tar -xzf public.tar.gz -C public --strip-components=1
+
+      - name: Download private current branch tarball for workflow preservation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/sync-work
+          url="https://api.github.com/repos/${PRIVATE_OWNER}/${PRIVATE_REPO}/tarball/${PRIVATE_BRANCH}"
+
+          for i in 1 2 3 4 5; do
+            if curl -fL \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "$url" -o private.tar.gz; then
+              break
+            fi
+            echo "private tarball download failed ($i/5), retrying in 8s..."
+            sleep 8
+            [ "$i" -lt 5 ] || exit 1
+          done
+
+          mkdir private
+          tar -xzf private.tar.gz -C private --strip-components=1
+
+      - name: Build final tree (public + preserved private workflows)
+        run: |
+          set -euo pipefail
+          cd /tmp/sync-work
+
+          rm -rf final
+          mkdir -p final
+          cp -R public/. final/
+
+          if [ -d "private/${KEEP_PATH}" ]; then
+            mkdir -p "final/${KEEP_PATH}"
+            rm -rf "final/${KEEP_PATH}"
+            cp -R "private/${KEEP_PATH}" "final/${KEEP_PATH}"
+            echo "Preserved private workflows from private/${KEEP_PATH}"
+          else
+            echo "No private workflows found to preserve."
+          fi
+
+      - name: Commit and force-push to private main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd /tmp/sync-work/final
+
+          git init
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fetch origin with retry
-        run: |
-          set -e
+          git add -A
+          git commit -m "chore(sync): mirror public ${PUBLIC_OWNER}/${PUBLIC_REPO}@${PUBLIC_BRANCH} (preserve private workflows)" || echo "No changes to commit"
+
+          git branch -M "${PRIVATE_BRANCH}"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${PRIVATE_OWNER}/${PRIVATE_REPO}.git"
+
           for i in 1 2 3 4 5; do
-            git fetch --prune origin "${DST_BRANCH}" && break
-            echo "origin fetch failed attempt $i, retrying..."
+            if git push --force origin "${PRIVATE_BRANCH}"; then
+              break
+            fi
+            echo "push failed ($i/5), retrying in 10s..."
             sleep 10
-            if [ "$i" = "5" ]; then exit 1; fi
+            [ "$i" -lt 5 ] || exit 1
           done
-
-      - name: Add/fetch public with retry
-        run: |
-          if git remote get-url public >/dev/null 2>&1; then
-            git remote set-url public "${SRC_REPO}"
-          else
-            git remote add public "${SRC_REPO}"
-          fi
-
-          set -e
-          for i in 1 2 3 4 5; do
-            git fetch --prune public "${SRC_BRANCH}" && git fetch --prune --tags public && break
-            echo "public fetch failed attempt $i, retrying..."
-            sleep 10
-            if [ "$i" = "5" ]; then exit 1; fi
-          done
-
-      - name: Backup private workflows
-        run: |
-          rm -rf /tmp/keep && mkdir -p /tmp/keep
-          if git ls-tree -r --name-only "origin/${DST_BRANCH}" | grep -q "^${KEEP_PATH}/"; then
-            git archive "origin/${DST_BRANCH}" "${KEEP_PATH}" | tar -x -C /tmp/keep
-          fi
-
-      - name: Reset to public
-        run: |
-          git checkout "${DST_BRANCH}"
-          git reset --hard "public/${SRC_BRANCH}"
-
-      - name: Restore private workflows
-        run: |
-          if [ -d "/tmp/keep/${KEEP_PATH}" ]; then
-            mkdir -p "${KEEP_PATH}"
-            cp -R /tmp/keep/${KEEP_PATH}/. "${KEEP_PATH}/"
-            git add "${KEEP_PATH}" || true
-          fi
-
-      - name: Commit if workflow files changed
-        run: |
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(sync): keep private workflows"
-          fi
-
-      - name: Force push branch
-        run: |
-          git push --force origin "${DST_BRANCH}"
-
-      - name: Sync tags
-        run: |
-          git push --force origin --tags
