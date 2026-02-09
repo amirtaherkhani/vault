@@ -16,7 +16,7 @@ export class APIDocs {
 
     // Apply Swagger Theme
     const theme = new SwaggerTheme();
-    const swaggerThemeCSS = theme.getBuffer(SwaggerThemeNameEnum.DRACULA); // Use a dark theme base
+    const swaggerThemeCSS = theme.getBuffer(SwaggerThemeNameEnum.CLASSIC); // Use a dark theme base
     const customCss = `
     ${swaggerThemeCSS}
 
@@ -93,14 +93,14 @@ export class APIDocs {
     }
   `;
 
-    SwaggerModule.setup('/docs', app, document, {
+    SwaggerModule.setup('/docs/api', app, document, {
       customCss: customCss, // Apply theme styles
       explorer: true,
-      customSiteTitle: 'Next Block API',
+      customSiteTitle: `${APP.name} API`,
     });
 
     app.getHttpAdapter().get('/api-docs', (_req, res) => {
-      res.redirect('/docs');
+      res.redirect('/docs/api');
     });
 
     // Serve OpenAPI JSON
@@ -110,7 +110,7 @@ export class APIDocs {
 
     // Scalar API Reference Middleware
     app.use(
-      '/docs/reference',
+      '/docs',
       apiReference({
         theme: ScalarThemeEnum.Kepler,
         spec: {
@@ -158,8 +158,8 @@ export class APIDocs {
     try {
       let appUrl = await app.getUrl();
       appUrl = appUrl.replace('[::1]', 'localhost');
-      this.logger.log(`[Swagger] Docs available at: ${appUrl}/docs`);
-      this.logger.log(`[API] Reference available at: ${appUrl}/docs/reference`);
+      this.logger.log(`[Swagger] Docs available at: ${appUrl}/docs/api`);
+      this.logger.log(`[API] Reference available at: ${appUrl}/docs`);
       this.logger.log(`[OpenAPI] JSON available at: ${appUrl}/openapi.json`);
     } catch (error: unknown) {
       this.logger.error(
