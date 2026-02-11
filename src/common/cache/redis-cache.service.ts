@@ -235,7 +235,7 @@ export class RedisCacheService implements OnModuleInit, OnModuleDestroy {
   private safeRedisHost(): string | undefined {
     try {
       return new URL(this.config.redisUrl).hostname;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       return undefined;
     }

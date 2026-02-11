@@ -137,11 +137,9 @@ export class ApiClientFactory {
     const retryOnStatuses = retry?.retryOnStatuses ?? [
       408, 429, 500, 502, 503, 504,
     ];
-    const retryOnMethods = (retry?.retryOnMethods ?? [
-      'GET',
-      'HEAD',
-      'OPTIONS',
-    ]).map((value) => String(value).toUpperCase());
+    const retryOnMethods = (
+      retry?.retryOnMethods ?? ['GET', 'HEAD', 'OPTIONS']
+    ).map((value) => String(value).toUpperCase());
     const method = String(axiosCfg.method ?? 'GET').toUpperCase();
 
     for (let attempt = 0; attempt <= retries; attempt += 1) {

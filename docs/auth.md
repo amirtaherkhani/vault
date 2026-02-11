@@ -147,6 +147,8 @@ When external token mode is enabled, the client should:
 2. Call `POST /api/v1/auth/vero/login` with the Vero token.
 3. Reuse the same Vero token in the `Authorization: Bearer <token>` header for all protected APIs.
 
+For a full walkthrough of Vero login behavior, configuration flags, and response differences, see `docs/vero-login.md`.
+
 ## About JWT strategy
 
 In the `validate` method of the `src/auth/strategies/jwt.strategy.ts` file, you can see that we do not check if the user exists in the database because it is redundant, it may lose the benefits of the JWT approach and can affect the application performance.
@@ -177,6 +179,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 1. On sign in (`POST /api/v1/auth/email/login`) you will receive `token`, `tokenExpires` and `refreshToken` in response.
 1. On each regular request you need to send `token` in `Authorization` header.
 1. If `token` is expired (check with `tokenExpires` property on client app) you need to send `refreshToken` to `POST /api/v1/auth/refresh` in `Authorization` header to refresh `token`. You will receive new `token`, `tokenExpires` and `refreshToken` in response.
+
+For session management (listing, closing sessions, and device metadata), see `docs/sessions.md`.
 
 ### Video example
 

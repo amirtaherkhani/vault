@@ -125,6 +125,7 @@ export abstract class BaseToggleableService {
     meta?: ToggleableServiceMeta,
   ): Omit<ToggleableServiceMeta, 'id'> | undefined {
     if (!meta) return undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, ...rest } = meta;
     return Object.keys(rest).length > 0 ? rest : undefined;
   }

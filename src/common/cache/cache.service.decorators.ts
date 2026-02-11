@@ -30,11 +30,8 @@ export const CacheableMethod = (options: CacheOptions = {}) => {
         keyStrategy: 'args',
         ...options,
       };
-      const result = await cacheService.cached(
-        merged,
-        context,
-        args,
-        async () => original.apply(this, args),
+      const result = await cacheService.cached(merged, context, args, () =>
+        original.apply(this, args),
       );
       return result.value;
     };

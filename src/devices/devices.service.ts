@@ -32,7 +32,9 @@ export class DevicesService {
     private readonly deviceRepository: DeviceRepository,
   ) {}
 
-  async create(createDeviceDto: CreateDeviceDto): Promise<DeviceAdminResponseDto> {
+  async create(
+    createDeviceDto: CreateDeviceDto,
+  ): Promise<DeviceAdminResponseDto> {
     // Do not remove comment below.
     // <creating-property />
 
@@ -108,19 +110,21 @@ export class DevicesService {
   }: {
     paginationOptions: IPaginationOptions;
   }): Promise<DeviceAdminResponseDto[]> {
-    return this.deviceRepository.findAllWithPagination({
-      paginationOptions: {
-        page: paginationOptions.page,
-        limit: paginationOptions.limit,
-      },
-    }).then((devices) =>
-      GroupPlainToInstances(DeviceAdminResponseDto, devices, [RoleEnum.admin]),
-    );
+    return this.deviceRepository
+      .findAllWithPagination({
+        paginationOptions: {
+          page: paginationOptions.page,
+          limit: paginationOptions.limit,
+        },
+      })
+      .then((devices) =>
+        GroupPlainToInstances(DeviceAdminResponseDto, devices, [
+          RoleEnum.admin,
+        ]),
+      );
   }
 
-  async findById(
-    id: Device['id'],
-  ): Promise<DeviceAdminResponseDto | null> {
+  async findById(id: Device['id']): Promise<DeviceAdminResponseDto | null> {
     const device = await this.deviceRepository.findById(id);
     return device
       ? GroupPlainToInstance(DeviceAdminResponseDto, device, [RoleEnum.admin])
@@ -221,10 +225,7 @@ export class DevicesService {
     deviceToken: string,
     userJwtPayload: JwtPayloadType,
   ): Promise<DeviceUserResponseDto> {
-    const device = await this.requireDeviceForUser(
-      deviceId,
-      userJwtPayload.id,
-    );
+    const device = await this.requireDeviceForUser(deviceId, userJwtPayload.id);
     const updated = await this.deviceRepository.update(device.id, {
       deviceToken,
     });
@@ -238,10 +239,7 @@ export class DevicesService {
     isActive: boolean,
     userJwtPayload: JwtPayloadType,
   ): Promise<DeviceUserResponseDto> {
-    const device = await this.requireDeviceForUser(
-      deviceId,
-      userJwtPayload.id,
-    );
+    const device = await this.requireDeviceForUser(deviceId, userJwtPayload.id);
     const updated = await this.deviceRepository.update(device.id, {
       isActive,
     });
@@ -261,10 +259,10 @@ export class DevicesService {
   }): Promise<DeviceAdminResponseDto[]> {
     return this.deviceRepository
       .findManyWithPagination({
-      filterOptions,
-      sortOptions,
-      paginationOptions,
-    })
+        filterOptions,
+        sortOptions,
+        paginationOptions,
+      })
       .then((devices) =>
         GroupPlainToInstances(DeviceAdminResponseDto, devices, [
           RoleEnum.admin,

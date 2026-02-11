@@ -13,6 +13,9 @@ export class DynamicAuthGuard extends AuthGuard('jwt') {
   }
 
   private useExternalToken(): boolean {
-    return booleanValidator(process.env.AUTH_VERO_USE_EXTERNAL_TOKEN, false);
+    return (
+      booleanValidator(process.env.AUTH_VERO_USE_EXTERNAL_TOKEN, false) ||
+      booleanValidator(process.env.VERO_ENABLE_DYNAMIC_CACHE, false)
+    );
   }
 }

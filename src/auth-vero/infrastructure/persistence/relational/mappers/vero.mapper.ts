@@ -5,9 +5,7 @@ export class VeroPayloadMapper {
   mapPayloadToSocial(payload: any): SocialInterface {
     const fullName =
       payload?.fullname ?? payload?.fullName ?? payload?.name ?? undefined;
-    const [firstName, lastName] = fullName
-      ? String(fullName).split(' ')
-      : [];
+    const [firstName, lastName] = fullName ? String(fullName).split(' ') : [];
     const id =
       payload?.veroUserId ??
       payload?.userId ??

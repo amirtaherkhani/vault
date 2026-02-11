@@ -20,9 +20,9 @@ export class ValidateEnumTransformer implements PipeTransform {
   }
 }
 
-export function SerializeGroups(
-  groups: Array<RoleEnum | string>,
-): { groups: string[] } {
+export function SerializeGroups(groups: Array<RoleEnum | string>): {
+  groups: string[];
+} {
   const mapped = groups.map((group) => {
     if (typeof group === 'string') {
       return group;

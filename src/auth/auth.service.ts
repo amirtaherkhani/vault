@@ -35,6 +35,7 @@ import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
+import { SessionMetadata } from '../session/types/session-base.type';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';
@@ -50,7 +51,10 @@ export class AuthService {
     private configService: ConfigService<AllConfigType>,
   ) {}
 
-  async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
+  async validateLogin(
+    loginDto: AuthEmailLoginDto,
+    sessionMetadata?: SessionMetadata,
+  ): Promise<LoginResponseDto> {
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
@@ -99,10 +103,14 @@ export class AuthService {
       .update(randomStringGenerator())
       .digest('hex');
 
-    const session = await this.sessionService.create({
-      user,
-      hash,
-    });
+    const session = await this.sessionService.create(
+      {
+        user,
+        hash,
+        lastUsedAt: new Date(),
+      },
+      sessionMetadata,
+    );
 
     const { token, refreshToken, tokenExpires } = await this.getTokensData({
       id: user.id,
@@ -130,6 +138,7 @@ export class AuthService {
     authProvider: string,
     socialData: SocialInterface,
     externalExp?: number,
+    sessionMetadata?: SessionMetadata,
   ): Promise<LoginResponseDto> {
     let user: NullableType<User> = null;
     const socialEmail = socialData.email?.toLowerCase();
@@ -220,10 +229,14 @@ export class AuthService {
       .update(randomStringGenerator())
       .digest('hex');
 
-    const session = await this.sessionService.create({
-      user,
-      hash,
-    });
+    const session = await this.sessionService.create(
+      {
+        user,
+        hash,
+        lastUsedAt: new Date(),
+      },
+      sessionMetadata,
+    );
 
     const {
       token: jwtToken,
@@ -637,6 +650,16 @@ export class AuthService {
     };
 
     return GroupPlainToInstance(RefreshResponseDto, result, [RoleEnum.user]);
+  }
+
+  async refreshTokenFromUser(user?: {
+    sessionId?: Session['id'];
+    hash?: Session['hash'];
+  }): Promise<RefreshResponseDto> {
+    if (!user?.sessionId || !user.hash) {
+      throw new UnauthorizedException();
+    }
+    return this.refreshToken({ sessionId: user.sessionId, hash: user.hash });
   }
 
   async softDelete(user: User): Promise<void> {

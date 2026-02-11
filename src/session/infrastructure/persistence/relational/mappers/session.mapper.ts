@@ -11,6 +11,12 @@ export class SessionMapper {
       domainEntity.user = UserMapper.toDomain(raw.user);
     }
     domainEntity.hash = raw.hash;
+    domainEntity.deviceName = raw.deviceName;
+    domainEntity.deviceType = raw.deviceType;
+    domainEntity.appVersion = raw.appVersion;
+    domainEntity.country = raw.country;
+    domainEntity.city = raw.city;
+    domainEntity.lastUsedAt = raw.lastUsedAt;
     domainEntity.createdAt = raw.createdAt;
     domainEntity.updatedAt = raw.updatedAt;
     domainEntity.deletedAt = raw.deletedAt;
@@ -27,6 +33,12 @@ export class SessionMapper {
     }
     persistenceEntity.hash = domainEntity.hash;
     persistenceEntity.user = user;
+    persistenceEntity.deviceName = domainEntity.deviceName;
+    persistenceEntity.deviceType = domainEntity.deviceType;
+    persistenceEntity.appVersion = domainEntity.appVersion;
+    persistenceEntity.country = domainEntity.country;
+    persistenceEntity.city = domainEntity.city;
+    persistenceEntity.lastUsedAt = domainEntity.lastUsedAt;
     persistenceEntity.createdAt = domainEntity.createdAt;
     persistenceEntity.updatedAt = domainEntity.updatedAt;
     persistenceEntity.deletedAt = domainEntity.deletedAt;

@@ -13,7 +13,7 @@ import {
   BASE_VALUE_VERO_API_URL,
   BASE_VALUE_JWKS_URL,
   DEFAULT_JWKS_CACHE_MAX_AGE,
-} from '../types/vero-const.type';
+} from '../types/vero-auth-const.type';
 import {
   booleanValidator,
   numberValidator,

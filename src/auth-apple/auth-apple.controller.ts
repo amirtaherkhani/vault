@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -13,6 +14,7 @@ import { AuthAppleLoginDto } from './dto/auth-apple-login.dto';
 import { LoginResponseDto } from '../auth/dto/login-response.dto';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
 import { RoleEnum } from '../roles/roles.enum';
+import { extractSessionMetadata } from '../session/utils/session-metadata';
 
 @ApiTags('Auth')
 @Controller({
@@ -31,12 +33,17 @@ export class AuthAppleController {
   @SerializeOptions(SerializeGroups([RoleEnum.user]))
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: AuthAppleLoginDto): Promise<LoginResponseDto> {
+  async login(
+    @Body() loginDto: AuthAppleLoginDto,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ): Promise<LoginResponseDto> {
     const socialData = await this.authAppleService.getProfileByToken(loginDto);
 
     return this.authService.validateSocialLogin(
       'apple',
       socialData,
+      undefined,
+      extractSessionMetadata(headers),
     );
   }
 }

@@ -117,18 +117,6 @@ export class UsersRelationalRepository implements UserRepository {
     return entities.map((user) => UserMapper.toDomain(user));
   }
 
-  async findByVeroId(
-    veroId: User['veroId'],
-  ): Promise<NullableType<User>> {
-    if (!veroId) return null;
-
-    const entity = await this.usersRepository.findOne({
-      where: { veroId },
-    });
-
-    return entity ? UserMapper.toDomain(entity) : null;
-  }
-
   async findBySocialIdAndProvider({
     socialId,
     provider,

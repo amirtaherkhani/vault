@@ -28,6 +28,24 @@ export class SessionEntity extends EntityRelationalHelper {
   @Column()
   hash: string;
 
+  @Column({ type: String, nullable: true })
+  deviceName?: string | null;
+
+  @Column({ type: String, nullable: true })
+  deviceType?: string | null;
+
+  @Column({ type: String, nullable: true })
+  appVersion?: string | null;
+
+  @Column({ type: String, nullable: true })
+  country?: string | null;
+
+  @Column({ type: String, nullable: true })
+  city?: string | null;
+
+  @Column({ type: Date, nullable: true })
+  lastUsedAt?: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
