@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Patch,
@@ -23,11 +24,12 @@ import { AuthVeroBulkCreateDto } from './dto/auth-vero-bulk-create.dto';
 import { AuthVeroBulkUpdateDto } from './dto/auth-vero-bulk-update.dto';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
-import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../roles/roles.guard';
 import { User } from '../users/domain/user';
 import { AuthProvidersEnum } from '../auth/auth-providers.enum';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
+import { extractSessionMetadata } from '../session/utils/session-metadata';
 
 @ApiTags('Auth')
 @Controller({
@@ -46,19 +48,30 @@ export class AuthVeroController {
   @SerializeOptions(SerializeGroups([RoleEnum.user]))
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: AuthVeroLoginDto): Promise<LoginResponseDto> {
+  async login(
+    @Body() loginDto: AuthVeroLoginDto,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ): Promise<LoginResponseDto> {
+    const sessionMetadata = extractSessionMetadata(headers);
+    if (this.authVeroService.isExternalTokenMode()) {
+      return this.authVeroService.loginWithExternalToken(
+        loginDto,
+        sessionMetadata,
+      );
+    }
     const { profile, exp } =
       await this.authVeroService.getProfileByToken(loginDto);
     return this.authService.validateSocialLogin(
       AuthProvidersEnum.vero,
       profile,
       exp,
+      sessionMetadata,
     );
   }
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiCreatedResponse({
     type: User,
   })
@@ -71,7 +84,7 @@ export class AuthVeroController {
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiCreatedResponse({
     type: User,
     isArray: true,
@@ -87,7 +100,7 @@ export class AuthVeroController {
 
   @ApiBearerAuth()
   @Roles(RoleEnum.admin)
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @UseGuards(DynamicAuthGuard, RolesGuard)
   @ApiOkResponse({
     type: User,
     isArray: true,

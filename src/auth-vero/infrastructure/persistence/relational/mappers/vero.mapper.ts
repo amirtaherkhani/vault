@@ -3,11 +3,23 @@ import { SocialInterface } from '../../../../../social/interfaces/social.interfa
 
 export class VeroPayloadMapper {
   mapPayloadToSocial(payload: any): SocialInterface {
+    const fullName =
+      payload?.fullname ?? payload?.fullName ?? payload?.name ?? undefined;
+    const [firstName, lastName] = fullName
+      ? String(fullName).split(' ')
+      : [];
+    const id =
+      payload?.veroUserId ??
+      payload?.userId ??
+      payload?.uid ??
+      payload?.id ??
+      payload?.email ??
+      '';
     return {
-      id: payload.uid,
-      firstName: payload.fullname ? payload.fullname.split(' ')[0] : undefined,
-      lastName: payload.fullname ? payload.fullname.split(' ')[1] : undefined,
-      email: payload.email,
+      id: String(id),
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      email: payload?.email,
     };
   }
 }

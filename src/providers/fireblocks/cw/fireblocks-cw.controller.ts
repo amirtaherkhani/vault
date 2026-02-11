@@ -6,7 +6,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import { FireblocksCwService } from './fireblocks-cw.service';
 import { FireblocksCwStatusDto } from './dto/fireblocks-cw-responses.dto';
 import { RolesGuard } from '../../../roles/roles.guard';
@@ -18,10 +17,11 @@ import {
   RequireServiceReady,
 } from '../../../utils/decorators/service-toggleable.decorators';
 import { EnableGuard } from '../../../common/guards/service-enabled.guard';
+import { DynamicAuthGuard } from '../../../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Fireblocks-CW')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('fireblocks.enable')
 @RequireServiceReady(FireblocksCwService)
 @Controller({ version: '1' })

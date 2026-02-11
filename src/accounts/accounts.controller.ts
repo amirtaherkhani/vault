@@ -12,7 +12,6 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -47,10 +46,11 @@ import { Roles } from '../roles/roles.decorator';
 import { ApiOperationRoles } from '../utils/decorators/swagger.decorator';
 import { RequestWithUser } from '../utils/types/object.type';
 import { DisabledEndpoint } from '../utils/decorators/disabled-endpoint.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Accounts')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard)
 @Controller({
   path: 'accounts',
   version: '1',

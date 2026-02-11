@@ -23,7 +23,6 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
-import { AuthGuard } from '@nestjs/passport';
 
 import {
   InfinityPaginationResponse,
@@ -40,10 +39,11 @@ import {
   GroupPlainToInstances,
 } from '../utils/transformers/class.transformer';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiBearerAuth()
 @Roles(RoleEnum.admin)
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard)
 @ApiTags('Users')
 @Controller({
   path: 'users',
@@ -105,9 +105,11 @@ export class UsersController {
     required: true,
   })
   async findOne(@Param('id') id: User['id']): Promise<NullableType<User>> {
-    return await this.usersService.findById(id).then((result) =>
-      result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
-    );
+    return await this.usersService
+      .findById(id)
+      .then((result) =>
+        result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
+      );
   }
 
   @ApiOkResponse({
@@ -125,9 +127,11 @@ export class UsersController {
     @Param('id') id: User['id'],
     @Body() updateProfileDto: UpdateUserDto,
   ): Promise<User | null> {
-    return await this.usersService.update(id, updateProfileDto).then((result) =>
-      result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
-    );
+    return await this.usersService
+      .update(id, updateProfileDto)
+      .then((result) =>
+        result ? GroupPlainToInstance(User, result, [RoleEnum.admin]) : null,
+      );
   }
 
   @Delete(':id')

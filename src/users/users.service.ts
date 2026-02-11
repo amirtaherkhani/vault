@@ -135,6 +135,7 @@ export class UsersService {
       status: status,
       provider: createUserDto.provider ?? AuthProvidersEnum.email,
       socialId: createUserDto.socialId,
+      veroId: createUserDto.veroId,
     });
 
     await this.emitUserEvents([UserInternalEvent.created(createdUser)]);
@@ -172,6 +173,10 @@ export class UsersService {
 
   findBySocialId(socialId: User['socialId']): Promise<NullableType<User>> {
     return this.usersRepository.findBySocialId(socialId);
+  }
+
+  findByVeroId(veroId: User['veroId']): Promise<NullableType<User>> {
+    return this.usersRepository.findByVeroId(veroId);
   }
 
   findBySocialIds(socialIds: User['socialId'][]): Promise<User[]> {

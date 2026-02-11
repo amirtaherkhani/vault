@@ -20,7 +20,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AssetRegistry } from './domain/asset-registry';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -30,10 +29,11 @@ import { FindAllAssetRegistriesDto } from './dto/find-all-asset-registries.dto';
 import { RolesGuard } from '../roles/roles.guard';
 import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Asset-Registry')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard)
 @Roles(RoleEnum.admin)
 @Controller({
   path: 'asset-registries',

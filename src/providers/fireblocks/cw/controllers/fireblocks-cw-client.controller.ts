@@ -16,7 +16,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import { FireblocksCwClientService } from '../services/fireblocks-cw-client.service';
 import {
   CreateUserVaultRequestDto,
@@ -43,10 +42,11 @@ import {
 } from '../../../../utils/decorators/service-toggleable.decorators';
 import { EnableGuard } from '../../../../common/guards/service-enabled.guard';
 import { FireblocksCwService } from '../fireblocks-cw.service';
+import { DynamicAuthGuard } from '../../../../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Fireblocks CW [SERVICES-CLIENT]')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('fireblocks.enable')
 @RequireServiceReady(FireblocksCwService)
 @Controller({ path: 'vaults', version: '1' })

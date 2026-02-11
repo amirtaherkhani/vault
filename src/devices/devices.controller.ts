@@ -29,7 +29,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -45,12 +44,13 @@ import {
   DeviceUserResponseDto,
 } from './dto/device-response.dto';
 import { QueryDeviceDto } from './dto/query-device.dto';
-import { ApiOperationRoles } from '../utils/decorators/swagger.decorator';
-import { RoleEnum } from '../roles/roles.enum';
+import { DynamicAuthGuard } from 'src/auth/guards/dynamic-auth.guard';
+import { ApiOperationRoles } from 'src/utils/decorators/swagger.decorator';
+import { RoleEnum } from 'src/roles/roles.enum';
 
 @ApiTags('Devices')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Controller({
   path: 'devices',
   version: '1',

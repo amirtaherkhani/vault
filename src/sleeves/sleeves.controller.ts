@@ -22,7 +22,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Sleeves } from './domain/sleeves';
-import { AuthGuard } from '@nestjs/passport';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -35,10 +34,11 @@ import { ApiOperationRoles } from 'src/utils/decorators/swagger.decorator';
 import { SleevesDto } from './dto/sleeves.dto';
 import { FilterSleevesDto } from './dto/filter-sleeves.dto';
 import { Roles } from 'src/roles/roles.decorator';
+import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
 
 @ApiTags('Sleeves')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard)
 @Roles(RoleEnum.admin)
 @Controller({
   path: 'sleeves',

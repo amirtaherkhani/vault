@@ -10,6 +10,7 @@ import {
   Patch,
   Delete,
   SerializeOptions,
+  Headers,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -26,6 +27,8 @@ import { User } from '../users/domain/user';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { SerializeGroups } from '../utils/transformers/enum.transformer';
 import { RoleEnum } from '../roles/roles.enum';
+import { DynamicAuthGuard } from './guards/dynamic-auth.guard';
+import { extractSessionMetadata } from '../session/utils/session-metadata';
 
 @ApiTags('Auth')
 @Controller({
@@ -43,8 +46,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   public async login(
     @Body() loginDto: AuthEmailLoginDto,
+    @Headers() headers: Record<string, string | string[] | undefined>,
   ): Promise<LoginResponseDto> {
-    return await this.service.validateLogin(loginDto);
+    return await this.service.validateLogin(
+      loginDto,
+      extractSessionMetadata(headers),
+    );
   }
 
   @Post('email/register')
@@ -88,8 +95,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Get('me')
-  @UseGuards(AuthGuard('jwt'))
-  @SerializeOptions(SerializeGroups([RoleEnum.user]))
+  @UseGuards(DynamicAuthGuard)
   @ApiOkResponse({
     type: User,
   })
@@ -115,7 +121,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Post('logout')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   public async logout(@Request() request): Promise<void> {
     await this.service.logout({
@@ -125,8 +131,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Patch('me')
-  @UseGuards(AuthGuard('jwt'))
-  @SerializeOptions(SerializeGroups([RoleEnum.user]))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: User,
@@ -140,7 +145,7 @@ export class AuthController {
 
   @ApiBearerAuth()
   @Delete('me')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   public async delete(@Request() request): Promise<void> {
     return this.service.softDelete(request.user);

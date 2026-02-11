@@ -31,6 +31,8 @@ export class CreateUserDto {
 
   socialId?: string | null;
 
+  veroId?: string | null;
+
   @ApiProperty({ example: 'John', type: String })
   @IsNotEmpty()
   firstName: string | null;

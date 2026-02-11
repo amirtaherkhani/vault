@@ -1,25 +1,33 @@
 import {
   ForbiddenException,
+  HttpStatus,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import axios, { isAxiosError } from 'axios';
+import { createHash } from 'crypto';
 import jwksRsa, { JwksClient, RsaSigningKey } from 'jwks-rsa';
 import { AuthVeroLoginDto } from './dto/auth-vero-login.dto';
 import { AuthVeroCreateDto } from './dto/auth-vero-create.dto';
 import { AuthVeroBulkCreateDto } from './dto/auth-vero-bulk-create.dto';
 import { AuthVeroBulkUpdateDto } from './dto/auth-vero-bulk-update.dto';
-import { SocialInterface } from '../social/interfaces/social.interface';
+import type { SocialInterface } from '../social/interfaces/social.interface';
 import { VeroPayloadMapper } from './infrastructure/persistence/relational/mappers/vero.mapper';
 import { AllConfigType } from '../config/config.type';
 import {
+  BASE_VALUE_VERO_API_URL,
   BASE_VALUE_JWKS_URL,
+  DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS,
   DEFAULT_JWKS_CACHE_MAX_AGE,
   VERO_ENABLE_DYNAMIC_CACHE,
-} from './types/vero-const.type';
+  VERO_PROFILE_PATH,
+} from './types/vero-auth-const.type';
 import { UsersService } from '../users/users.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { StatusEnum } from '../statuses/statuses.enum';
@@ -27,6 +35,14 @@ import { AuthProvidersEnum } from '../auth/auth-providers.enum';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';
 import { User } from '../users/domain/user';
 import { GroupPlainToInstances } from '../utils/transformers/class.transformer';
+import { CacheService } from '../common/cache';
+import { SessionService } from '../session/session.service';
+import type { Session } from '../session/domain/session';
+import { SessionMetadata } from '../session/types/session-base.type';
+import type {
+  VeroProfileResult,
+  VeroTokenCacheEntry,
+} from './types/vero-auth-base.type';
 
 @Injectable()
 export class AuthVeroService {
@@ -35,12 +51,15 @@ export class AuthVeroService {
   private keyUsageCounter: number;
   private enableDynamicCache: boolean;
   private readonly logger = new Logger(AuthVeroService.name);
+  private readonly localTokenCache = new Map<string, VeroTokenCacheEntry>();
 
   constructor(
     private readonly configService: ConfigService<AllConfigType>,
     private jwtService: JwtService,
     private veroMapper: VeroPayloadMapper,
     private readonly usersService: UsersService,
+    private readonly sessionService: SessionService,
+    private readonly cacheService: CacheService,
   ) {
     const jwksUri =
       this.configService.get('vero.jwksUri', { infer: true }) ||
@@ -100,6 +119,117 @@ export class AuthVeroService {
 
     // Re-create the JwksClient with the updated cache duration
     this.jwksClient = this.createJwksClient(jwksUri, newCacheMaxAge);
+  }
+
+  isExternalTokenMode(): boolean {
+    return (
+      (this.configService.get('vero.useExternalToken', {
+        infer: true,
+      }) ??
+        false) ||
+      this.enableDynamicCache
+    );
+  }
+
+  private getVeroApiBaseUrl(): string {
+    return (
+      this.configService.get('vero.apiBaseUrl', { infer: true }) ??
+      BASE_VALUE_VERO_API_URL
+    );
+  }
+
+  private extractTokenExp(token: string): number | undefined {
+    const decoded = this.jwtService.decode(token) as { exp?: number } | null;
+    if (!decoded || typeof decoded.exp !== 'number') {
+      return undefined;
+    }
+    return decoded.exp;
+  }
+
+  private buildTokenCacheKey(token: string): string {
+    const hash = createHash('sha256').update(token).digest('hex');
+    return `vero:token:${hash}`;
+  }
+
+  private async createSessionForUser(
+    user: User,
+    metadata?: SessionMetadata,
+  ): Promise<Session> {
+    const hash = createHash('sha256')
+      .update(randomStringGenerator())
+      .digest('hex');
+    return this.sessionService.create(
+      {
+        user,
+        hash,
+        lastUsedAt: new Date(),
+      },
+      metadata,
+    );
+  }
+
+  private resolveCacheTtlSecondsFromExpiresAt(expiresAt: number): number {
+    const remainingSeconds = Math.ceil((expiresAt - Date.now()) / 1000);
+    if (remainingSeconds <= 0) {
+      return DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS;
+    }
+    return remainingSeconds;
+  }
+
+  private attachSessionToUser(
+    user: User,
+    sessionId?: Session['id'],
+  ): User & { sessionId?: Session['id'] } {
+    if (sessionId) {
+      (user as User & { sessionId?: Session['id'] }).sessionId = sessionId;
+    }
+    return user as User & { sessionId?: Session['id'] };
+  }
+
+  private async getCachedTokenEntry(
+    token: string,
+  ): Promise<VeroTokenCacheEntry | null> {
+    const key = this.buildTokenCacheKey(token);
+    if (this.cacheService.isEnabled()) {
+      const entry = await this.cacheService.get<VeroTokenCacheEntry>(key);
+      return entry?.value ?? null;
+    }
+
+    const cached = this.localTokenCache.get(key);
+    if (!cached) {
+      return null;
+    }
+    if (cached.expiresAt <= Date.now()) {
+      this.localTokenCache.delete(key);
+      return null;
+    }
+    return cached;
+  }
+
+  private async setCachedTokenEntry(
+    token: string,
+    entry: VeroTokenCacheEntry,
+    ttlSeconds: number,
+  ): Promise<void> {
+    const key = this.buildTokenCacheKey(token);
+    if (this.cacheService.isEnabled()) {
+      await this.cacheService.set(key, entry, ttlSeconds);
+      return;
+    }
+
+    this.localTokenCache.set(key, entry);
+  }
+
+  private resolveTokenCacheTtlSeconds(exp?: number): number {
+    if (!exp) {
+      return DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS;
+    }
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const remaining = exp - nowSeconds;
+    if (remaining <= 0) {
+      return DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS;
+    }
+    return Math.min(remaining, DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS);
   }
 
   private async getKey(header: {
@@ -170,6 +300,299 @@ export class AuthVeroService {
     const exp = decodedToken.exp;
     const profile = this.veroMapper.mapPayloadToSocial(decodedToken);
     return { profile, exp };
+  }
+
+  async getProfileFromExternalToken(token: string): Promise<VeroProfileResult> {
+    const profilePayload = await this.fetchVeroProfile(token);
+    const profile = this.veroMapper.mapPayloadToSocial(profilePayload);
+    const exp = this.extractTokenExp(token);
+    return { profile, exp, rawProfile: profilePayload };
+  }
+
+  private async getProfileFromVerifiedToken(
+    token: string,
+  ): Promise<VeroProfileResult> {
+    const decodedToken = await this.verifyToken(token);
+    const profile = this.veroMapper.mapPayloadToSocial(decodedToken);
+    const exp = decodedToken?.exp;
+    return { profile, exp, rawProfile: decodedToken };
+  }
+
+  async loginWithExternalToken(
+    loginDto: AuthVeroLoginDto,
+    sessionMetadata?: SessionMetadata,
+  ): Promise<{
+    token: string;
+    refreshToken: string;
+    tokenExpires: number;
+    user: User;
+  }> {
+    const { profile, exp, rawProfile } = this.enableDynamicCache
+      ? await this.getProfileFromVerifiedToken(loginDto.veroToken)
+      : await this.getProfileFromExternalToken(loginDto.veroToken);
+    const user = await this.resolveUserFromVeroProfile(profile, rawProfile);
+    const identity = this.resolveVeroIdentity(profile, rawProfile);
+    const cached = await this.getCachedTokenEntry(loginDto.veroToken);
+    let sessionId = cached?.sessionId;
+    if (!sessionId) {
+      const session = await this.createSessionForUser(user, sessionMetadata);
+      sessionId = session.id;
+    } else if (sessionMetadata) {
+      const updates: Partial<Session> = {
+        lastUsedAt: new Date(),
+      };
+      if (sessionMetadata.deviceName) {
+        updates.deviceName = sessionMetadata.deviceName;
+      }
+      if (sessionMetadata.deviceType) {
+        updates.deviceType = sessionMetadata.deviceType;
+      }
+      if (sessionMetadata.appVersion) {
+        updates.appVersion = sessionMetadata.appVersion;
+      }
+      if (sessionMetadata.country) {
+        updates.country = sessionMetadata.country;
+      }
+      if (sessionMetadata.city) {
+        updates.city = sessionMetadata.city;
+      }
+      await this.sessionService.update(sessionId, updates);
+    }
+    const ttlSeconds = cached
+      ? this.resolveCacheTtlSecondsFromExpiresAt(cached.expiresAt)
+      : this.resolveTokenCacheTtlSeconds(exp);
+    const expiresAt =
+      cached?.expiresAt ?? (exp ? exp * 1000 : Date.now() + ttlSeconds * 1000);
+    await this.setCachedTokenEntry(
+      loginDto.veroToken,
+      {
+        internalUserId: user.id,
+        veroIdentity: identity,
+        expiresAt,
+        sessionId,
+      },
+      ttlSeconds,
+    );
+    const tokenExpires = exp ? exp * 1000 : 0;
+    return {
+      token: loginDto.veroToken,
+      refreshToken: '',
+      tokenExpires,
+      user,
+    };
+  }
+
+  async resolveUserFromExternalToken(
+    token: string,
+    options: { attachSession?: boolean } = {},
+  ): Promise<User & { sessionId?: Session['id'] }> {
+    if (!this.isExternalTokenMode()) {
+      throw new UnauthorizedException('Vero external token auth is disabled.');
+    }
+
+    const attachSession = options.attachSession ?? true;
+    const cached = await this.getCachedTokenEntry(token);
+    if (cached) {
+      const cachedUser = await this.usersService.findById(
+        cached.internalUserId,
+      );
+      if (cachedUser) {
+        let sessionId = cached.sessionId;
+        if (!sessionId) {
+          const session = await this.createSessionForUser(cachedUser);
+          sessionId = session.id;
+          const ttlSeconds = this.resolveCacheTtlSecondsFromExpiresAt(
+            cached.expiresAt,
+          );
+          await this.setCachedTokenEntry(
+            token,
+            {
+              ...cached,
+              sessionId,
+            },
+            ttlSeconds,
+          );
+        }
+        return attachSession
+          ? this.attachSessionToUser(cachedUser, sessionId)
+          : cachedUser;
+      }
+    }
+
+    const { profile, exp, rawProfile } = this.enableDynamicCache
+      ? await this.getProfileFromVerifiedToken(token)
+      : await this.getProfileFromExternalToken(token);
+    const user = await this.resolveUserFromVeroProfile(profile, rawProfile);
+    const identity = this.resolveVeroIdentity(profile, rawProfile);
+    const session = await this.createSessionForUser(user);
+    const ttlSeconds = this.resolveTokenCacheTtlSeconds(exp);
+    const expiresAt = exp ? exp * 1000 : Date.now() + ttlSeconds * 1000;
+    await this.setCachedTokenEntry(
+      token,
+      {
+        internalUserId: user.id,
+        veroIdentity: identity,
+        expiresAt,
+        sessionId: session.id,
+      },
+      ttlSeconds,
+    );
+    return attachSession ? this.attachSessionToUser(user, session.id) : user;
+  }
+
+  private async fetchVeroProfile(token: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `${this.getVeroApiBaseUrl()}${VERO_PROFILE_PATH}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          timeout: 5000,
+        },
+      );
+      return response.data?.data ?? response.data;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        const status = error.response?.status;
+        if (status && status >= 400 && status < 500) {
+          throw new UnauthorizedException('Invalid Vero token.');
+        }
+      }
+      throw new ServiceUnavailableException('Unable to validate Vero token.');
+    }
+  }
+
+  private resolveVeroIdentity(
+    profile: SocialInterface,
+    rawProfile: any,
+  ): { socialId?: string; email?: string | null } {
+    const email = profile.email?.toLowerCase() ?? null;
+    const preferredId =
+      rawProfile?.veroUserId ??
+      rawProfile?.userId ??
+      rawProfile?.uid ??
+      rawProfile?.id ??
+      profile.id;
+    const normalizedId =
+      preferredId && String(preferredId).trim()
+        ? String(preferredId).trim()
+        : undefined;
+    const resolvedId = normalizedId ?? email ?? undefined;
+    return {
+      socialId: resolvedId ? String(resolvedId) : undefined,
+      email,
+    };
+  }
+
+  private async resolveUserFromVeroProfile(
+    profile: SocialInterface,
+    rawProfile: any,
+  ): Promise<User> {
+    const identity = this.resolveVeroIdentity(profile, rawProfile);
+    const socialEmail = identity.email;
+    const socialId = identity.socialId;
+
+    let user: User | null = null;
+    let userByEmail: User | null = null;
+
+    if (socialEmail) {
+      userByEmail = await this.usersService.findByEmail(socialEmail);
+    }
+
+    if (socialId) {
+      user = await this.usersService.findBySocialIdAndProvider({
+        socialId,
+        provider: AuthProvidersEnum.vero,
+      });
+    }
+
+    if (user) {
+      const updates: Partial<User> = {};
+      const emailBelongsToAnotherUser =
+        userByEmail && userByEmail.id !== user.id;
+
+      if (
+        socialEmail &&
+        !emailBelongsToAnotherUser &&
+        user.email?.toLowerCase() !== socialEmail
+      ) {
+        updates.email = socialEmail;
+      }
+
+      const firstNameUpdate = this.resolveNameUpdate(
+        user.firstName,
+        profile.firstName,
+      );
+      const lastNameUpdate = this.resolveNameUpdate(
+        user.lastName,
+        profile.lastName,
+      );
+
+      if (firstNameUpdate) {
+        updates.firstName = firstNameUpdate;
+      }
+      if (lastNameUpdate) {
+        updates.lastName = lastNameUpdate;
+      }
+
+      if (socialId && user.socialId !== socialId) {
+        updates.socialId = socialId;
+      }
+      if (user.provider !== AuthProvidersEnum.vero) {
+        updates.provider = AuthProvidersEnum.vero;
+      }
+
+      if (Object.keys(updates).length) {
+        await this.usersService.update(user.id, updates);
+        user = await this.usersService.findById(user.id);
+      }
+    } else if (userByEmail) {
+      const updates: Partial<User> = {};
+      if (socialId && userByEmail.socialId !== socialId) {
+        updates.socialId = socialId;
+      }
+      if (userByEmail.provider !== AuthProvidersEnum.vero) {
+        updates.provider = AuthProvidersEnum.vero;
+      }
+
+      if (Object.keys(updates).length) {
+        await this.usersService.update(userByEmail.id, updates);
+        user = await this.usersService.findById(userByEmail.id);
+      } else {
+        user = userByEmail;
+      }
+    } else if (socialId || socialEmail) {
+      const role = {
+        id: RoleEnum.user,
+      };
+      const status = {
+        id: StatusEnum.active,
+      };
+
+      const createdUser = await this.usersService.create({
+        email: socialEmail ?? null,
+        firstName: this.normalizeNameValue(profile.firstName) ?? null,
+        lastName: this.normalizeNameValue(profile.lastName) ?? null,
+        socialId: socialId ?? null,
+        provider: AuthProvidersEnum.vero,
+        role,
+        status,
+      });
+
+      user = await this.usersService.findById(createdUser.id);
+    }
+
+    if (!user) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          user: 'userNotFound',
+        },
+      });
+    }
+
+    return user;
   }
 
   async createUser(createDto: AuthVeroCreateDto): Promise<User> {
@@ -295,9 +718,11 @@ export class AuthVeroService {
       }`,
     );
 
-    return GroupPlainToInstances(User, [...existingUsers, ...createdUsers], [
-      RoleEnum.admin,
-    ]);
+    return GroupPlainToInstances(
+      User,
+      [...existingUsers, ...createdUsers],
+      [RoleEnum.admin],
+    );
   }
 
   async bulkUpdateUsers(bulkUpdateDto: AuthVeroBulkUpdateDto): Promise<User[]> {
@@ -416,9 +841,11 @@ export class AuthVeroService {
       }`,
     );
 
-    return GroupPlainToInstances(User, [...updatedUsers, ...untouched], [
-      RoleEnum.admin,
-    ]);
+    return GroupPlainToInstances(
+      User,
+      [...updatedUsers, ...untouched],
+      [RoleEnum.admin],
+    );
   }
 
   private normalizeNameValue(value?: string | null): string | undefined {
