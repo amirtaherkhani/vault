@@ -55,5 +55,5 @@ services:
 
 networks:
   default:
-    name: next-block-net
+    name: vault-net
     external: true

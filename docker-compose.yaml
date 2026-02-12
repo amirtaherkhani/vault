@@ -1,12 +1,12 @@
-name: next-block
+name: vault
 
 services:
   postgres:
     image: postgres:17.6-alpine
-    container_name: next-block-postgres
+    container_name: vault-postgres
     restart: unless-stopped
     networks:
-      - next-block-net
+      - vault-net
     ports:
       - "${DATABASE_PORT:-5432}:5432"
     environment:
@@ -18,7 +18,7 @@ services:
       PGDATA: "/var/lib/postgresql/17/docker"
     volumes:
       # For Postgres 18+ the recommended mount target is /var/lib/postgresql (not /data).
-      - next-block-postgres-data:/var/lib/postgresql
+      - vault-postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -h 127.0.0.1"]
       interval: 5s
@@ -27,14 +27,14 @@ services:
 
   redis:
     image: redis:8.4-alpine
-    container_name: next-block-redis
+    container_name: vault-redis
     restart: unless-stopped
     networks:
-      - next-block-net
+      - vault-net
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - next-block-redis-data:/data
+      - vault-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -43,27 +43,27 @@ services:
 
   maildev:
     image: maildev/maildev:2.2.1
-    container_name: next-block-maildev
+    container_name: vault-maildev
     restart: unless-stopped
     networks:
-      - next-block-net
+      - vault-net
     ports:
       - "${MAIL_CLIENT_PORT:-1080}:1080"
       - "${MAIL_PORT:-1025}:1025"
 
   pgadmin:
     image: dpage/pgadmin4:9.8.0
-    container_name: next-block-pgadmin
+    container_name: vault-pgadmin
     restart: unless-stopped
     networks:
-      - next-block-net
+      - vault-net
     ports:
       - "${PGADMIN_PORT:-8888}:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: "${PGADMIN_DEFAULT_EMAIL:-admin@example.com}"
       PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_DEFAULT_PASSWORD:-Q7r9T3pL}"
     volumes:
-      - next-block-pgadmin-data:/var/lib/pgadmin
+      - vault-pgadmin-data:/var/lib/pgadmin
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,11 +72,11 @@ services:
     build:
       context: .
       dockerfile: relational.test.Dockerfile
-    container_name: next-block-app
-    hostname: next-block-app
+    container_name: vault-app
+    hostname: vault-app
     restart: unless-stopped
     networks:
-      - next-block-net
+      - vault-net
     ports:
       - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     env_file:
@@ -91,11 +91,11 @@ services:
 
 
 volumes:
-  next-block-postgres-data:
-  next-block-redis-data:
-  next-block-pgadmin-data:
+  vault-postgres-data:
+  vault-redis-data:
+  vault-pgadmin-data:
 
 networks:
-  next-block-net:
-    name: next-block-net
+  vault-net:
+    name: vault-net
     external: true

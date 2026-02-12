@@ -124,7 +124,7 @@ export class HomeController {
   @ApiOkResponse({
     schema: {
       example: {
-        name: 'next-block',
+        name: 'vault',
         version: '1.0.0',
         env: 'production',
         databaseType: 'PostgreSQL',

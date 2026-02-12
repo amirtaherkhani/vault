@@ -17,7 +17,7 @@ jobs:
 
     env:
       PUBLIC_OWNER: amirtaherkhani
-      PUBLIC_REPO: next-block
+      PUBLIC_REPO: vault
       PUBLIC_BRANCH: main
 
       PRIVATE_OWNER: Metapolitanltd

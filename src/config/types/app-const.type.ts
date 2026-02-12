@@ -1,4 +1,4 @@
-export const APP_DEFAULT_NAME: string = 'the next-block';
+export const APP_DEFAULT_NAME: string = 'vault';
 export const APP_DEFAULT_PORT: number = 3000;
 export const APP_DEFAULT_BACKEND_DOMAIN: string = 'http://localhost';
 export const APP_DEFAULT_API_PREFIX: string = 'api';
