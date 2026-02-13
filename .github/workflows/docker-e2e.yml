@@ -34,7 +34,7 @@ jobs:
 
       # <database-relational-block>
       - name: Prepare relational env file
-        run: cp env-example-relational .env
+        run: bash docker/scripts/ensure-env.sh
 
       - name: Ensure shared docker network exists
         run: docker network inspect vault-net >/dev/null 2>&1 || docker network create vault-net

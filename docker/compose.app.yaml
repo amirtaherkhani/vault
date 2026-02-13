@@ -7,8 +7,8 @@ services:
       dockerfile: "${APP_DOCKERFILE:-docker/Dockerfile.app}"
     restart: "${APP_RESTART_POLICY:-unless-stopped}"
     env_file:
-      - ../env-example-relational
       - ../.env
+      - ../env-example-relational
     environment:
       DATABASE_HOST: "${DOCKER_DATABASE_HOST:-postgres}"
       MAIL_HOST: "${DOCKER_MAIL_HOST:-maildev}"
