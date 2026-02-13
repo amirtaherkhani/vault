@@ -1,0 +1,61 @@
+name: vault-dependencies
+
+services:
+  postgres:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    networks:
+      vault-net:
+        aliases:
+          - postgres
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "${DATABASE_USERNAME:-postgres}"
+      POSTGRES_PASSWORD: "${DATABASE_PASSWORD:-postgres}"
+      POSTGRES_DB: "${DATABASE_NAME:-vault}"
+      PGDATA: "/var/lib/postgresql/data"
+    volumes:
+      - vault-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -h 127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8.4-alpine
+    restart: unless-stopped
+    networks:
+      vault-net:
+        aliases:
+          - redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - vault-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  maildev:
+    image: maildev/maildev:2.2.1
+    restart: unless-stopped
+    networks:
+      vault-net:
+        aliases:
+          - maildev
+    ports:
+      - "${MAIL_CLIENT_PORT:-1080}:1080"
+      - "${MAIL_PORT:-1025}:1025"
+
+volumes:
+  vault-postgres-data:
+  vault-redis-data:
+
+networks:
+  vault-net:
+    external: true
+    name: "${VAULT_DOCKER_NETWORK:-vault-net}"

@@ -1,0 +1,18 @@
+FROM node:24-alpine
+
+RUN apk add --no-cache bash
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+COPY docker/scripts/wait-for-it.sh /opt/wait-for-it.sh
+COPY docker/scripts/start-ci.sh /opt/start-ci.sh
+RUN if [ ! -f .env ]; then cp env-example-relational .env; fi \
+  && chmod +x /opt/wait-for-it.sh /opt/start-ci.sh \
+  && sed -i 's/\r$//' /opt/wait-for-it.sh /opt/start-ci.sh \
+  && npm run build
+
+CMD ["/opt/start-ci.sh"]

@@ -1,10 +1,27 @@
 name: Docker E2E Test
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch or ref to test (e.g. main, feature/my-branch, refs/heads/main)
+        required: false
+        default: main
+
+concurrency:
+  group: docker-e2e-${{ github.event.pull_request.number || github.event.inputs.branch || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -12,26 +29,37 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || github.ref }}
 
       # <database-relational-block>
+      - name: Prepare relational env file
+        run: cp env-example-relational .env
+
+      - name: Ensure shared docker network exists
+        run: docker network inspect vault-net >/dev/null 2>&1 || docker network create vault-net
+
+      - name: Start relational dependencies
+        run: docker compose --env-file .env -f docker/compose.dependencies.yaml -p ci-relational-deps up -d
+
       - name: Run e2e tests for NestJS with TypeORM
         id: relational
-        run: docker compose -f docker-compose.relational.ci.yaml --env-file env-example-relational -p ci-relational up --build --exit-code-from api
+        env:
+          APP_DOCKERFILE: docker/Dockerfile.ci
+          APP_COMMAND: /opt/start-ci.sh
+          APP_RESTART_POLICY: "no"
+        run: docker compose --env-file .env -f docker/compose.app.yaml -p ci-relational-app up --build --abort-on-container-exit --exit-code-from app
 
       - name: Copy prod.log from container to host
         if: ${{ failure() && steps.relational.conclusion == 'failure' }}
-        run: docker cp ci-relational-api-1:/usr/src/app/prod.log .
+        run: docker cp ci-relational-app-app-1:/usr/src/app/prod.log .
+
+      - name: Stop relational docker services
+        if: always()
+        run: |
+          docker compose --env-file .env -f docker/compose.app.yaml -p ci-relational-app down -v || true
+          docker compose --env-file .env -f docker/compose.dependencies.yaml -p ci-relational-deps down -v || true
       # </database-relational-block>
-
-      # <database-document-block>
-      - name: Run e2e tests for NestJS with Mongoose
-        id: document
-        run: docker compose -f docker-compose.document.ci.yaml --env-file env-example-document -p ci-document up --build --exit-code-from api
-
-      - name: Copy prod.log from container to host
-        if: ${{ failure() && steps.document.conclusion == 'failure' }}
-        run: docker cp ci-document-api-1:/usr/src/app/prod.log .
-      # </database-document-block>
 
       - name: Upload prod.log to artifacts for debugging
         if: failure()
