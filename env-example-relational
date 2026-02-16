@@ -13,6 +13,8 @@ BACKEND_DOMAIN=http://localhost:3000
 ########################################
 # Database
 ########################################
+# When running Nest locally (`npm run start:dev`) while Postgres runs in Docker,
+# use DATABASE_HOST=localhost in your local `.env`.
 DATABASE_TYPE=postgres
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
@@ -257,3 +259,16 @@ AWS_SQS_POLL_INTERVAL=3000
 AWS_SQS_MAX_MESSAGES=10
 AWS_SQS_VISIBILITY_TIMEOUT=30
 AWS_SQS_WAIT_TIME_SECONDS=10
+
+
+########################################
+# Striga (HMAC API)
+########################################
+STRIGA_ENABLE=false
+STRIGA_APPLICATION_ID=
+STRIGA_API_KEY=
+STRIGA_API_SECRET=
+STRIGA_UI_SECRET=
+STRIGA_BASE_URL=https://www.sandbox.striga.com/api/v1
+STRIGA_REQUEST_TIMEOUT_MS=10000
+STRIGA_MAX_RETRIES=2

@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/require-await */
-import { ParsedWebhookEvent, TestWebhookInput } from '../webhook.type';
+import {
+  ParsedWebhookEvent,
+  TestWebhookInput,
+  WebhookParseContext,
+} from '../webhook.type';
 
 export const TestWebhookHandler = {
   /**
@@ -12,6 +16,8 @@ export const TestWebhookHandler = {
     body: TestWebhookInput,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     headers: Record<string, any>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    context?: WebhookParseContext,
   ): Promise<ParsedWebhookEvent> {
     const type = typeof body.event === 'string' ? body.event : 'TEST_EVENT';
     const data =

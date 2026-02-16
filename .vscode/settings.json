@@ -15,10 +15,13 @@
     "MAXLEN",
     "mhdw",
     "Ohlcv",
+    "PAYIN",
     "pgadmin",
     "PGDATA",
     "Redlock",
+    "SEPA",
     "smembers",
+    "Striga",
     "Upserting",
     "XREADGROUP"
   ]

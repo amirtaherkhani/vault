@@ -16,6 +16,7 @@ import { FireblocksConfig } from '../providers/fireblocks/cw/config/fireblocks-c
 import { QueueDashConfig } from '../common/queuedash/config/queuedash-config.type';
 import { InternalEventsConfig } from '../common/internal-events/config/internal-events-config.type';
 import { CacheConfig } from '../common/cache/config/cache-config.type';
+import { StrigaConfig } from '../providers/striga/config/striga-config.type';
 
 export type AllConfigType = {
   app: AppConfig;
@@ -36,4 +37,5 @@ export type AllConfigType = {
   queuedash: QueueDashConfig;
   internalEvents: InternalEventsConfig;
   cache: CacheConfig;
+  striga: StrigaConfig;
 };

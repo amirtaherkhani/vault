@@ -23,7 +23,14 @@ export class WebhooksModule implements NestModule, OnModuleInit {
   private readonly logger = new Logger(WebhooksModule.name);
 
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(webhookCorsMiddleware).forRoutes('api/webhooks/:provider');
+    consumer
+      .apply(webhookCorsMiddleware)
+      .forRoutes(
+        'api/webhooks/:provider',
+        'api/webhooks/:provider/:webhookPath',
+        'api/webhooks/:provider/:webhookPath/:webhookSubPath',
+        'api/webhooks/:provider/:webhookPath/:webhookSubPath/:webhookTail',
+      );
   }
 
   onModuleInit() {
@@ -31,7 +38,7 @@ export class WebhooksModule implements NestModule, OnModuleInit {
 
     this.logger.log('Webhook system initialized');
     this.logger.debug(
-      `Listening for ${chalk.bold.green('POST')} requests on: ${chalk.cyanBright('/api/webhooks/:provider')}`,
+      `Listening for ${chalk.bold.green('POST')} requests on: ${chalk.cyanBright('/api/webhooks/:provider[/...]')}`,
     );
     this.logger.debug(
       `Supported providers: ${chalk.yellow(providerList.join(', '))}`,

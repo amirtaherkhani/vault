@@ -3,10 +3,21 @@ export interface TestWebhookInput {
   payload?: Record<string, any>;
 }
 
+export interface StrigaWebhookInput extends Record<string, any> {
+  event?: string;
+  type?: string;
+  status?: string;
+}
+
+export interface WebhookParseContext {
+  path?: string;
+}
+
 export interface WebhookHandler {
   parse: (
     body: any,
     headers: Record<string, any>,
+    context?: WebhookParseContext,
   ) => Promise<{
     type: string;
     data: Record<string, any>;
