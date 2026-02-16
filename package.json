@@ -42,8 +42,10 @@
     "docker:dev:app:up": "bash docker/scripts/dev-compose.sh up docker/compose.app.yaml -d --build",
     "docker:dev:deps:down": "bash docker/scripts/dev-compose.sh down docker/compose.dependencies.yaml -v",
     "docker:dev:app:down": "bash docker/scripts/dev-compose.sh down docker/compose.app.yaml -v",
+    "docker:dev:deps:restart": "bash docker/scripts/dev-compose.sh restart docker/compose.dependencies.yaml",
+    "docker:dev:app:restart": "bash docker/scripts/dev-compose.sh restart docker/compose.app.yaml",
     "docker:dev:stop": "bash docker/scripts/dev-compose.sh stop docker/compose.app.yaml && bash docker/scripts/dev-compose.sh stop docker/compose.dependencies.yaml",
-    "docker:dev:restart": "bash docker/scripts/dev-compose.sh restart docker/compose.dependencies.yaml && bash docker/scripts/dev-compose.sh restart docker/compose.app.yaml",
+    "docker:dev:restart": "npm run docker:dev:deps:restart && npm run docker:dev:app:restart",
     "postinstall": "husky"
   },
   "dependencies": {
