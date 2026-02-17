@@ -21,9 +21,14 @@ esac
 
 "${SCRIPT_DIR}/ensure-env.sh"
 
-if [[ "${ACTION}" == "up" ]]; then
+if [[ "${ACTION}" == "up" || "${ACTION}" == "restart" ]]; then
   docker network inspect "${VAULT_DOCKER_NETWORK:-vault-net}" >/dev/null 2>&1 || \
     docker network create "${VAULT_DOCKER_NETWORK:-vault-net}"
 fi
 
-docker compose --env-file .env --env-file env-example-relational -f "${COMPOSE_FILE}" "${ACTION}" "$@"
+if [[ "${ACTION}" == "restart" ]]; then
+  # Recreate containers so env-file changes are applied.
+  docker compose --env-file env-example-relational --env-file .env -f "${COMPOSE_FILE}" up -d --force-recreate "$@"
+else
+  docker compose --env-file env-example-relational --env-file .env -f "${COMPOSE_FILE}" "${ACTION}" "$@"
+fi

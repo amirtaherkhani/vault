@@ -34,7 +34,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "env-cmd --no-override jest --config ./test/jest-e2e.json",
-    "test:e2e:relational:docker": "bash -lc 'bash docker/scripts/ensure-env.sh; docker network inspect ${VAULT_DOCKER_NETWORK:-vault-net} >/dev/null 2>&1 || docker network create ${VAULT_DOCKER_NETWORK:-vault-net}; docker compose --env-file .env --env-file env-example-relational -f docker/compose.dependencies.yaml -p tests-deps up -d; APP_DOCKERFILE=docker/Dockerfile.ci APP_COMMAND=/opt/start-ci.sh APP_RESTART_POLICY=no docker compose --env-file .env --env-file env-example-relational -f docker/compose.app.yaml -p tests-app up --build --abort-on-container-exit --exit-code-from app; EXIT_CODE=$?; docker compose --env-file .env --env-file env-example-relational -f docker/compose.app.yaml -p tests-app down -v; docker compose --env-file .env --env-file env-example-relational -f docker/compose.dependencies.yaml -p tests-deps down -v; exit $EXIT_CODE'",
+    "test:e2e:relational:docker": "bash -lc 'bash docker/scripts/ensure-env.sh; docker network inspect ${VAULT_DOCKER_NETWORK:-vault-net} >/dev/null 2>&1 || docker network create ${VAULT_DOCKER_NETWORK:-vault-net}; docker compose --env-file env-example-relational --env-file .env -f docker/compose.dependencies.yaml -p tests-deps up -d; APP_DOCKERFILE=docker/Dockerfile.ci APP_COMMAND=/opt/start-ci.sh APP_RESTART_POLICY=no docker compose --env-file env-example-relational --env-file .env -f docker/compose.app.yaml -p tests-app up --build --abort-on-container-exit --exit-code-from app; EXIT_CODE=$?; docker compose --env-file env-example-relational --env-file .env -f docker/compose.app.yaml -p tests-app down -v; docker compose --env-file env-example-relational --env-file .env -f docker/compose.dependencies.yaml -p tests-deps down -v; exit $EXIT_CODE'",
     "release": "release-it",
     "generate:secret-key": "ts-node -r tsconfig-paths/register ./src/utils/scripts/generator.script.ts secret",
     "generate:password": "ts-node -r tsconfig-paths/register ./src/utils/scripts/generator.script.ts password",
@@ -46,6 +46,7 @@
     "docker:dev:app:restart": "bash docker/scripts/dev-compose.sh restart docker/compose.app.yaml",
     "docker:dev:stop": "bash docker/scripts/dev-compose.sh stop docker/compose.app.yaml && bash docker/scripts/dev-compose.sh stop docker/compose.dependencies.yaml",
     "docker:dev:restart": "npm run docker:dev:deps:restart && npm run docker:dev:app:restart",
+    "docker:dev:refresh": "bash scripts/prod-bootstrap.sh",
     "postinstall": "husky"
   },
   "dependencies": {

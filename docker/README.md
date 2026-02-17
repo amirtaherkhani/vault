@@ -11,18 +11,16 @@ This project uses two Compose files and two Dockerfiles:
 
 Docker compose now resolves variables from env files in this order:
 
-1. `.env`
-2. `env-example-relational`
+1. `env-example-relational`
+2. `.env` (overrides defaults)
 
 This order is used consistently by the Docker commands in this project.
 
-Inside Docker, connection endpoints are forced to Docker service DNS defaults:
+Inside Docker, connection values resolve with this priority:
 
-- `DATABASE_HOST=postgres`
-- `MAIL_HOST=maildev`
-- Redis URLs -> `redis://redis:6379/*`
-
-You can override these via optional `DOCKER_*` environment variables.
+1. `DOCKER_*` variables (if provided)
+2. standard app variables from env files (for example `DATABASE_HOST`, `MAIL_HOST`, `REDIS_*`)
+3. Docker-safe defaults (`postgres`, `maildev`, `redis://redis:6379/*`)
 
 ## Local Docker Run
 
@@ -93,12 +91,12 @@ npm run docker:dev:deps:down
 | `npm run docker:dev:deps:down` | Stops dependencies and removes dependency volumes | Uses `down -v` |
 | `npm run docker:dev:app:down` | Stops app and removes app compose volumes | Uses `down -v` |
 | `npm run docker:dev:stop` | Stops app and dependencies without removing volumes | Equivalent to `compose stop` for app then deps |
-| `npm run docker:dev:restart` | Restarts dependencies first, then app | Equivalent to `compose restart` |
+| `npm run docker:dev:restart` | Recreates dependencies first, then app | Equivalent to `compose up -d --force-recreate` |
 
 All four commands use env precedence:
 
-1. `.env`
-2. `env-example-relational`
+1. `env-example-relational`
+2. `.env` (overrides defaults)
 
 ## Docker E2E Test Run
 

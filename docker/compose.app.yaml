@@ -7,18 +7,18 @@ services:
       dockerfile: "${APP_DOCKERFILE:-docker/Dockerfile.app}"
     restart: "${APP_RESTART_POLICY:-unless-stopped}"
     env_file:
-      - ../.env
       - ../env-example-relational
+      - ../.env
     environment:
-      DATABASE_HOST: "${DOCKER_DATABASE_HOST:-postgres}"
-      MAIL_HOST: "${DOCKER_MAIL_HOST:-maildev}"
-      REDIS_SESSION_URL: "${DOCKER_REDIS_SESSION_URL:-redis://redis:6379/1}"
-      REDIS_RATE_LIMIT_URL: "${DOCKER_REDIS_RATE_LIMIT_URL:-redis://redis:6379/2}"
-      REDIS_WORKER_URL: "${DOCKER_REDIS_WORKER_URL:-redis://redis:6379/4}"
-      REDIS_URL: "${DOCKER_REDIS_URL:-redis://redis:6379}"
-      CACHE_REDIS_URL: "${DOCKER_CACHE_REDIS_URL:-redis://redis:6379/0}"
-      INTERNAL_EVENTS_REDIS_URL: "${DOCKER_INTERNAL_EVENTS_REDIS_URL:-redis://redis:6379/5}"
-      QUEUEDASH_REDIS_URL: "${DOCKER_QUEUEDASH_REDIS_URL:-redis://redis:6379}"
+      DATABASE_HOST: "${DOCKER_DATABASE_HOST:-${DATABASE_HOST:-postgres}}"
+      MAIL_HOST: "${DOCKER_MAIL_HOST:-${MAIL_HOST:-maildev}}"
+      REDIS_SESSION_URL: "${DOCKER_REDIS_SESSION_URL:-${REDIS_SESSION_URL:-redis://redis:6379/1}}"
+      REDIS_RATE_LIMIT_URL: "${DOCKER_REDIS_RATE_LIMIT_URL:-${REDIS_RATE_LIMIT_URL:-redis://redis:6379/2}}"
+      REDIS_WORKER_URL: "${DOCKER_REDIS_WORKER_URL:-${REDIS_WORKER_URL:-redis://redis:6379/4}}"
+      REDIS_URL: "${DOCKER_REDIS_URL:-${REDIS_URL:-redis://redis:6379}}"
+      CACHE_REDIS_URL: "${DOCKER_CACHE_REDIS_URL:-${CACHE_REDIS_URL:-redis://redis:6379/0}}"
+      INTERNAL_EVENTS_REDIS_URL: "${DOCKER_INTERNAL_EVENTS_REDIS_URL:-${INTERNAL_EVENTS_REDIS_URL:-redis://redis:6379/5}}"
+      QUEUEDASH_REDIS_URL: "${DOCKER_QUEUEDASH_REDIS_URL:-${QUEUEDASH_REDIS_URL:-redis://redis:6379}}"
     ports:
       - "${APP_PORT:-3000}:${APP_PORT:-3000}"
     command: "${APP_COMMAND:-/opt/start-app.sh}"
