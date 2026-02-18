@@ -11,7 +11,7 @@ export class Account {
     type: () => String,
     nullable: true,
   })
-  customerRefId: string | null;
+  customerRefId!: string | null;
 
   @ApiProperty({
     type: () => String,

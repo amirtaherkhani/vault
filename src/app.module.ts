@@ -69,8 +69,11 @@ import { SleevesModule } from './sleeves/sleeves.module';
 import { AssetRegistriesModule } from './asset-registries/asset-registries.module';
 import { CacheModule } from './common/cache/cache.module';
 
+import { StrigaUsersModule } from './providers/striga/striga-users/striga-users.module';
+
 @Module({
   imports: [
+    StrigaUsersModule,
     AssetRegistriesModule,
     AssetRegistriesModule,
     SleevesModule,

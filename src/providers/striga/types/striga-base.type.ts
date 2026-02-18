@@ -4,14 +4,34 @@ export type StrigaPathParamValue = string | number | boolean;
 
 export type StrigaPathParams = Record<string, StrigaPathParamValue>;
 
-export type StrigaEndpointName =
-  | 'ping'
-  | 'getUserById'
-  | 'createUser'
-  | 'createWallet'
-  | 'updateUser'
-  | 'getUserByEmail'
-  | 'startKyc';
+const STRIGA_ENDPOINT_NAMES = [
+  'ping',
+  'getUserById',
+  'createUser',
+  'createAccount',
+  'updateUser',
+  'updateVerifiedCredentials',
+  'getUserByEmail',
+  'verifyEmail',
+  'resendEmail',
+  'verifyMobile',
+  'resendSms',
+  'startKyc',
+] as const;
+
+function createKeyMirror<const T extends readonly string[]>(
+  keys: T,
+): { readonly [K in T[number]]: K } {
+  const mirror = {} as { [K in T[number]]: K };
+  for (const key of keys) {
+    mirror[key] = key;
+  }
+  return Object.freeze(mirror);
+}
+
+export type StrigaEndpointName = (typeof STRIGA_ENDPOINT_NAMES)[number];
+
+export const STRIGA_ENDPOINT_NAME = createKeyMirror(STRIGA_ENDPOINT_NAMES);
 
 export type StrigaEndpointDefinition = {
   method: HttpMethod;
@@ -22,15 +42,3 @@ export type StrigaEndpoints = Record<
   StrigaEndpointName,
   StrigaEndpointDefinition
 >;
-
-export type StrigaCreateUserRequest = Record<string, unknown>;
-
-export type StrigaCreateAccountRequest = Record<string, unknown>;
-
-export type StrigaUpdateUserRequest = Record<string, unknown>;
-
-export type StrigaUserByEmailRequest = {
-  email: string;
-};
-
-export type StrigaKycRequest = Record<string, unknown>;

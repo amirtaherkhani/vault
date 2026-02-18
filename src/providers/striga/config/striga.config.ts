@@ -9,6 +9,10 @@ import {
 } from '../types/striga-const.type';
 
 class StrigaEnvironmentVariablesValidator {
+  @IsBoolean()
+  @IsOptional()
+  STRIGA_USERS_ENDPOINTS_ENABLE?: boolean;
+
   @IsString()
   STRIGA_APPLICATION_ID: string;
 
@@ -42,6 +46,7 @@ class StrigaEnvironmentVariablesValidator {
 
 const defaults: StrigaConfig = {
   enable: STRIGA_ENABLE,
+  usersEndpointsEnable: false,
   applicationId: '',
   apiKey: '',
   apiSecret: '',
@@ -58,6 +63,8 @@ export default createToggleableConfig<
   enableKey: 'enable',
   enableEnvKey: 'STRIGA_ENABLE',
   mapEnabledConfig: (env) => ({
+    usersEndpointsEnable:
+      env.STRIGA_USERS_ENDPOINTS_ENABLE ?? defaults.usersEndpointsEnable,
     applicationId: env.STRIGA_APPLICATION_ID,
     apiKey: env.STRIGA_API_KEY,
     apiSecret: env.STRIGA_API_SECRET,

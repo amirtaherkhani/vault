@@ -15,18 +15,26 @@ import { STRIGA_ENDPOINTS } from './config/striga-endpoints.config';
 import { StrigaConfig } from './config/striga-config.type';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
 import {
+  StrigaCreateAccountRequestDto,
+  StrigaCreateUserRequestDto,
+  StrigaKycRequestDto,
+  StrigaResendEmailRequestDto,
+  StrigaResendSmsRequestDto,
+  StrigaUpdateVerifiedCredentialsRequestDto,
+  StrigaUpdateUserRequestDto,
+  StrigaUserByEmailRequestDto,
+  StrigaVerifyEmailRequestDto,
+  StrigaVerifyMobileRequestDto,
+} from './dto/striga-request.dto';
+import {
   buildStrigaEndpointPath,
   createStrigaHmacAuthorization,
   getStrigaBaseUrl,
 } from './striga.helper';
 import {
-  StrigaCreateAccountRequest,
-  StrigaCreateUserRequest,
+  STRIGA_ENDPOINT_NAME,
   StrigaEndpointName,
-  StrigaKycRequest,
   StrigaPathParams,
-  StrigaUpdateUserRequest,
-  StrigaUserByEmailRequest,
 } from './types/striga-base.type';
 import {
   STRIGA_ENABLE,
@@ -119,54 +127,106 @@ export class StrigaService
   }
 
   async getUserById(userId: string): Promise<StrigaBaseResponseDto<any>> {
-    const payload = await this.callSigned('getUserById', { param: { userId } });
-    return this.toResponse(payload, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getUserById, {
+      param: { userId },
+    });
   }
 
   async ping(): Promise<StrigaBaseResponseDto<any>> {
-    const payload = await this.callSigned('ping', { body: {} });
-    return this.toResponse(payload, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.ping, {
+      body: {},
+    });
   }
 
   async createUser(
-    payload: StrigaCreateUserRequest,
+    payload: StrigaCreateUserRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSigned('createUser', { body: payload });
-    return this.toResponse(response, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.createUser, {
+      body: payload,
+    });
   }
 
   async createAccount(
-    payload: StrigaCreateAccountRequest,
+    payload: StrigaCreateAccountRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSigned('createWallet', { body: payload });
-    return this.toResponse(response, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.createAccount, {
+      body: payload,
+    });
   }
 
   async initKyc(
-    payload: StrigaKycRequest,
+    payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSigned('startKyc', { body: payload });
-    return this.toResponse(response, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.startKyc, {
+      body: payload,
+    });
   }
 
   async startKyc(
-    payload: StrigaKycRequest,
+    payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSigned('startKyc', { body: payload });
-    return this.toResponse(response, RoleEnum.user);
+    return this.callSignedUser(STRIGA_ENDPOINT_NAME.startKyc, {
+      body: payload,
+    });
   }
 
   async updateUser(
-    payload: StrigaUpdateUserRequest,
+    payload: StrigaUpdateUserRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSigned('updateUser', { body: payload });
-    return this.toResponse(response, RoleEnum.admin);
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.updateUser, {
+      body: payload,
+    });
   }
 
-  async getUserByEmail(email: string): Promise<StrigaBaseResponseDto<any>> {
-    const payload: StrigaUserByEmailRequest = { email };
-    const response = await this.callSigned('getUserByEmail', { body: payload });
-    return this.toResponse(response, RoleEnum.admin);
+  async updateVerifiedCredentials(
+    payload: StrigaUpdateVerifiedCredentialsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(
+      STRIGA_ENDPOINT_NAME.updateVerifiedCredentials,
+      {
+        body: payload,
+      },
+    );
+  }
+
+  async getUserByEmail(
+    payload: StrigaUserByEmailRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getUserByEmail, {
+      body: payload,
+    });
+  }
+
+  async verifyEmail(
+    payload: StrigaVerifyEmailRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.verifyEmail, {
+      body: payload,
+    });
+  }
+
+  async resendEmail(
+    payload: StrigaResendEmailRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.resendEmail, {
+      body: payload,
+    });
+  }
+
+  async verifyMobile(
+    payload: StrigaVerifyMobileRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.verifyMobile, {
+      body: payload,
+    });
+  }
+
+  async resendSms(
+    payload: StrigaResendSmsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.resendSms, {
+      body: payload,
+    });
   }
 
   private async checkConnection(): Promise<boolean> {
@@ -221,6 +281,29 @@ export class StrigaService
     return this.unwrapPayload(payload);
   }
 
+  private async callSignedWithRoles(
+    endpointName: StrigaEndpointName,
+    roles: RoleEnum | RoleEnum[],
+    input: RequestInput = {},
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const payload = await this.callSigned(endpointName, input);
+    return this.toResponse(payload, roles);
+  }
+
+  private async callSignedAdmin(
+    endpointName: StrigaEndpointName,
+    input: RequestInput = {},
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedWithRoles(endpointName, RoleEnum.admin, input);
+  }
+
+  private async callSignedUser(
+    endpointName: StrigaEndpointName,
+    input: RequestInput = {},
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedWithRoles(endpointName, RoleEnum.user, input);
+  }
+
   private unwrapPayload<T>(payload: any): T {
     if (
       payload &&
@@ -236,8 +319,9 @@ export class StrigaService
 
   private toResponse<T>(
     data: T,
-    role: RoleEnum,
+    roles: RoleEnum | RoleEnum[],
   ): StrigaBaseResponseDto<Record<string, unknown> | T | null> {
+    const groups = Array.isArray(roles) ? roles : [roles];
     return GroupPlainToInstance(
       StrigaBaseResponseDto,
       {
@@ -248,7 +332,7 @@ export class StrigaService
         data,
         hasNextPage: false,
       },
-      [role],
+      groups,
     ) as StrigaBaseResponseDto<Record<string, unknown> | T | null>;
   }
 }

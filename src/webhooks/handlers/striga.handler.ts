@@ -138,6 +138,19 @@ function inferTypeFromPath(
     return 'TX_UPDATE';
   }
 
+  if (path.startsWith('/user')) {
+    if (typeof payload.event === 'string' && payload.event.length > 0) {
+      return payload.event;
+    }
+    if (typeof payload.type === 'string' && payload.type.length > 0) {
+      return payload.type;
+    }
+    if (typeof payload.status === 'string' && payload.status.length > 0) {
+      return `USER_${payload.status}`;
+    }
+    return 'USER_UPDATE';
+  }
+
   return path.slice(1).replace(/\//g, '_');
 }
 

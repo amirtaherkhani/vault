@@ -2,6 +2,9 @@ export interface StrigaConfig {
   /** Whether Striga integration is enabled */
   enable: boolean;
 
+  /** Whether StrigaUsersController endpoints are enabled */
+  usersEndpointsEnable: boolean;
+
   /** Striga application identifier */
   applicationId: string;
 

@@ -21,17 +21,37 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.POST,
     path: '/user/create',
   },
-  createWallet: {
+  createAccount: {
     method: HttpMethod.POST,
-    path: '/wallets/create',
+    path: '/account/create',
   },
   updateUser: {
     method: HttpMethod.PATCH,
     path: '/user/update',
   },
+  updateVerifiedCredentials: {
+    method: HttpMethod.PATCH,
+    path: '/user/update-verified-credentials',
+  },
   getUserByEmail: {
     method: HttpMethod.POST,
     path: '/user/get-by-email',
+  },
+  verifyEmail: {
+    method: HttpMethod.POST,
+    path: '/user/verify-email',
+  },
+  resendEmail: {
+    method: HttpMethod.POST,
+    path: '/user/resend-email',
+  },
+  verifyMobile: {
+    method: HttpMethod.POST,
+    path: '/user/verify-mobile',
+  },
+  resendSms: {
+    method: HttpMethod.POST,
+    path: '/user/resend-sms',
   },
   startKyc: {
     method: HttpMethod.POST,
