@@ -22,7 +22,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { DeepPartial } from '../utils/types/deep-partial.type';
 import { InternalEventsService } from '../common/internal-events/internal-events.service';
 import { DataSource } from 'typeorm';
-import { UserInternalEvent } from './events/user-internal.event';
+import { UserInternalEvent } from './events/user.event';
 import { InternalEventPayload } from '../common/internal-events/types/internal-events.type';
 
 @Injectable()

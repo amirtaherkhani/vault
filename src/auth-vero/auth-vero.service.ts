@@ -45,7 +45,7 @@ import type {
 } from './types/vero-auth-base.type';
 import { InternalEventsService } from '../common/internal-events/internal-events.service';
 import { DataSource } from 'typeorm';
-import { UserInternalEvent } from '../users/events/user-internal.event';
+import { UserInternalEvent } from '../users/events/user.event';
 import { InternalEventPayload } from '../common/internal-events/types/internal-events.type';
 
 @Injectable()

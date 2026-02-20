@@ -4,14 +4,11 @@ import { InternalEventHandler } from '../../../common/internal-events/helper/int
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import {
+  VERO_LOGIN_USER_ADDED_EVENT,
   VERO_LOGIN_USER_DELETED_EVENT,
   VERO_LOGIN_USER_LOGGED_IN_EVENT,
 } from '../../../users/types/user-event.type';
 import { StrigaUserWorkflowService } from '../services/striga-user-workflow.service';
-import {
-  STRIGA_USER_SYNC_EVENT,
-  STRIGA_WEBHOOK_USER_CREATED_EVENT,
-} from '../types/striga-event.type';
 
 @Injectable()
 @InternalEventHandler(VERO_LOGIN_USER_LOGGED_IN_EVENT)
@@ -27,11 +24,44 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
     this.received(event, eventId, payload, true);
 
     try {
-      await this.workflow.onUserLoggedIn(payload, eventId);
+      await this.onLoggedIn(payload, eventId);
       this.processed(event, eventId);
     } catch (error) {
       this.failed(event, eventId, error);
     }
+  }
+
+  private async onLoggedIn(
+    payload: UserEventDto,
+    traceId: string,
+  ): Promise<void> {
+    await this.workflow.processVeroUserEvent(payload, traceId, 'login');
+  }
+}
+
+@Injectable()
+@InternalEventHandler(VERO_LOGIN_USER_ADDED_EVENT)
+export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
+  constructor(private readonly workflow: StrigaUserWorkflowService) {
+    super(StrigaUserAddedEventHandler.name);
+  }
+
+  async handle(event: InternalEvent): Promise<void> {
+    const payload = new UserEventDto(event.payload as Partial<UserEventDto>);
+    const eventId = this.id(event);
+
+    this.received(event, eventId, payload, true);
+
+    try {
+      await this.onAdded(payload, eventId);
+      this.processed(event, eventId);
+    } catch (error) {
+      this.failed(event, eventId, error);
+    }
+  }
+
+  private async onAdded(payload: UserEventDto, traceId: string): Promise<void> {
+    await this.workflow.processVeroUserEvent(payload, traceId, 'created');
   }
 }
 
@@ -49,66 +79,17 @@ export class StrigaUserDeletedEventHandler extends InternalEventHandlerBase {
     this.received(event, eventId, payload, true);
 
     try {
-      await this.workflow.onUserDeleted(payload, eventId);
+      await this.onDeleted(payload, eventId);
       this.processed(event, eventId);
     } catch (error) {
       this.failed(event, eventId, error);
     }
   }
-}
 
-@InternalEventHandler(STRIGA_USER_SYNC_EVENT)
-export class StrigaUserSyncEventHandler extends InternalEventHandlerBase {
-  constructor(private readonly workflow: StrigaUserWorkflowService) {
-    super(StrigaUserSyncEventHandler.name);
-  }
-
-  async handle(event: InternalEvent): Promise<void> {
-    const payload = new UserEventDto(event.payload as Partial<UserEventDto>);
-    const eventId = this.id(event);
-
-    this.received(event, eventId, payload, true);
-
-    try {
-      await this.workflow.onUserSync(payload, eventId);
-      this.processed(event, eventId);
-    } catch (error) {
-      this.failed(event, eventId, error);
-    }
-  }
-}
-
-@Injectable()
-@InternalEventHandler(STRIGA_WEBHOOK_USER_CREATED_EVENT)
-export class StrigaWebhookUserCreatedEventHandler extends InternalEventHandlerBase {
-  constructor(private readonly workflow: StrigaUserWorkflowService) {
-    super(StrigaWebhookUserCreatedEventHandler.name);
-  }
-
-  async handle(event: InternalEvent): Promise<void> {
-    const payload = (event.payload ?? {}) as Record<string, unknown>;
-    const userPayload = new UserEventDto(
-      event.payload as Partial<UserEventDto>,
-    );
-    const eventId = this.id(event);
-
-    this.received(event, eventId, payload, true);
-
-    try {
-      const isCreatePayload =
-        typeof payload.type === 'undefined' &&
-        typeof userPayload.email === 'string' &&
-        userPayload.email.trim().length > 0;
-
-      if (isCreatePayload) {
-        await this.workflow.onUserCreate(userPayload, eventId);
-      } else {
-        await this.workflow.onWebhookUserCreated(payload, eventId);
-      }
-
-      this.processed(event, eventId);
-    } catch (error) {
-      this.failed(event, eventId, error);
-    }
+  private async onDeleted(
+    payload: UserEventDto,
+    traceId: string,
+  ): Promise<void> {
+    await this.workflow.processUserDeleted(payload, traceId);
   }
 }

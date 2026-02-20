@@ -27,6 +27,7 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { RefreshResponseDto } from './dto/refresh-response.dto';
 import { GroupPlainToInstance } from '../utils/transformers/class.transformer';
 import { ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 import { JwtRefreshPayloadType } from './strategies/types/jwt-refresh-payload.type';
 import { JwtPayloadType } from './strategies/types/jwt-payload.type';
 import { UsersService } from '../users/users.service';
@@ -39,6 +40,9 @@ import { SessionMetadata } from '../session/types/session-base.type';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';
+import { InternalEventsService } from '../common/internal-events/internal-events.service';
+import { InternalEventPayload } from '../common/internal-events/types/internal-events.type';
+import { UserInternalEvent } from '../users/events/user.event';
 
 @Injectable()
 export class AuthService {
@@ -49,6 +53,8 @@ export class AuthService {
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
+    private internalEventsService: InternalEventsService,
+    private dataSource: DataSource,
   ) {}
 
   async validateLogin(
@@ -264,7 +270,42 @@ export class AuthService {
       user,
     };
 
+    await this.emitVeroLoggedInEvent(user, authProvider);
+
     return GroupPlainToInstance(LoginResponseDto, result, [RoleEnum.user]);
+  }
+
+  private async emitVeroLoggedInEvent(
+    user: User,
+    authProvider: string,
+  ): Promise<void> {
+    if (authProvider !== AuthProvidersEnum.vero) {
+      return;
+    }
+
+    const event = UserInternalEvent.loggedIn(user);
+    if (!event) {
+      return;
+    }
+
+    try {
+      await this.internalEventsService.emit(this.dataSource.manager, {
+        eventType: event.eventType,
+        payload: { ...event.payload } as InternalEventPayload,
+      });
+    } catch (error) {
+      const message = (error as Error)?.message ?? String(error);
+      if (message.includes('Internal events are disabled')) {
+        this.logger.warn(
+          `Internal events are disabled; skipping emit for: ${event.eventType}`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Failed to emit internal event ${event.eventType}: ${message}`,
+      );
+      throw error;
+    }
   }
 
   private normalizeNameValue(value?: string | null): string | undefined {

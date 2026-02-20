@@ -4,14 +4,14 @@ import { InternalEventsService } from '../../../common/internal-events/internal-
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { UsersService } from '../../../users/users.service';
 import { StrigaCreateUserRequestDto } from '../dto/striga-request.dto';
+import {
+  StrigaUserEvent,
+  StrigaUserEventPayload,
+} from '../events/striga-user.event';
 import { getStrigaPlaceholderMobile } from '../striga.helper';
-import { StrigaUserInternalEvent } from '../events/striga-user.event';
 import { StrigaUsersService } from '../striga-users/striga-users.service';
 import { StrigaService } from '../striga.service';
-import {
-  STRIGA_USER_SYNC_EVENT,
-  STRIGA_WEBHOOK_USER_CREATED_EVENT,
-} from '../types/striga-event.type';
+import { STRIGA_USER_SYNCED_EVENT } from '../types/striga-event.type';
 
 @Injectable()
 export class StrigaUserWorkflowService {
@@ -25,120 +25,58 @@ export class StrigaUserWorkflowService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async onUserLoggedIn(payload: UserEventDto, traceId: string): Promise<void> {
-    if (!this.strigaService.getEnabled()) {
-      this.logger.warn(
-        `[trace=${traceId}] Striga service is disabled; skipping user-login flow.`,
-      );
-      return;
-    }
-
-    const email = this.normalizeEmail(payload.email);
-    if (!email) {
-      this.logger.warn(
-        `[trace=${traceId}] Missing email in user-login payload; skipping Striga user workflow.`,
-      );
-      return;
-    }
-
-    const localUser = await this.strigaUsersService.findByEmail(email);
-    if (localUser) {
-      this.logger.log(
-        `[trace=${traceId}] Striga user already exists locally for email=${email}; skipping login workflow.`,
-      );
-      return;
-    }
-
-    const cloudUser = await this.findCloudUserByEmail(email, traceId);
-    if (cloudUser) {
-      await this.emitStrigaUserEvent(
-        StrigaUserInternalEvent.sync(payload),
-        traceId,
-        `Queued ${STRIGA_USER_SYNC_EVENT} for email=${email} because user exists in Striga cloud but missing locally.`,
-      );
-      return;
-    }
-
-    await this.emitStrigaUserEvent(
-      StrigaUserInternalEvent.create(payload),
-      traceId,
-      `Queued ${STRIGA_WEBHOOK_USER_CREATED_EVENT} for email=${email} because user does not exist in Striga cloud and local DB.`,
+  async processVeroUserEvent(
+    payload: UserEventDto,
+    traceId: string,
+    trigger: 'login' | 'created',
+  ): Promise<void> {
+    this.logger.debug(
+      `[trace=${traceId}] Starting vero-user-${trigger} flow userId=${payload.userId ?? 'n/a'} email=${payload.email ?? 'n/a'}.`,
     );
-  }
 
-  async onUserSync(payload: UserEventDto, traceId: string): Promise<void> {
     if (!this.strigaService.getEnabled()) {
       this.logger.warn(
-        `[trace=${traceId}] Striga service is disabled; skipping user-sync flow.`,
+        `[trace=${traceId}] Striga service is disabled; skipping vero-user-${trigger} flow.`,
       );
       return;
     }
 
     const email = this.normalizeEmail(payload.email);
-    if (!email) {
-      this.logger.warn(
-        `[trace=${traceId}] Missing email in user-sync payload; skipping Striga user workflow.`,
-      );
-      return;
-    }
-
-    const localUser = await this.strigaUsersService.findByEmail(email);
-    if (localUser) {
-      this.logger.log(
-        `[trace=${traceId}] Striga user already exists locally for email=${email}; skipping sync.`,
-      );
-      return;
-    }
-
-    const cloudUser = await this.findCloudUserByEmail(email, traceId);
-    if (!cloudUser) {
-      this.logger.warn(
-        `[trace=${traceId}] User sync not found in Striga cloud for email=${email}; queuing create.`,
-      );
-      await this.emitStrigaUserEvent(
-        StrigaUserInternalEvent.create(payload),
-        traceId,
-        `Queued ${STRIGA_WEBHOOK_USER_CREATED_EVENT} for email=${email} after sync-miss in Striga cloud.`,
-      );
-      return;
-    }
-
-    const synced = await this.strigaUsersService.upsertFromCloudUser(cloudUser);
-    this.logger.log(
-      `[trace=${traceId}] Synced Striga user from cloud for email=${email}; localSync=${synced ? 'ok' : 'skipped'}.`,
+    this.logger.debug(
+      `[trace=${traceId}] Parsed vero-user-${trigger} payload userId=${payload.userId ?? 'n/a'} normalizedEmail=${email || 'empty'}.`,
     );
-  }
-
-  async onUserCreate(payload: UserEventDto, traceId: string): Promise<void> {
-    if (!this.strigaService.getEnabled()) {
-      this.logger.warn(
-        `[trace=${traceId}] Striga service is disabled; skipping user-create flow.`,
-      );
-      return;
-    }
-
-    const email = this.normalizeEmail(payload.email);
     if (!email) {
       this.logger.warn(
-        `[trace=${traceId}] Missing email in user-create payload; skipping Striga user workflow.`,
+        `[trace=${traceId}] Missing email in vero-user-${trigger} payload; skipping Striga user workflow.`,
       );
       return;
     }
 
     const localUser = await this.strigaUsersService.findByEmail(email);
+    this.logger.debug(
+      `[trace=${traceId}] Local Striga user lookup completed email=${email} found=${localUser ? 'yes' : 'no'}.`,
+    );
     if (localUser) {
       this.logger.log(
-        `[trace=${traceId}] Striga user already exists locally for email=${email}; skipping create.`,
+        `[trace=${traceId}] Striga user already exists locally for email=${email}; skipping vero-user-${trigger} workflow.`,
       );
       return;
     }
 
     const cloudUser = await this.findCloudUserByEmail(email, traceId);
+    this.logger.debug(
+      `[trace=${traceId}] Cloud Striga user lookup completed email=${email} found=${cloudUser ? 'yes' : 'no'}.`,
+    );
     if (cloudUser) {
-      await this.emitStrigaUserEvent(
-        StrigaUserInternalEvent.sync(payload),
-        traceId,
-        `Queued ${STRIGA_USER_SYNC_EVENT} for email=${email} because user already exists in Striga cloud.`,
+      this.logger.debug(
+        `[trace=${traceId}] Cloud user found for email=${email}; starting sync to local db.`,
+      );
+      await this.syncUserFromProviderPayload(cloudUser, traceId, {
+        source: 'workflow',
+        trigger,
+      });
+      this.logger.log(
+        `[trace=${traceId}] Synced Striga user from cloud for email=${email}.`,
       );
       return;
     }
@@ -147,6 +85,9 @@ export class StrigaUserWorkflowService {
     if (!names) {
       return;
     }
+    this.logger.debug(
+      `[trace=${traceId}] Resolved fallback names for create flow firstName=${names.firstName ? 'set' : 'empty'} lastName=${names.lastName ? 'set' : 'empty'}.`,
+    );
 
     const createPayload: StrigaCreateUserRequestDto = {
       firstName: names.firstName || 'Unknown',
@@ -154,15 +95,45 @@ export class StrigaUserWorkflowService {
       email,
       mobile: getStrigaPlaceholderMobile(),
     };
+    this.logger.debug(
+      `[trace=${traceId}] Prepared create payload email=${email} firstName=${createPayload.firstName} lastName=${createPayload.lastName} mobileCountryCode=${createPayload.mobile?.countryCode ?? 'n/a'} mobileNumber=${createPayload.mobile?.number ?? 'n/a'}.`,
+    );
 
     try {
-      await this.strigaService.createUser(createPayload);
+      this.logger.debug(
+        `[trace=${traceId}] Calling Striga createUser email=${email}.`,
+      );
+      const createdResponse =
+        await this.strigaService.createUser(createPayload);
+      const createdObject = this.extractObjectData(createdResponse?.data);
+      this.logger.debug(
+        `[trace=${traceId}] Striga createUser succeeded email=${email} responseStatus=${createdResponse?.status ?? 'n/a'} responseSuccess=${String(createdResponse?.success ?? 'n/a')} responseData=${createdResponse?.data ? 'present' : 'empty'} externalId=${String(createdObject?.userId ?? createdObject?.externalId ?? createdObject?.id ?? 'n/a')}.`,
+      );
+      const createdSource =
+        createdObject ??
+        (await this.findCloudUserByEmail(email, traceId));
+      if (!createdSource) {
+        this.logger.warn(
+          `[trace=${traceId}] Striga user created for email=${email} but cloud payload was empty; local sync skipped.`,
+        );
+        return;
+      }
+      await this.syncUserFromProviderPayload(createdSource, traceId, {
+        source: 'workflow',
+        trigger,
+      });
       this.logger.log(
-        `[trace=${traceId}] Striga user created in cloud for email=${email}; waiting for webhook sync.`,
+        `[trace=${traceId}] Created Striga user and saved locally for email=${email}.`,
       );
       return;
     } catch (error) {
+      this.logger.warn(
+        `[trace=${traceId}] Striga createUser failed email=${email} details=${this.formatError(error)}.`,
+      );
       if (!this.isDuplicateEmailError(error)) {
+        this.logger.debug(
+          `[trace=${traceId}] Striga createUser failed with non-duplicate error email=${email}.`,
+        );
         throw error;
       }
 
@@ -181,16 +152,21 @@ export class StrigaUserWorkflowService {
         throw error;
       }
 
-      const synced =
-        await this.strigaUsersService.upsertFromCloudUser(recoveredCloudUser);
+      await this.syncUserFromProviderPayload(recoveredCloudUser, traceId, {
+        source: 'workflow',
+        trigger,
+      });
       this.logger.log(
-        `[trace=${traceId}] Recovered duplicate Striga user for email=${email}; localSync=${synced ? 'ok' : 'skipped'}.`,
+        `[trace=${traceId}] Recovered duplicate Striga user for email=${email}.`,
       );
       return;
     }
   }
 
-  async onUserDeleted(payload: UserEventDto, traceId: string): Promise<void> {
+  async processUserDeleted(
+    payload: UserEventDto,
+    traceId: string,
+  ): Promise<void> {
     if (!this.strigaService.getEnabled()) {
       this.logger.warn(
         `[trace=${traceId}] Striga service is disabled; skipping user-deleted flow.`,
@@ -205,31 +181,25 @@ export class StrigaUserWorkflowService {
     // TODO: Implement Striga user cleanup logic.
   }
 
-  async onWebhookUserCreated(
+  async processProviderUserPayload(
     payload: Record<string, unknown>,
     traceId: string,
   ): Promise<void> {
+    this.logger.debug(
+      `[trace=${traceId}] Starting provider-user sync flow source=webhook rawUserId=${String(payload.userId ?? payload.externalId ?? payload.id ?? 'n/a')}.`,
+    );
     if (!this.strigaService.getEnabled()) {
       this.logger.warn(
-        `[trace=${traceId}] Striga service is disabled; skipping webhook user-created flow.`,
+        `[trace=${traceId}] Striga service is disabled; skipping provider user sync flow.`,
       );
       return;
     }
-
-    const externalId = this.resolveExternalId(payload);
-    if (!externalId) {
-      this.logger.warn(
-        `[trace=${traceId}] Webhook user-created payload is missing user identifier; skipping.`,
-      );
-      return;
-    }
-
-    const cloudUser = await this.findCloudUserById(externalId, traceId);
-    const source = cloudUser ?? payload;
-
-    const synced = await this.strigaUsersService.upsertFromCloudUser(source);
-    this.logger.log(
-      `[trace=${traceId}] Webhook user-created sync completed for externalId=${externalId}; localSync=${synced ? 'ok' : 'skipped'}.`,
+    await this.syncUserFromProviderPayload(payload, traceId, {
+      source: 'webhook',
+      trigger: 'webhook',
+    });
+    this.logger.debug(
+      `[trace=${traceId}] Provider-user sync flow finished source=webhook.`,
     );
   }
 
@@ -254,6 +224,9 @@ export class StrigaUserWorkflowService {
 
     const appUserId = Number(payload.userId);
     if (!Number.isNaN(appUserId)) {
+      this.logger.debug(
+        `[trace=${traceId}] Resolving app user names userId=${appUserId}.`,
+      );
       const appUser = await this.usersService.findById(appUserId);
       if (!appUser) {
         this.logger.warn(
@@ -279,12 +252,18 @@ export class StrigaUserWorkflowService {
     traceId: string,
   ): Promise<Record<string, unknown> | null> {
     try {
-      const response = await this.strigaService.getUserByEmail({ email });
-      return this.extractObjectData(response?.data);
-    } catch (error) {
-      const message = (error as Error)?.message ?? String(error);
       this.logger.debug(
-        `[trace=${traceId}] Striga get-by-email returned no user for email=${email}: ${message}`,
+        `[trace=${traceId}] Calling Striga getUserByEmail email=${email}.`,
+      );
+      const response = await this.strigaService.getUserByEmail({ email });
+      const user = this.extractObjectData(response?.data);
+      this.logger.debug(
+        `[trace=${traceId}] Striga getUserByEmail completed email=${email} found=${user ? 'yes' : 'no'} status=${response?.status ?? 'n/a'} success=${String(response?.success ?? 'n/a')}.`,
+      );
+      return user;
+    } catch (error) {
+      this.logger.debug(
+        `[trace=${traceId}] Striga get-by-email returned no user for email=${email}: ${this.formatError(error)}`,
       );
       return null;
     }
@@ -295,12 +274,18 @@ export class StrigaUserWorkflowService {
     traceId: string,
   ): Promise<Record<string, unknown> | null> {
     try {
+      this.logger.debug(
+        `[trace=${traceId}] Calling Striga getUserById externalId=${externalId}.`,
+      );
       const response = await this.strigaService.getUserById(externalId);
-      return this.extractObjectData(response?.data);
+      const user = this.extractObjectData(response?.data);
+      this.logger.debug(
+        `[trace=${traceId}] Striga getUserById completed externalId=${externalId} found=${user ? 'yes' : 'no'} status=${response?.status ?? 'n/a'} success=${String(response?.success ?? 'n/a')}.`,
+      );
+      return user;
     } catch (error) {
-      const message = (error as Error)?.message ?? String(error);
       this.logger.warn(
-        `[trace=${traceId}] Striga get-user-by-id failed for externalId=${externalId}; using webhook payload. reason=${message}`,
+        `[trace=${traceId}] Striga get-user-by-id failed for externalId=${externalId}; using webhook payload. reason=${this.formatError(error)}`,
       );
       return null;
     }
@@ -322,15 +307,128 @@ export class StrigaUserWorkflowService {
     return text.includes('duplicate') && text.includes('user.email');
   }
 
-  private async emitStrigaUserEvent(
-    event: StrigaUserInternalEvent,
+  private formatError(error: unknown): string {
+    const asAny = error as any;
+    const status =
+      asAny?.status ??
+      asAny?.response?.statusCode ??
+      asAny?.response?.status ??
+      asAny?.getStatus?.();
+    const response =
+      asAny?.response ??
+      asAny?.getResponse?.() ??
+      asAny?.message ??
+      String(error);
+
+    try {
+      return `status=${status ?? 'n/a'} response=${JSON.stringify(response)}`;
+    } catch {
+      return `status=${status ?? 'n/a'} response=${String(response)}`;
+    }
+  }
+
+  private async syncUserFromProviderPayload(
+    payload: Record<string, unknown>,
     traceId: string,
-    successMessage: string,
+    eventMeta: {
+      source: 'workflow' | 'webhook';
+      trigger: 'login' | 'created' | 'webhook';
+    },
   ): Promise<void> {
+    const externalId = this.resolveExternalId(payload);
+    this.logger.debug(
+      `[trace=${traceId}] Syncing provider payload source=${eventMeta.source} trigger=${eventMeta.trigger} externalId=${externalId || 'n/a'}.`,
+    );
+    let sourceUser = payload;
+
+    if (externalId) {
+      const cloudUser = await this.findCloudUserById(externalId, traceId);
+      sourceUser = cloudUser ?? payload;
+    } else if (eventMeta.source === 'webhook') {
+      this.logger.warn(
+        `[trace=${traceId}] Provider user payload is missing user identifier; using raw payload for local sync.`,
+      );
+    }
+
+    const synced =
+      await this.strigaUsersService.upsertFromCloudUser(sourceUser);
+    const loggedExternalId = synced?.externalId ?? externalId ?? 'n/a';
+    this.logger.debug(
+      `[trace=${traceId}] Local upsert from provider payload completed result=${synced?.id ? 'saved' : 'skipped'} localId=${synced?.id ?? 'n/a'} externalId=${loggedExternalId} email=${String(sourceUser.email ?? 'n/a')}.`,
+    );
+    await this.emitSyncedEventIfSaved({
+      traceId,
+      email:
+        typeof sourceUser.email === 'string'
+          ? this.normalizeEmail(sourceUser.email)
+          : null,
+      userId:
+        typeof sourceUser.userId === 'string' ||
+        typeof sourceUser.userId === 'number'
+          ? String(sourceUser.userId)
+          : null,
+      synced,
+      source: eventMeta.source,
+      trigger: eventMeta.trigger,
+    });
+
+    if (externalId) {
+      this.logger.log(
+        `[trace=${traceId}] Provider user sync completed for externalId=${externalId}; localSync=${synced ? 'ok' : 'skipped'}.`,
+      );
+    } else {
+      this.logger.debug(
+        `[trace=${traceId}] Provider user sync completed without externalId; localSync=${synced ? 'ok' : 'skipped'}.`,
+      );
+    }
+  }
+
+  private async emitStrigaEvent(
+    event: StrigaUserEvent,
+    traceId: string,
+  ): Promise<void> {
+    this.logger.debug(
+      `[trace=${traceId}] Emitting internal event type=${event.eventType} payloadKeys=${Object.keys(event.payload ?? {}).join(',')}.`,
+    );
     await this.internalEventsService.emit(this.dataSource.manager, {
       eventType: event.eventType,
-      payload: { ...event.payload },
+      payload: event.payload,
     });
-    this.logger.log(`[trace=${traceId}] ${successMessage}`);
+    this.logger.debug(
+      `[trace=${traceId}] Internal event emitted type=${event.eventType}.`,
+    );
+  }
+
+  private async emitSyncedEventIfSaved(input: {
+    traceId: string;
+    trigger: 'login' | 'created' | 'webhook';
+    email: string | null;
+    userId: string | null | undefined;
+    synced: { id?: string; externalId?: string } | null;
+    source: 'workflow' | 'webhook';
+  }): Promise<void> {
+    if (!input.synced?.id) {
+      this.logger.debug(
+        `[trace=${input.traceId}] Skipping ${STRIGA_USER_SYNCED_EVENT}; local save was skipped.`,
+      );
+      return;
+    }
+
+    const payload: StrigaUserEventPayload = {
+      source: input.source,
+      trigger: input.trigger,
+      email: input.email,
+      userId: input.userId ?? null,
+      localId: input.synced.id,
+      externalId: input.synced.externalId ?? null,
+    };
+
+    await this.emitStrigaEvent(
+      StrigaUserEvent.userSynced(payload),
+      input.traceId,
+    );
+    this.logger.debug(
+      `[trace=${input.traceId}] Emitted ${STRIGA_USER_SYNCED_EVENT} localId=${payload.localId} externalId=${payload.externalId}.`,
+    );
   }
 }

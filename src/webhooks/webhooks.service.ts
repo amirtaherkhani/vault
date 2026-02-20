@@ -1,10 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InternalEventsService } from '../common/internal-events/internal-events.service';
-import {
-  STRIGA_WEBHOOK_USER_CREATED_EVENT,
-  STRIGA_WEBHOOK_USER_CREATED_TYPES,
-} from '../providers/striga/types/striga-event.type';
 import { WebhookEventEmitter } from './events/webhook.event-emitter';
 import { WebhookHandlers } from './handlers';
 import { WebhookResponseDto } from './dto/webhook-response.dto';
@@ -97,30 +93,10 @@ export class WebhooksService {
   }
 
   private resolveStrigaInternalEventType(
-    type: string,
-    data: Record<string, any>,
+    _type: string,
+    _data: Record<string, any>,
   ): string | null {
-    const normalizedType = String(type ?? '')
-      .trim()
-      .toUpperCase();
-    const payloadType = String(data?.type ?? '')
-      .trim()
-      .toUpperCase();
-    const payloadEvent = String(data?.event ?? '')
-      .trim()
-      .toUpperCase();
-
-    const isUserCreatedType = [normalizedType, payloadType, payloadEvent].some(
-      (value) =>
-        (STRIGA_WEBHOOK_USER_CREATED_TYPES as readonly string[]).includes(
-          value,
-        ),
-    );
-
-    if (isUserCreatedType) {
-      return STRIGA_WEBHOOK_USER_CREATED_EVENT;
-    }
-
+    // No Striga webhook paths currently map to internal events.
     return null;
   }
 }

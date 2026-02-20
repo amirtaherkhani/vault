@@ -1,23 +1,21 @@
 import { InternalEventBase } from '../../../common/internal-events/base/internal-event.abstract';
-import { UserEventDto } from '../../../users/dto/user.dto';
-import {
-  STRIGA_USER_SYNC_EVENT,
-  STRIGA_WEBHOOK_USER_CREATED_EVENT,
-} from '../types/striga-event.type';
+import { STRIGA_USER_SYNCED_EVENT } from '../types/striga-event.type';
 
-export class StrigaUserInternalEvent extends InternalEventBase<UserEventDto> {
-  private constructor(eventType: string, payload: UserEventDto) {
+export type StrigaUserEventPayload = {
+  source: 'workflow' | 'webhook';
+  trigger: 'login' | 'created' | 'webhook';
+  email: string | null;
+  userId: string | null;
+  localId: string | null;
+  externalId: string | null;
+};
+
+export class StrigaUserEvent extends InternalEventBase<StrigaUserEventPayload> {
+  private constructor(eventType: string, payload: StrigaUserEventPayload) {
     super(eventType, payload);
   }
 
-  static sync(payload: UserEventDto): StrigaUserInternalEvent {
-    return new StrigaUserInternalEvent(STRIGA_USER_SYNC_EVENT, payload);
-  }
-
-  static create(payload: UserEventDto): StrigaUserInternalEvent {
-    return new StrigaUserInternalEvent(
-      STRIGA_WEBHOOK_USER_CREATED_EVENT,
-      payload,
-    );
+  static userSynced(payload: StrigaUserEventPayload): StrigaUserEvent {
+    return new StrigaUserEvent(STRIGA_USER_SYNCED_EVENT, payload);
   }
 }
