@@ -11,6 +11,16 @@ type StrigaSignatureInput = {
   timestamp?: string;
 };
 
+export type StrigaMobileLike = {
+  countryCode?: string | null;
+  number?: string | null;
+};
+
+export const STRIGA_PLACEHOLDER_MOBILE = Object.freeze({
+  countryCode: '+999',
+  number: '90000009',
+});
+
 export function getStrigaBaseUrl(
   defaultBaseUrl: string = STRIGA_SANDBOX_BASE_URL,
 ): string {
@@ -55,4 +65,28 @@ export function createStrigaHmacAuthorization({
   hmac.update(contentHash.digest('hex'));
 
   return `HMAC ${time}:${hmac.digest('hex')}`;
+}
+
+export function getStrigaPlaceholderMobile(): {
+  countryCode: string;
+  number: string;
+} {
+  return {
+    countryCode: STRIGA_PLACEHOLDER_MOBILE.countryCode,
+    number: STRIGA_PLACEHOLDER_MOBILE.number,
+  };
+}
+
+export function isStrigaPlaceholderMobile(mobile?: StrigaMobileLike | null): boolean {
+  if (!mobile) {
+    return false;
+  }
+
+  const countryCode = String(mobile.countryCode ?? '').trim();
+  const number = String(mobile.number ?? '').trim();
+
+  return (
+    countryCode === STRIGA_PLACEHOLDER_MOBILE.countryCode &&
+    number === STRIGA_PLACEHOLDER_MOBILE.number
+  );
 }

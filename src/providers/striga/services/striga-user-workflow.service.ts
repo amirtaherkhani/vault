@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { UsersService } from '../../../users/users.service';
 import { StrigaCreateUserRequestDto } from '../dto/striga-request.dto';
+import { getStrigaPlaceholderMobile } from '../striga.helper';
 import { StrigaUsersService } from '../striga-users/striga-users.service';
 import { StrigaService } from '../striga.service';
 
@@ -58,6 +59,7 @@ export class StrigaUserWorkflowService {
       firstName: names.firstName || 'Unknown',
       lastName: names.lastName || 'Unknown',
       email,
+      mobile: getStrigaPlaceholderMobile(),
     };
 
     await this.strigaService.createUser(createPayload);
