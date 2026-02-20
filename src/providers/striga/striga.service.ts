@@ -32,6 +32,7 @@ import {
   StrigaVerifyEmailRequestDto,
   StrigaVerifyMobileRequestDto,
 } from './dto/striga-request.dto';
+import { StrigaUsersService } from './striga-users/striga-users.service';
 import {
   buildStrigaEndpointPath,
   createStrigaHmacAuthorization,
@@ -72,6 +73,7 @@ export class StrigaService
     private readonly apiSdkService: ApiGatewayService,
     private readonly configService: ConfigService<AllConfigType>,
     private readonly appLogger: LoggerService,
+    private readonly strigaUsersService: StrigaUsersService,
     @Inject('API_GATEWAY_STRIGA') apiClient?: Record<string, ApiFunction>,
   ) {
     super(
@@ -236,9 +238,16 @@ export class StrigaService
   async updateUser(
     payload: StrigaUpdateUserRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.updateUser, {
-      body: payload,
-    });
+    const response = await this.callSignedAdmin(
+      STRIGA_ENDPOINT_NAME.updateUser,
+      {
+        body: payload,
+      },
+    );
+
+    await this.syncLocalStrigaUserContact(payload);
+
+    return response;
   }
 
   async updateVerifiedCredentials(
@@ -365,6 +374,63 @@ export class StrigaService
     input: RequestInput = {},
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.callSignedWithRoles(endpointName, RoleEnum.user, input);
+  }
+
+  private async syncLocalStrigaUserContact(
+    payload: StrigaUpdateUserRequestDto,
+  ): Promise<void> {
+    const externalId = String(payload.userId ?? '').trim();
+    if (!externalId) {
+      return;
+    }
+
+    const mobile = payload.mobile
+      ? {
+          countryCode: payload.mobile.countryCode,
+          number: payload.mobile.number,
+        }
+      : undefined;
+
+    const address = payload.address
+      ? {
+          addressLine1: payload.address.addressLine1,
+          addressLine2: payload.address.addressLine2,
+          city: payload.address.city,
+          state: payload.address.state,
+          country: payload.address.country,
+          postalCode: payload.address.postalCode,
+        }
+      : undefined;
+
+    if (typeof mobile === 'undefined' && typeof address === 'undefined') {
+      return;
+    }
+
+    try {
+      const updated = await this.strigaUsersService.updateContactByExternalId(
+        externalId,
+        { mobile, address },
+      );
+
+      if (!updated) {
+        this.appLogger.warn(
+          `Local Striga user not found for externalId=${externalId}; mobile/address were not synced locally.`,
+          StrigaService.name,
+        );
+        return;
+      }
+
+      this.appLogger.debug(
+        `Local Striga user contact synced externalId=${externalId} mobileUpdated=${typeof mobile !== 'undefined'} addressUpdated=${typeof address !== 'undefined'}.`,
+        StrigaService.name,
+      );
+    } catch (error) {
+      const message = (error as Error)?.message ?? String(error);
+      this.appLogger.warn(
+        `Failed to sync local Striga user contact externalId=${externalId}: ${message}`,
+        StrigaService.name,
+      );
+    }
   }
 
   private unwrapPayload<T>(payload: any): T {

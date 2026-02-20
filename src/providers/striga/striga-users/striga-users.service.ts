@@ -335,6 +335,33 @@ export class StrigaUsersService {
     });
   }
 
+  updateContactByExternalId(
+    externalId: StrigaUser['externalId'],
+    payload: {
+      mobile?: StrigaUser['mobile'];
+      address?: StrigaUser['address'];
+    },
+  ) {
+    const updatePayload: Partial<StrigaUser> = {};
+
+    if (typeof payload.mobile !== 'undefined') {
+      updatePayload.mobile = payload.mobile;
+    }
+    if (typeof payload.address !== 'undefined') {
+      updatePayload.address = payload.address;
+    }
+
+    if (!Object.keys(updatePayload).length) {
+      return Promise.resolve(null);
+    }
+
+    return this.strigaUserRepository.updateByIdOrExternalId(
+      undefined,
+      externalId,
+      updatePayload,
+    );
+  }
+
   async update(
     id: StrigaUser['id'],
 
