@@ -250,24 +250,12 @@ export class StrigaUserWorkflowService {
       return;
     }
 
-    let strigaUser = await this.strigaUsersService.findByExternalId(externalId);
-    if (!strigaUser) {
-      this.logger.debug(
-        `[trace=${traceId}] Local Striga user not found for externalId=${externalId}; attempting cloud sync before KYC update.`,
-      );
-      const cloudUser = await this.findCloudUserById(externalId, traceId);
-      if (cloudUser) {
-        await this.syncUserFromProviderPayload(cloudUser, traceId, {
-          source: 'webhook',
-          trigger: 'webhook',
-        });
-        strigaUser = await this.strigaUsersService.findByExternalId(externalId);
-      }
-    }
+    const strigaUser =
+      await this.strigaUsersService.findByExternalId(externalId);
 
     if (!strigaUser) {
       this.logger.warn(
-        `[trace=${traceId}] Unable to resolve local Striga user for externalId=${externalId}; skipping KYC/account sync.`,
+        `[trace=${traceId}] Local Striga user not found for externalId=${externalId}; skipping KYC/account sync.`,
       );
       return;
     }

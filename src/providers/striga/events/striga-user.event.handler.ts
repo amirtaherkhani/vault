@@ -126,6 +126,18 @@ export class StrigaKycWebhookEventHandler extends InternalEventHandlerBase {
     payload: StrigaKycWebhookEventDto,
     traceId: string,
   ): Promise<void> {
+    const externalId = String(payload.userId ?? '').trim();
+    if (!externalId) {
+      this.logger.warn(
+        `[trace=${traceId}] Striga KYC webhook payload missing userId; skipping handler flow.`,
+      );
+      return;
+    }
+
+    this.logger.debug(
+      `[trace=${traceId}] Handling Striga KYC webhook with externalId=${externalId}.`,
+    );
+
     await this.workflow.processKycWebhook(payload, traceId);
   }
 }
