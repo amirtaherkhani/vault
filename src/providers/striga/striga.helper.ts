@@ -1,6 +1,7 @@
 import { createHash, createHmac } from 'crypto';
 import { HttpMethod } from 'src/common/api-gateway/types/api-gateway-enum.type';
 import { STRIGA_SANDBOX_BASE_URL } from './types/striga-const.type';
+import { STRIGA_WEBHOOK_KYC_EVENT } from './types/striga-event.type';
 import { StrigaPathParams } from './types/striga-base.type';
 
 type StrigaSignatureInput = {
@@ -91,4 +92,18 @@ export function isStrigaPlaceholderMobile(
     countryCode === STRIGA_PLACEHOLDER_MOBILE.countryCode &&
     number === STRIGA_PLACEHOLDER_MOBILE.number
   );
+}
+
+export function resolveStrigaInternalEventType(
+  type: string,
+  data: Record<string, unknown>,
+): string | null {
+  const webhookPath =
+    typeof data.webhookPath === 'string' ? data.webhookPath : '';
+
+  if (webhookPath.startsWith('/kyc') || type.startsWith('KYC_')) {
+    return STRIGA_WEBHOOK_KYC_EVENT;
+  }
+
+  return null;
 }

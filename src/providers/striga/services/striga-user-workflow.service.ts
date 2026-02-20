@@ -3,15 +3,22 @@ import { DataSource } from 'typeorm';
 import { InternalEventsService } from '../../../common/internal-events/internal-events.service';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { UsersService } from '../../../users/users.service';
+import { StrigaKycWebhookEventDto } from '../dto/striga-kyc-webhook.dto';
 import { StrigaCreateUserRequestDto } from '../dto/striga-request.dto';
 import {
   StrigaUserEvent,
   StrigaUserEventPayload,
 } from '../events/striga-user.event';
 import { getStrigaPlaceholderMobile } from '../striga.helper';
-import { StrigaUsersService } from '../striga-users/striga-users.service';
+import {
+  StrigaUsersService,
+  StrigaUserUpsertResult,
+} from '../striga-users/striga-users.service';
 import { StrigaService } from '../striga.service';
-import { STRIGA_USER_SYNCED_EVENT } from '../types/striga-event.type';
+import {
+  STRIGA_USER_CREATED_EVENT,
+  STRIGA_USER_SYNCED_EVENT,
+} from '../types/striga-event.type';
 
 @Injectable()
 export class StrigaUserWorkflowService {
@@ -110,8 +117,7 @@ export class StrigaUserWorkflowService {
         `[trace=${traceId}] Striga createUser succeeded email=${email} responseStatus=${createdResponse?.status ?? 'n/a'} responseSuccess=${String(createdResponse?.success ?? 'n/a')} responseData=${createdResponse?.data ? 'present' : 'empty'} externalId=${String(createdObject?.userId ?? createdObject?.externalId ?? createdObject?.id ?? 'n/a')}.`,
       );
       const createdSource =
-        createdObject ??
-        (await this.findCloudUserByEmail(email, traceId));
+        createdObject ?? (await this.findCloudUserByEmail(email, traceId));
       if (!createdSource) {
         this.logger.warn(
           `[trace=${traceId}] Striga user created for email=${email} but cloud payload was empty; local sync skipped.`,
@@ -200,6 +206,26 @@ export class StrigaUserWorkflowService {
     });
     this.logger.debug(
       `[trace=${traceId}] Provider-user sync flow finished source=webhook.`,
+    );
+  }
+
+  async processKycWebhook(
+    payload: StrigaKycWebhookEventDto,
+    traceId: string,
+  ): Promise<void> {
+    this.logger.log(
+      `[trace=${traceId}] Striga KYC webhook received userId=${payload.userId ?? 'n/a'} status=${payload.status ?? 'n/a'} reason=${payload.reason ?? 'n/a'} type=${payload.type ?? payload.webhookType ?? 'n/a'}.`,
+    );
+
+    this.logger.debug(
+      `[trace=${traceId}] Striga KYC webhook details=${JSON.stringify({
+        currentTier: payload.currentTier ?? null,
+        rejectionFinal: payload.rejectionFinal ?? null,
+        details: payload.details ?? [],
+        ts: payload.ts ?? null,
+        tinCollected: payload.tinCollected ?? null,
+        tinVerificationExpiryDate: payload.tinVerificationExpiryDate ?? null,
+      })}`,
     );
   }
 
@@ -350,13 +376,14 @@ export class StrigaUserWorkflowService {
       );
     }
 
-    const synced =
+    const upsertResult =
       await this.strigaUsersService.upsertFromCloudUser(sourceUser);
+    const synced = upsertResult.user;
     const loggedExternalId = synced?.externalId ?? externalId ?? 'n/a';
     this.logger.debug(
-      `[trace=${traceId}] Local upsert from provider payload completed result=${synced?.id ? 'saved' : 'skipped'} localId=${synced?.id ?? 'n/a'} externalId=${loggedExternalId} email=${String(sourceUser.email ?? 'n/a')}.`,
+      `[trace=${traceId}] Local upsert from provider payload completed operation=${upsertResult.operation} localId=${synced?.id ?? 'n/a'} externalId=${loggedExternalId} email=${String(sourceUser.email ?? 'n/a')}.`,
     );
-    await this.emitSyncedEventIfSaved({
+    await this.emitUpsertEvent({
       traceId,
       email:
         typeof sourceUser.email === 'string'
@@ -367,7 +394,7 @@ export class StrigaUserWorkflowService {
         typeof sourceUser.userId === 'number'
           ? String(sourceUser.userId)
           : null,
-      synced,
+      upsertResult,
       source: eventMeta.source,
       trigger: eventMeta.trigger,
     });
@@ -399,17 +426,18 @@ export class StrigaUserWorkflowService {
     );
   }
 
-  private async emitSyncedEventIfSaved(input: {
+  private async emitUpsertEvent(input: {
     traceId: string;
     trigger: 'login' | 'created' | 'webhook';
     email: string | null;
     userId: string | null | undefined;
-    synced: { id?: string; externalId?: string } | null;
+    upsertResult: StrigaUserUpsertResult;
     source: 'workflow' | 'webhook';
   }): Promise<void> {
-    if (!input.synced?.id) {
+    const synced = input.upsertResult.user;
+    if (!synced?.id) {
       this.logger.debug(
-        `[trace=${input.traceId}] Skipping ${STRIGA_USER_SYNCED_EVENT}; local save was skipped.`,
+        `[trace=${input.traceId}] Skipping Striga user event emission; local save was skipped operation=${input.upsertResult.operation}.`,
       );
       return;
     }
@@ -419,16 +447,34 @@ export class StrigaUserWorkflowService {
       trigger: input.trigger,
       email: input.email,
       userId: input.userId ?? null,
-      localId: input.synced.id,
-      externalId: input.synced.externalId ?? null,
+      localId: synced.id,
+      externalId: synced.externalId ?? null,
     };
 
-    await this.emitStrigaEvent(
-      StrigaUserEvent.userSynced(payload),
-      input.traceId,
-    );
+    if (input.upsertResult.operation === 'created') {
+      await this.emitStrigaEvent(
+        StrigaUserEvent.userCreated(payload),
+        input.traceId,
+      );
+      this.logger.debug(
+        `[trace=${input.traceId}] Emitted ${STRIGA_USER_CREATED_EVENT} localId=${payload.localId} externalId=${payload.externalId}.`,
+      );
+      return;
+    }
+
+    if (input.upsertResult.operation === 'updated') {
+      await this.emitStrigaEvent(
+        StrigaUserEvent.userSynced(payload),
+        input.traceId,
+      );
+      this.logger.debug(
+        `[trace=${input.traceId}] Emitted ${STRIGA_USER_SYNCED_EVENT} localId=${payload.localId} externalId=${payload.externalId}.`,
+      );
+      return;
+    }
+
     this.logger.debug(
-      `[trace=${input.traceId}] Emitted ${STRIGA_USER_SYNCED_EVENT} localId=${payload.localId} externalId=${payload.externalId}.`,
+      `[trace=${input.traceId}] Skipping Striga user event emission for operation=${input.upsertResult.operation}.`,
     );
   }
 }

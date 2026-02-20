@@ -8,6 +8,17 @@ import { StrigaUserRepository } from './infrastructure/persistence/striga-user.r
 import { IPaginationOptions } from '../../../utils/types/pagination-options.type';
 import { StrigaUser } from './domain/striga-user';
 
+export type StrigaUserUpsertOperation =
+  | 'created'
+  | 'updated'
+  | 'unchanged'
+  | 'skipped';
+
+export type StrigaUserUpsertResult = {
+  operation: StrigaUserUpsertOperation;
+  user: StrigaUser | null;
+};
+
 @Injectable()
 export class StrigaUsersService {
   constructor(
@@ -41,21 +52,59 @@ export class StrigaUsersService {
     };
   }
 
+  private hasUserChanges(
+    current: StrigaUser,
+    payload: UpdateStrigaUserDto,
+  ): boolean {
+    const normalizedCurrentEmail = String(current.email ?? '')
+      .trim()
+      .toLowerCase();
+    const normalizedPayloadEmail = String(payload.email ?? '')
+      .trim()
+      .toLowerCase();
+
+    if (normalizedCurrentEmail !== normalizedPayloadEmail) {
+      return true;
+    }
+
+    if (String(current.firstName ?? '') !== String(payload.firstName ?? '')) {
+      return true;
+    }
+
+    if (String(current.lastName ?? '') !== String(payload.lastName ?? '')) {
+      return true;
+    }
+
+    const currentMobile = JSON.stringify(current.mobile ?? {});
+    const payloadMobile = JSON.stringify(payload.mobile ?? {});
+    if (currentMobile !== payloadMobile) {
+      return true;
+    }
+
+    const currentAddress = JSON.stringify(current.address ?? {});
+    const payloadAddress = JSON.stringify(payload.address ?? {});
+    if (currentAddress !== payloadAddress) {
+      return true;
+    }
+
+    return false;
+  }
+
   async upsertFromCloudUser(
     cloudUser: Record<string, unknown>,
-  ): Promise<StrigaUser | null> {
+  ): Promise<StrigaUserUpsertResult> {
     const externalId = String(
       cloudUser.userId ?? cloudUser.externalId ?? '',
     ).trim();
     if (!externalId) {
-      return null;
+      return { operation: 'skipped', user: null };
     }
 
     const email = String(cloudUser.email ?? '')
       .trim()
       .toLowerCase();
     if (!email) {
-      return null;
+      return { operation: 'skipped', user: null };
     }
 
     const firstName = String(cloudUser.firstName ?? '').trim() || 'Unknown';
@@ -76,13 +125,23 @@ export class StrigaUsersService {
 
     const existingByExternalId = await this.findByExternalId(externalId);
     if (existingByExternalId) {
-      return this.update(existingByExternalId.id, payload);
+      if (!this.hasUserChanges(existingByExternalId, payload)) {
+        return { operation: 'unchanged', user: existingByExternalId };
+      }
+
+      const updated = await this.update(existingByExternalId.id, payload);
+      return { operation: 'updated', user: updated };
     }
 
     if (email) {
       const existingByEmail = await this.findByEmail(email);
       if (existingByEmail) {
-        return this.update(existingByEmail.id, payload);
+        if (!this.hasUserChanges(existingByEmail, payload)) {
+          return { operation: 'unchanged', user: existingByEmail };
+        }
+
+        const updated = await this.update(existingByEmail.id, payload);
+        return { operation: 'updated', user: updated };
       }
     }
 
@@ -95,7 +154,8 @@ export class StrigaUsersService {
       address: payload.address!,
     };
 
-    return this.create(createPayload);
+    const created = await this.create(createPayload);
+    return { operation: 'created', user: created };
   }
 
   async create(createStrigaUserDto: CreateStrigaUserDto) {

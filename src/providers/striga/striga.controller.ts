@@ -27,9 +27,15 @@ import {
   RequireServiceReady,
 } from '../../utils/decorators/service-toggleable.decorators';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
+import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
   StrigaCreateAccountRequestDto,
+  StrigaCreateWalletRequestDto,
   StrigaCreateUserRequestDto,
+  StrigaGetAllWalletsRequestDto,
+  StrigaGetWalletAccountRequestDto,
+  StrigaGetWalletAccountStatementRequestDto,
+  StrigaGetWalletRequestDto,
   StrigaKycRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
@@ -79,6 +85,24 @@ export class StrigaController {
     @Param() params: StrigaUserIdParamDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.getUserById(params.userId);
+  }
+
+  @ApiOperation({ summary: 'Get Striga user KYC by user ID' })
+  @ApiParam({
+    name: 'userId',
+    description: 'Unique user ID from Striga',
+    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
+  })
+  @ApiOkResponse({
+    description: 'Striga user KYC details response',
+    type: StrigaUserKycStatusResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Get('user/:userId/kyc')
+  async getUserKycById(
+    @Param() params: StrigaUserIdParamDto,
+  ): Promise<StrigaUserKycStatusResponseDto> {
+    return this.strigaService.getUserKycById(params.userId);
   }
 
   @ApiOperation({ summary: 'Get Striga user by email' })
@@ -176,6 +200,71 @@ export class StrigaController {
     @Body() payload: StrigaCreateAccountRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.createAccount(payload);
+  }
+
+  @ApiOperation({ summary: 'Get Striga wallet account' })
+  @ApiOkResponse({
+    description: 'Striga wallet account response',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('wallets/get/account')
+  async getWalletAccount(
+    @Body() payload: StrigaGetWalletAccountRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getWalletAccount(payload);
+  }
+
+  @ApiOperation({ summary: 'Get Striga wallet account statement' })
+  @ApiOkResponse({
+    description: 'Striga wallet account statement response',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('wallets/get/account/statement')
+  async getWalletAccountStatement(
+    @Body() payload: StrigaGetWalletAccountStatementRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getWalletAccountStatement(payload);
+  }
+
+  @ApiOperation({ summary: 'Get all Striga wallets' })
+  @ApiOkResponse({
+    description: 'Striga get all wallets response',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('wallets/get/all')
+  async getAllWallets(
+    @Body() payload: StrigaGetAllWalletsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getAllWallets(payload);
+  }
+
+  @ApiOperation({ summary: 'Get Striga wallet' })
+  @ApiOkResponse({
+    description: 'Striga get wallet response',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('wallets/get')
+  async getWallet(
+    @Body() payload: StrigaGetWalletRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getWallet(payload);
+  }
+
+  @ApiOperation({ summary: 'Create Striga wallet' })
+  @ApiOkResponse({
+    description: 'Striga create wallet response',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('wallets/create')
+  async createWallet(
+    @Body() payload: StrigaCreateWalletRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.createWallet(payload);
   }
 
   @ApiOperation({ summary: 'Update Striga user' })

@@ -6,6 +6,7 @@ import {
   StrigaUserAddedEventHandler,
   StrigaUserDeletedEventHandler,
   StrigaUserLoggedInEventHandler,
+  StrigaKycWebhookEventHandler,
 } from './events/striga-user.event.handler';
 import { StrigaUserWorkflowService } from './services/striga-user-workflow.service';
 import { StrigaUsersModule } from './striga-users/striga-users.module';
@@ -20,6 +21,7 @@ import { StrigaService } from './striga.service';
     StrigaUserLoggedInEventHandler,
     StrigaUserAddedEventHandler,
     StrigaUserDeletedEventHandler,
+    StrigaKycWebhookEventHandler,
     EnableGuard,
   ],
   controllers: [StrigaController],

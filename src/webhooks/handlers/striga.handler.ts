@@ -1,11 +1,17 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
-import {
-  ParsedWebhookEvent,
-  StrigaWebhookInput,
-  WebhookParseContext,
-} from '../webhook.type';
+import { plainToInstance } from 'class-transformer';
 import { Logger } from '@nestjs/common';
+import { StrigaKycWebhookDto } from '../../providers/striga/dto/striga-kyc-webhook.dto';
+import {
+  StrigaParsedWebhookEvent,
+  StrigaWebhookInput,
+  StrigaWebhookParseContext,
+} from '../../providers/striga/types/striga-webhook.type';
+import {
+  getNonEmptyString,
+  pickFirstNonEmptyString,
+} from '../helpers/webhook-payload.helper';
 
 const STRIGA_SIGNATURE_HEADER = 'signature';
 const STRIGA_API_KEY_ENV = 'STRIGA_API_KEY';
@@ -95,59 +101,44 @@ function inferTypeFromPath(
 
   if (path.startsWith('/kyc')) {
     // KYC webhooks can include status updates and account action events.
-    if (typeof payload.type === 'string' && payload.type.length > 0) {
-      return `KYC_${payload.type}`;
-    }
-    if (typeof payload.status === 'string' && payload.status.length > 0) {
-      return `KYC_${payload.status}`;
-    }
-    if (typeof payload.reason === 'string' && payload.reason.length > 0) {
-      return `KYC_${payload.reason}`;
-    }
+    const indicator = pickFirstNonEmptyString(
+      payload.type,
+      payload.status,
+      payload.reason,
+    );
+    if (indicator) return `KYC_${indicator}`;
     return 'KYC_UPDATE';
   }
 
   if (path.startsWith('/kyb')) {
     // KYB webhooks are primarily status-driven, with optional reason/type.
-    if (typeof payload.type === 'string' && payload.type.length > 0) {
-      return `KYB_${payload.type}`;
-    }
-    if (typeof payload.status === 'string' && payload.status.length > 0) {
-      return `KYB_${payload.status}`;
-    }
-    if (typeof payload.reason === 'string' && payload.reason.length > 0) {
-      return `KYB_${payload.reason}`;
-    }
+    const indicator = pickFirstNonEmptyString(
+      payload.type,
+      payload.status,
+      payload.reason,
+    );
+    if (indicator) return `KYB_${indicator}`;
     return 'KYB_UPDATE';
   }
 
   if (path.startsWith('/card/watch')) {
-    if (typeof payload.status === 'string' && payload.status.length > 0) {
-      return `CARD_${payload.status}`;
-    }
-    if (typeof payload.type === 'string' && payload.type.length > 0) {
-      return `CARD_${payload.type}`;
-    }
+    const indicator = pickFirstNonEmptyString(payload.status, payload.type);
+    if (indicator) return `CARD_${indicator}`;
     return 'CARD_UPDATE';
   }
 
   if (path.startsWith('/tx')) {
-    if (typeof payload.type === 'string' && payload.type.length > 0) {
-      return payload.type;
-    }
+    const type = getNonEmptyString(payload.type);
+    if (type) return type;
     return 'TX_UPDATE';
   }
 
   if (path.startsWith('/user')) {
-    if (typeof payload.event === 'string' && payload.event.length > 0) {
-      return payload.event;
-    }
-    if (typeof payload.type === 'string' && payload.type.length > 0) {
-      return payload.type;
-    }
-    if (typeof payload.status === 'string' && payload.status.length > 0) {
-      return `USER_${payload.status}`;
-    }
+    const eventOrType = pickFirstNonEmptyString(payload.event, payload.type);
+    if (eventOrType) return eventOrType;
+
+    const status = getNonEmptyString(payload.status);
+    if (status) return `USER_${status}`;
     return 'USER_UPDATE';
   }
 
@@ -158,27 +149,35 @@ function inferEventType(path: string, payload: StrigaWebhookInput): string {
   const pathType = inferTypeFromPath(path, payload);
   if (pathType) return pathType;
 
-  if (typeof payload.event === 'string' && payload.event.length > 0) {
-    return payload.event;
-  }
-
-  if (typeof payload.type === 'string' && payload.type.length > 0) {
-    return payload.type;
-  }
-
-  if (typeof payload.status === 'string' && payload.status.length > 0) {
-    return payload.status;
-  }
+  const indicator = pickFirstNonEmptyString(
+    payload.event,
+    payload.type,
+    payload.status,
+  );
+  if (indicator) return indicator;
 
   return 'EVENT';
+}
+
+function parseWebhookPayloadByPath(
+  path: string,
+  payload: StrigaWebhookInput,
+): Record<string, any> {
+  if (path.startsWith('/kyc')) {
+    return plainToInstance(StrigaKycWebhookDto, payload, {
+      excludeExtraneousValues: true,
+    }) as Record<string, any>;
+  }
+
+  return payload;
 }
 
 export const StrigaWebhookHandler = {
   parse(
     body: StrigaWebhookInput,
     headers: Record<string, any>,
-    context?: WebhookParseContext,
-  ): Promise<ParsedWebhookEvent> {
+    context?: StrigaWebhookParseContext,
+  ): Promise<StrigaParsedWebhookEvent> {
     const path = normalizeWebhookPath(context?.path);
     const hasSignature =
       getHeaderValue(headers, STRIGA_SIGNATURE_HEADER) !== null;
@@ -189,14 +188,22 @@ export const StrigaWebhookHandler = {
     verifySignature(body, headers);
 
     const payload = asRecord(body) as StrigaWebhookInput;
+    const normalizedPayload = parseWebhookPayloadByPath(path, payload);
     const type = normalizeEventType(inferEventType(path, payload));
     logger.debug(
       `Parsed Striga webhook${path ? ` path=${path}` : ''} type=${type}`,
     );
+    if (path.startsWith('/kyc')) {
+      logger.debug(
+        `Striga KYC webhook details userId=${String(normalizedPayload.userId ?? 'n/a')} status=${String(normalizedPayload.status ?? 'n/a')} reason=${String(normalizedPayload.reason ?? 'n/a')} currentTier=${String(normalizedPayload.currentTier ?? 'n/a')}`,
+      );
+    }
 
     return Promise.resolve({
       type,
-      data: path ? { ...payload, webhookPath: path } : payload,
+      data: path
+        ? { ...normalizedPayload, webhookPath: path }
+        : normalizedPayload,
     });
   },
 };

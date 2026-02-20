@@ -14,9 +14,15 @@ import { GroupPlainToInstance } from '../../utils/transformers/class.transformer
 import { STRIGA_ENDPOINTS } from './config/striga-endpoints.config';
 import { StrigaConfig } from './config/striga-config.type';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
+import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
   StrigaCreateAccountRequestDto,
+  StrigaCreateWalletRequestDto,
   StrigaCreateUserRequestDto,
+  StrigaGetAllWalletsRequestDto,
+  StrigaGetWalletAccountRequestDto,
+  StrigaGetWalletAccountStatementRequestDto,
+  StrigaGetWalletRequestDto,
   StrigaKycRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
@@ -132,6 +138,15 @@ export class StrigaService
     });
   }
 
+  async getUserKycById(userId: string): Promise<StrigaUserKycStatusResponseDto> {
+    const payload = await this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getUserKycById, {
+      param: { userId },
+    });
+    return GroupPlainToInstance(StrigaUserKycStatusResponseDto, payload, [
+      RoleEnum.admin,
+    ]) as StrigaUserKycStatusResponseDto;
+  }
+
   async ping(): Promise<StrigaBaseResponseDto<any>> {
     return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.ping, {
       body: {},
@@ -150,6 +165,49 @@ export class StrigaService
     payload: StrigaCreateAccountRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.createAccount, {
+      body: payload,
+    });
+  }
+
+  async getWalletAccount(
+    payload: StrigaGetWalletAccountRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getWalletAccount, {
+      body: payload,
+    });
+  }
+
+  async getWalletAccountStatement(
+    payload: StrigaGetWalletAccountStatementRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(
+      STRIGA_ENDPOINT_NAME.getWalletAccountStatement,
+      {
+        body: payload,
+      },
+    );
+  }
+
+  async getAllWallets(
+    payload: StrigaGetAllWalletsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getAllWallets, {
+      body: payload,
+    });
+  }
+
+  async getWallet(
+    payload: StrigaGetWalletRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getWallet, {
+      body: payload,
+    });
+  }
+
+  async createWallet(
+    payload: StrigaCreateWalletRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.createWallet, {
       body: payload,
     });
   }

@@ -129,6 +129,11 @@ export class StrigaCreateUserRequestDto {
 }
 
 export type StrigaCreateAccountRequestDto = Record<string, unknown>;
+export type StrigaGetWalletAccountRequestDto = Record<string, unknown>;
+export type StrigaGetWalletAccountStatementRequestDto = Record<string, unknown>;
+export type StrigaGetAllWalletsRequestDto = Record<string, unknown>;
+export type StrigaGetWalletRequestDto = Record<string, unknown>;
+export type StrigaCreateWalletRequestDto = Record<string, unknown>;
 
 @Exclude()
 export class StrigaUpdateUserRequestDto {

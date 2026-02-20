@@ -17,6 +17,10 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.GET,
     path: '/user/{userId}',
   },
+  getUserKycById: {
+    method: HttpMethod.GET,
+    path: '/user/kyc/{userId}',
+  },
   createUser: {
     method: HttpMethod.POST,
     path: '/user/create',
@@ -24,6 +28,26 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
   createAccount: {
     method: HttpMethod.POST,
     path: '/account/create',
+  },
+  getWalletAccount: {
+    method: HttpMethod.POST,
+    path: '/wallets/get/account',
+  },
+  getWalletAccountStatement: {
+    method: HttpMethod.POST,
+    path: '/wallets/get/account/statement',
+  },
+  getAllWallets: {
+    method: HttpMethod.POST,
+    path: '/wallets/get/all',
+  },
+  getWallet: {
+    method: HttpMethod.POST,
+    path: '/wallets/get',
+  },
+  createWallet: {
+    method: HttpMethod.POST,
+    path: '/wallets/create',
   },
   updateUser: {
     method: HttpMethod.PATCH,
