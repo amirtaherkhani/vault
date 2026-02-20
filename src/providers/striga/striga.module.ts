@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EnableGuard } from 'src/common/guards/service-enabled.guard';
+import { AccountsModule } from '../../accounts/accounts.module';
 import { UsersModule } from '../../users/users.module';
 import { ProvidersModule } from '../providers.module';
 import {
@@ -14,7 +15,7 @@ import { StrigaController } from './striga.controller';
 import { StrigaService } from './striga.service';
 
 @Module({
-  imports: [ProvidersModule, UsersModule, StrigaUsersModule],
+  imports: [ProvidersModule, UsersModule, AccountsModule, StrigaUsersModule],
   providers: [
     StrigaUserWorkflowService,
     StrigaService,

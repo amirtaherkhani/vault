@@ -7,6 +7,7 @@ import { UpdateStrigaUserDto } from './dto/update-striga-user.dto';
 import { StrigaUserRepository } from './infrastructure/persistence/striga-user.repository';
 import { IPaginationOptions } from '../../../utils/types/pagination-options.type';
 import { StrigaUser } from './domain/striga-user';
+import { StrigaKycWebhookEventDto } from '../dto/striga-kyc-webhook.dto';
 
 export type StrigaUserUpsertOperation =
   | 'created'
@@ -52,6 +53,137 @@ export class StrigaUsersService {
     };
   }
 
+  private normalizeKycFromCloud(
+    kyc?: Record<string, unknown>,
+  ): StrigaUser['kyc'] | undefined {
+    if (!kyc || typeof kyc !== 'object' || Array.isArray(kyc)) {
+      return undefined;
+    }
+
+    const normalizeTier = (tier: unknown) => {
+      if (!tier || typeof tier !== 'object' || Array.isArray(tier)) {
+        return undefined;
+      }
+      const tierObj = tier as Record<string, unknown>;
+      return {
+        eligible:
+          typeof tierObj.eligible === 'boolean' ? tierObj.eligible : undefined,
+        status: typeof tierObj.status === 'string' ? tierObj.status : undefined,
+      };
+    };
+
+    const normalizeComments = (comments: unknown) => {
+      if (!comments || typeof comments !== 'object' || Array.isArray(comments)) {
+        return undefined;
+      }
+      const commentsObj = comments as Record<string, unknown>;
+      return {
+        userComment:
+          typeof commentsObj.userComment === 'string'
+            ? commentsObj.userComment
+            : null,
+        autoComment:
+          typeof commentsObj.autoComment === 'string'
+            ? commentsObj.autoComment
+            : null,
+      };
+    };
+
+    return {
+      status: typeof kyc.status === 'string' ? kyc.status : null,
+      currentTier:
+        typeof kyc.currentTier === 'number' ? kyc.currentTier : null,
+      details: Array.isArray(kyc.details)
+        ? (kyc.details.filter((value) => typeof value === 'string') as string[])
+        : null,
+      rejectionFinal:
+        typeof kyc.rejectionFinal === 'boolean' ? kyc.rejectionFinal : null,
+      reason: typeof kyc.reason === 'string' ? kyc.reason : null,
+      type: typeof kyc.type === 'string' ? kyc.type : null,
+      ts: typeof kyc.ts === 'number' ? kyc.ts : null,
+      tinCollected:
+        typeof kyc.tinCollected === 'boolean' ? kyc.tinCollected : null,
+      tinVerificationExpiryDate:
+        typeof kyc.tinVerificationExpiryDate === 'string'
+          ? kyc.tinVerificationExpiryDate
+          : null,
+      rejectionComments: normalizeComments(kyc.rejectionComments) ?? null,
+      tier0: normalizeTier(kyc.tier0) ?? null,
+      tier1: normalizeTier(kyc.tier1) ?? null,
+      tier2: normalizeTier(kyc.tier2) ?? null,
+      tier3: normalizeTier(kyc.tier3) ?? null,
+    };
+  }
+
+  toKycSnapshotFromWebhook(
+    payload: StrigaKycWebhookEventDto,
+  ): StrigaUser['kyc'] {
+    const details = Array.isArray(payload.details)
+      ? payload.details.filter((value) => typeof value === 'string')
+      : [];
+
+    return {
+      status: payload.status ?? null,
+      currentTier:
+        typeof payload.currentTier === 'number' ? payload.currentTier : null,
+      details,
+      rejectionFinal:
+        typeof payload.rejectionFinal === 'boolean'
+          ? payload.rejectionFinal
+          : null,
+      reason: payload.reason ?? null,
+      type: payload.type ?? null,
+      ts: typeof payload.ts === 'number' ? payload.ts : null,
+      tinCollected:
+        typeof payload.tinCollected === 'boolean'
+          ? payload.tinCollected
+          : null,
+      tinVerificationExpiryDate: payload.tinVerificationExpiryDate ?? null,
+      rejectionComments: payload.rejectionComments
+        ? {
+            userComment: payload.rejectionComments.userComment ?? null,
+            autoComment: payload.rejectionComments.autoComment ?? null,
+          }
+        : null,
+      tier0: payload.tier0
+        ? {
+            eligible: payload.tier0.eligible,
+            status: payload.tier0.status,
+          }
+        : null,
+      tier1: payload.tier1
+        ? {
+            eligible: payload.tier1.eligible,
+            status: payload.tier1.status,
+          }
+        : null,
+      tier2: payload.tier2
+        ? {
+            eligible: payload.tier2.eligible,
+            status: payload.tier2.status,
+          }
+        : null,
+      tier3: payload.tier3
+        ? {
+            eligible: payload.tier3.eligible,
+            status: payload.tier3.status,
+          }
+        : null,
+    };
+  }
+
+  async updateKycByExternalId(
+    externalId: StrigaUser['externalId'],
+    kyc: StrigaUser['kyc'],
+  ): Promise<StrigaUser | null> {
+    const existing = await this.findByExternalId(externalId);
+    if (!existing) {
+      return null;
+    }
+
+    return this.update(existing.id, { kyc });
+  }
+
   private hasUserChanges(
     current: StrigaUser,
     payload: UpdateStrigaUserDto,
@@ -85,6 +217,14 @@ export class StrigaUsersService {
     const payloadAddress = JSON.stringify(payload.address ?? {});
     if (currentAddress !== payloadAddress) {
       return true;
+    }
+
+    if (typeof payload.kyc !== 'undefined') {
+      const currentKyc = JSON.stringify(current.kyc ?? null);
+      const payloadKyc = JSON.stringify(payload.kyc ?? null);
+      if (currentKyc !== payloadKyc) {
+        return true;
+      }
     }
 
     return false;
@@ -121,6 +261,11 @@ export class StrigaUsersService {
       address: this.normalizeAddress(
         (cloudUser.address as Record<string, unknown>) ?? undefined,
       ),
+      kyc: this.normalizeKycFromCloud(
+        (cloudUser.KYC as Record<string, unknown>) ??
+          (cloudUser.kyc as Record<string, unknown>) ??
+          undefined,
+      ),
     };
 
     const existingByExternalId = await this.findByExternalId(externalId);
@@ -152,6 +297,7 @@ export class StrigaUsersService {
       lastName,
       mobile: payload.mobile!,
       address: payload.address!,
+      kyc: payload.kyc,
     };
 
     const created = await this.create(createPayload);
@@ -176,6 +322,8 @@ export class StrigaUsersService {
       mobile: createStrigaUserDto.mobile,
 
       address: createStrigaUserDto.address,
+
+      kyc: createStrigaUserDto.kyc,
     });
   }
 
@@ -274,6 +422,8 @@ export class StrigaUsersService {
       mobile: updateStrigaUserDto.mobile,
 
       address: updateStrigaUserDto.address,
+
+      kyc: updateStrigaUserDto.kyc,
     });
   }
 

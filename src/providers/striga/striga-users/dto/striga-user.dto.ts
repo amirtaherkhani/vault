@@ -1,8 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID, ValidateNested } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   StrigaUserAddressDto,
+  StrigaUserKycDto,
   StrigaUserMobileDto,
 } from './create-striga-user.dto';
 
@@ -40,4 +47,10 @@ export class StrigaUserDto {
   @ValidateNested()
   @Type(() => StrigaUserAddressDto)
   address!: StrigaUserAddressDto;
+
+  @ApiProperty({ type: () => StrigaUserKycDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaUserKycDto)
+  kyc?: StrigaUserKycDto | null;
 }

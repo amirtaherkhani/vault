@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import {
   StrigaUserAddress,
+  StrigaUserKyc,
   StrigaUserMobile,
 } from '../../../../domain/striga-user';
 import { EntityRelationalHelper } from '../../../../../../../utils/relational-entity-helper';
@@ -51,6 +52,12 @@ export class StrigaUserEntity extends EntityRelationalHelper {
     nullable: false,
   })
   address!: StrigaUserAddress;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+  })
+  kyc?: StrigaUserKyc | null;
 
   @PrimaryGeneratedColumn('uuid')
   id: string;

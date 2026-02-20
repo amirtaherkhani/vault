@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import { AccountsService } from '../../../accounts/accounts.service';
+import {
+  AccountProviderName,
+  AccountStatus,
+  KycStatus,
+} from '../../../accounts/types/account-enum.type';
 import { InternalEventsService } from '../../../common/internal-events/internal-events.service';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { UsersService } from '../../../users/users.service';
@@ -27,6 +33,7 @@ export class StrigaUserWorkflowService {
   constructor(
     private readonly strigaService: StrigaService,
     private readonly usersService: UsersService,
+    private readonly accountsService: AccountsService,
     private readonly strigaUsersService: StrigaUsersService,
     private readonly internalEventsService: InternalEventsService,
     private readonly dataSource: DataSource,
@@ -213,6 +220,13 @@ export class StrigaUserWorkflowService {
     payload: StrigaKycWebhookEventDto,
     traceId: string,
   ): Promise<void> {
+    if (!this.strigaService.getEnabled()) {
+      this.logger.warn(
+        `[trace=${traceId}] Striga service is disabled; skipping KYC webhook flow.`,
+      );
+      return;
+    }
+
     this.logger.log(
       `[trace=${traceId}] Striga KYC webhook received userId=${payload.userId ?? 'n/a'} status=${payload.status ?? 'n/a'} reason=${payload.reason ?? 'n/a'} type=${payload.type ?? payload.webhookType ?? 'n/a'}.`,
     );
@@ -227,6 +241,87 @@ export class StrigaUserWorkflowService {
         tinVerificationExpiryDate: payload.tinVerificationExpiryDate ?? null,
       })}`,
     );
+
+    const externalId = String(payload.userId ?? '').trim();
+    if (!externalId) {
+      this.logger.warn(
+        `[trace=${traceId}] KYC webhook payload missing userId; skipping Striga KYC workflow.`,
+      );
+      return;
+    }
+
+    let strigaUser = await this.strigaUsersService.findByExternalId(externalId);
+    if (!strigaUser) {
+      this.logger.debug(
+        `[trace=${traceId}] Local Striga user not found for externalId=${externalId}; attempting cloud sync before KYC update.`,
+      );
+      const cloudUser = await this.findCloudUserById(externalId, traceId);
+      if (cloudUser) {
+        await this.syncUserFromProviderPayload(cloudUser, traceId, {
+          source: 'webhook',
+          trigger: 'webhook',
+        });
+        strigaUser = await this.strigaUsersService.findByExternalId(externalId);
+      }
+    }
+
+    if (!strigaUser) {
+      this.logger.warn(
+        `[trace=${traceId}] Unable to resolve local Striga user for externalId=${externalId}; skipping KYC/account sync.`,
+      );
+      return;
+    }
+
+    const kycSnapshot = this.strigaUsersService.toKycSnapshotFromWebhook(payload);
+    const updatedStrigaUser = await this.strigaUsersService.update(
+      strigaUser.id,
+      { kyc: kycSnapshot },
+    );
+    this.logger.debug(
+      `[trace=${traceId}] Updated local Striga user KYC snapshot localId=${updatedStrigaUser?.id ?? strigaUser.id} externalId=${externalId}.`,
+    );
+
+    const tier1Approved = this.isTierApproved(payload.tier1?.status);
+    const tier2Approved = this.isTierApproved(payload.tier2?.status);
+    const accountKycStatus =
+      tier1Approved && tier2Approved ? KycStatus.VERIFIED : KycStatus.PENDING;
+
+    if (!tier1Approved && !tier2Approved) {
+      this.logger.debug(
+        `[trace=${traceId}] KYC tiers are not approved (tier1=${tier1Approved}, tier2=${tier2Approved}); account sync skipped.`,
+      );
+      return;
+    }
+
+    const appUser = await this.usersService.findByEmail(
+      this.normalizeEmail(strigaUser.email),
+    );
+    if (!appUser?.id) {
+      this.logger.warn(
+        `[trace=${traceId}] No app user found for Striga email=${strigaUser.email}; skipping account upsert.`,
+      );
+      return;
+    }
+
+    const providerAccountId = await this.resolveStrigaAccountIdForUser(
+      externalId,
+      traceId,
+    );
+
+    const upsertedAccount = await this.accountsService.upsertByAccountId({
+      accountId: providerAccountId,
+      providerName: AccountProviderName.STRIGA,
+      user: { id: appUser.id },
+      kycStatus: accountKycStatus,
+      label: 'striga',
+      status: AccountStatus.ACTIVE,
+      customerRefId: providerAccountId,
+      name: `striga-${externalId}`,
+    });
+
+    this.logger.log(
+      `[trace=${traceId}] Striga account synced accountId=${upsertedAccount.accountId} userId=${appUser.id} kycStatus=${upsertedAccount.kycStatus}.`,
+    );
   }
 
   private normalizeEmail(email: unknown): string {
@@ -239,6 +334,121 @@ export class StrigaUserWorkflowService {
     return String(
       payload.userId ?? payload.externalId ?? payload.id ?? '',
     ).trim();
+  }
+
+  private isTierApproved(status?: string | null): boolean {
+    return String(status ?? '').trim().toUpperCase() === 'APPROVED';
+  }
+
+  private extractAccountIdFromPayload(data: unknown): string | null {
+    if (!data) {
+      return null;
+    }
+
+    if (typeof data === 'string' || typeof data === 'number') {
+      const value = String(data).trim();
+      return value.length ? value : null;
+    }
+
+    if (Array.isArray(data)) {
+      for (const item of data) {
+        const nested = this.extractAccountIdFromPayload(item);
+        if (nested) {
+          return nested;
+        }
+      }
+      return null;
+    }
+
+    if (typeof data !== 'object') {
+      return null;
+    }
+
+    const record = data as Record<string, unknown>;
+    const directKeys = ['accountId', 'walletAccountId', 'walletId'];
+    for (const key of directKeys) {
+      const value = record[key];
+      if (typeof value === 'string' || typeof value === 'number') {
+        const normalized = String(value).trim();
+        if (normalized.length) {
+          return normalized;
+        }
+      }
+    }
+
+    const listKeys = [
+      'accounts',
+      'wallets',
+      'items',
+      'data',
+      'result',
+      'account',
+      'wallet',
+    ];
+    for (const key of listKeys) {
+      if (typeof record[key] === 'undefined' || record[key] === null) {
+        continue;
+      }
+
+      const nested = this.extractAccountIdFromPayload(record[key]);
+      if (nested) {
+        return nested;
+      }
+    }
+
+    return null;
+  }
+
+  private async resolveStrigaAccountIdForUser(
+    externalUserId: string,
+    traceId: string,
+  ): Promise<string> {
+    try {
+      this.logger.debug(
+        `[trace=${traceId}] Resolving Striga account id via wallets/get/account userId=${externalUserId}.`,
+      );
+      const accountResponse = await this.strigaService.getWalletAccount({
+        userId: externalUserId,
+      });
+      const accountId = this.extractAccountIdFromPayload(accountResponse?.data);
+      if (accountId) {
+        this.logger.debug(
+          `[trace=${traceId}] Resolved Striga account id via wallets/get/account accountId=${accountId}.`,
+        );
+        return accountId;
+      }
+    } catch (error) {
+      this.logger.debug(
+        `[trace=${traceId}] wallets/get/account failed for userId=${externalUserId} reason=${this.formatError(error)}.`,
+      );
+    }
+
+    try {
+      this.logger.debug(
+        `[trace=${traceId}] Resolving Striga account id via wallets/get/all userId=${externalUserId}.`,
+      );
+      const allWalletsResponse = await this.strigaService.getAllWallets({
+        userId: externalUserId,
+      });
+      const accountId = this.extractAccountIdFromPayload(
+        allWalletsResponse?.data,
+      );
+      if (accountId) {
+        this.logger.debug(
+          `[trace=${traceId}] Resolved Striga account id via wallets/get/all accountId=${accountId}.`,
+        );
+        return accountId;
+      }
+    } catch (error) {
+      this.logger.debug(
+        `[trace=${traceId}] wallets/get/all failed for userId=${externalUserId} reason=${this.formatError(error)}.`,
+      );
+    }
+
+    this.logger.warn(
+      `[trace=${traceId}] Could not resolve Striga account id from wallet endpoints; falling back to external user id=${externalUserId}.`,
+    );
+    return externalUserId;
   }
 
   private async resolveNames(
