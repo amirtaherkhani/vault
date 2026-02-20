@@ -110,6 +110,25 @@ export class InternalEventsConsumer {
         }
       } catch (error) {
         const reason = (error as Error)?.message ?? String(error);
+        if (this.isNoGroupError(reason)) {
+          this.loggerService.warn(
+            `Internal events stream/group missing; recreating stream=${this.options.streamName} group=${this.options.serviceName}`,
+            InternalEventsConsumer.name,
+          );
+          try {
+            await this.ensureStreamGroup();
+          } catch (ensureError) {
+            const ensureReason =
+              (ensureError as Error)?.message ?? String(ensureError);
+            this.loggerService.warn(
+              `InternalEventsConsumer ensureStreamGroup failed: ${ensureReason}`,
+              InternalEventsConsumer.name,
+            );
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+
         this.loggerService.warn(
           `InternalEventsConsumer loop failed: ${reason}`,
           InternalEventsConsumer.name,
@@ -151,6 +170,10 @@ export class InternalEventsConsumer {
         InternalEventsConsumer.name,
       );
     }
+  }
+
+  private isNoGroupError(message: string): boolean {
+    return message.includes('NOGROUP');
   }
 
   private parseFields(fields: string[]): Record<string, string> {

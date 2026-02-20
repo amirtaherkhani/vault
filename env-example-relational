@@ -262,7 +262,7 @@ AWS_SQS_WAIT_TIME_SECONDS=10
 
 
 ########################################
-# Striga (HMAC API)
+# Striga
 ########################################
 STRIGA_ENABLE=false
 STRIGA_USERS_ENDPOINTS_ENABLE=false

@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
 
 export abstract class InternalEventHandlerBase {
@@ -38,12 +38,27 @@ export abstract class InternalEventHandlerBase {
   }
 
   protected failed(event: InternalEvent, id: string, error: unknown): never {
-    const message = (error as Error)?.message ?? String(error);
+    const message = this.formatError(error);
     this.logger.error(
       `Internal event failed: [EVENT:${event.eventType}] [ID:${id}] MSG:${message}`,
       (error as Error)?.stack,
     );
     throw error as Error;
+  }
+
+  private formatError(error: unknown): string {
+    if (error instanceof HttpException) {
+      const status = error.getStatus();
+      const response = error.getResponse();
+      const responseText = this.stringifyPayload(response);
+      return `HttpException status=${status} response=${responseText}`;
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return String(error);
   }
 
   private stringifyPayload(payload: unknown): string {
