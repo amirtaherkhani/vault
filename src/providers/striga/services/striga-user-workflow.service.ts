@@ -62,10 +62,36 @@ export class StrigaUserWorkflowService {
       mobile: getStrigaPlaceholderMobile(),
     };
 
-    await this.strigaService.createUser(createPayload);
-    this.logger.log(
-      `[trace=${traceId}] Striga user created in cloud for email=${email}; waiting for webhook sync.`,
-    );
+    try {
+      await this.strigaService.createUser(createPayload);
+      this.logger.log(
+        `[trace=${traceId}] Striga user created in cloud for email=${email}; waiting for webhook sync.`,
+      );
+      return;
+    } catch (error) {
+      if (!this.isDuplicateEmailError(error)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `[trace=${traceId}] Striga user create returned duplicate email for email=${email}; attempting cloud recovery.`,
+      );
+
+      const recoveredCloudUser = await this.findCloudUserByEmail(email, traceId);
+      if (!recoveredCloudUser) {
+        this.logger.warn(
+          `[trace=${traceId}] Duplicate-email recovery failed for email=${email}; Striga get-by-email did not return a user.`,
+        );
+        throw error;
+      }
+
+      const synced =
+        await this.strigaUsersService.upsertFromCloudUser(recoveredCloudUser);
+      this.logger.log(
+        `[trace=${traceId}] Recovered duplicate Striga user for email=${email}; localSync=${synced ? 'ok' : 'skipped'}.`,
+      );
+      return;
+    }
   }
 
   async onUserDeleted(payload: UserEventDto, traceId: string): Promise<void> {
@@ -190,5 +216,16 @@ export class StrigaUserWorkflowService {
     }
 
     return null;
+  }
+
+  private isDuplicateEmailError(error: unknown): boolean {
+    const asAny = error as any;
+    const response = asAny?.response ?? asAny?.getResponse?.();
+    const text = JSON.stringify(response ?? {}).toLowerCase();
+
+    return (
+      text.includes('duplicate') &&
+      text.includes('user.email')
+    );
   }
 }
