@@ -17,8 +17,8 @@ export type StrigaMobileLike = {
 };
 
 export const STRIGA_PLACEHOLDER_MOBILE = Object.freeze({
-  countryCode: '+999',
-  number: '90000009',
+  countryCode: '+372',
+  number: '55555555',
 });
 
 export function getStrigaBaseUrl(
