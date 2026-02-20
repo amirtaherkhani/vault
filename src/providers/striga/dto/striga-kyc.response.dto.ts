@@ -26,8 +26,7 @@ export class StrigaKycLimitSplitDto {
 @Exclude()
 export class StrigaKycRejectionCommentsDto {
   @ApiPropertyOptional({
-    example:
-      'We could not verify your profile. Your region is not supported.',
+    example: 'We could not verify your profile. Your region is not supported.',
   })
   @IsOptional()
   @IsString()
@@ -35,8 +34,7 @@ export class StrigaKycRejectionCommentsDto {
   autoComment?: string;
 
   @ApiPropertyOptional({
-    example:
-      'We could not verify your profile. Your region is not supported.',
+    example: 'We could not verify your profile. Your region is not supported.',
   })
   @IsOptional()
   @IsString()

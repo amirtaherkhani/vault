@@ -1,13 +1,10 @@
 import {
   // decorators here
 
-  IsBoolean,
-  IsInt,
   IsNotEmptyObject,
   IsOptional,
   IsString,
   IsUUID,
-  IsArray,
   ValidateNested,
 } from 'class-validator';
 
@@ -82,37 +79,11 @@ export class StrigaUserAddressDto {
 export class StrigaUserKycTierDto {
   @ApiProperty({
     required: false,
-    type: () => Boolean,
-  })
-  @IsOptional()
-  @IsBoolean()
-  eligible?: boolean;
-
-  @ApiProperty({
-    required: false,
     type: () => String,
   })
   @IsOptional()
   @IsString()
   status?: string;
-}
-
-export class StrigaUserKycRejectionCommentsDto {
-  @ApiProperty({
-    required: false,
-    type: () => String,
-  })
-  @IsOptional()
-  @IsString()
-  userComment?: string | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => String,
-  })
-  @IsOptional()
-  @IsString()
-  autoComment?: string | null;
 }
 
 export class StrigaUserKycDto {
@@ -123,80 +94,6 @@ export class StrigaUserKycDto {
   @IsOptional()
   @IsString()
   status?: string | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => Number,
-  })
-  @IsOptional()
-  @IsInt()
-  currentTier?: number | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => [String],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  details?: string[] | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => Boolean,
-  })
-  @IsOptional()
-  @IsBoolean()
-  rejectionFinal?: boolean | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => String,
-  })
-  @IsOptional()
-  @IsString()
-  reason?: string | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => String,
-  })
-  @IsOptional()
-  @IsString()
-  type?: string | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => Number,
-  })
-  @IsOptional()
-  @IsInt()
-  ts?: number | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => Boolean,
-  })
-  @IsOptional()
-  @IsBoolean()
-  tinCollected?: boolean | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => String,
-  })
-  @IsOptional()
-  @IsString()
-  tinVerificationExpiryDate?: string | null;
-
-  @ApiProperty({
-    required: false,
-    type: () => StrigaUserKycRejectionCommentsDto,
-  })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => StrigaUserKycRejectionCommentsDto)
-  rejectionComments?: StrigaUserKycRejectionCommentsDto | null;
 
   @ApiProperty({
     required: false,

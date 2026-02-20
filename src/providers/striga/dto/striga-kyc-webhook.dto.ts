@@ -27,8 +27,7 @@ export class StrigaKycWebhookLimitSplitDto {
 @Exclude()
 export class StrigaKycWebhookRejectionCommentsDto {
   @ApiPropertyOptional({
-    example:
-      'We could not verify your profile. Your region is not supported.',
+    example: 'We could not verify your profile. Your region is not supported.',
   })
   @IsOptional()
   @IsString()
@@ -36,8 +35,7 @@ export class StrigaKycWebhookRejectionCommentsDto {
   userComment?: string;
 
   @ApiPropertyOptional({
-    example:
-      'We could not verify your profile. Your region is not supported.',
+    example: 'We could not verify your profile. Your region is not supported.',
   })
   @IsOptional()
   @IsString()

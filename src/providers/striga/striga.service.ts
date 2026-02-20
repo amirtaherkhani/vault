@@ -138,10 +138,15 @@ export class StrigaService
     });
   }
 
-  async getUserKycById(userId: string): Promise<StrigaUserKycStatusResponseDto> {
-    const payload = await this.callSignedAdmin(STRIGA_ENDPOINT_NAME.getUserKycById, {
-      param: { userId },
-    });
+  async getUserKycById(
+    userId: string,
+  ): Promise<StrigaUserKycStatusResponseDto> {
+    const payload = await this.callSignedAdmin(
+      STRIGA_ENDPOINT_NAME.getUserKycById,
+      {
+        param: { userId },
+      },
+    );
     return GroupPlainToInstance(StrigaUserKycStatusResponseDto, payload, [
       RoleEnum.admin,
     ]) as StrigaUserKycStatusResponseDto;

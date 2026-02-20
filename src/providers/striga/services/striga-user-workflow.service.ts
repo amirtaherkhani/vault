@@ -272,7 +272,8 @@ export class StrigaUserWorkflowService {
       return;
     }
 
-    const kycSnapshot = this.strigaUsersService.toKycSnapshotFromWebhook(payload);
+    const kycSnapshot =
+      this.strigaUsersService.toKycSnapshotFromWebhook(payload);
     const updatedStrigaUser = await this.strigaUsersService.update(
       strigaUser.id,
       { kyc: kycSnapshot },
@@ -337,7 +338,11 @@ export class StrigaUserWorkflowService {
   }
 
   private isTierApproved(status?: string | null): boolean {
-    return String(status ?? '').trim().toUpperCase() === 'APPROVED';
+    return (
+      String(status ?? '')
+        .trim()
+        .toUpperCase() === 'APPROVED'
+    );
   }
 
   private extractAccountIdFromPayload(data: unknown): string | null {

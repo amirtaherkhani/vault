@@ -54,30 +54,10 @@ export class StrigaUserAddress {
 
 export class StrigaUserKycTier {
   @ApiProperty({
-    type: () => Boolean,
-    nullable: true,
-  })
-  eligible?: boolean;
-
-  @ApiProperty({
     type: () => String,
     nullable: true,
   })
   status?: string;
-}
-
-export class StrigaUserKycRejectionComments {
-  @ApiProperty({
-    type: () => String,
-    nullable: true,
-  })
-  userComment?: string | null;
-
-  @ApiProperty({
-    type: () => String,
-    nullable: true,
-  })
-  autoComment?: string | null;
 }
 
 export class StrigaUserKyc {
@@ -86,60 +66,6 @@ export class StrigaUserKyc {
     nullable: true,
   })
   status?: string | null;
-
-  @ApiProperty({
-    type: () => Number,
-    nullable: true,
-  })
-  currentTier?: number | null;
-
-  @ApiProperty({
-    type: () => [String],
-    nullable: true,
-  })
-  details?: string[] | null;
-
-  @ApiProperty({
-    type: () => Boolean,
-    nullable: true,
-  })
-  rejectionFinal?: boolean | null;
-
-  @ApiProperty({
-    type: () => String,
-    nullable: true,
-  })
-  reason?: string | null;
-
-  @ApiProperty({
-    type: () => String,
-    nullable: true,
-  })
-  type?: string | null;
-
-  @ApiProperty({
-    type: () => Number,
-    nullable: true,
-  })
-  ts?: number | null;
-
-  @ApiProperty({
-    type: () => Boolean,
-    nullable: true,
-  })
-  tinCollected?: boolean | null;
-
-  @ApiProperty({
-    type: () => String,
-    nullable: true,
-  })
-  tinVerificationExpiryDate?: string | null;
-
-  @ApiProperty({
-    type: () => StrigaUserKycRejectionComments,
-    nullable: true,
-  })
-  rejectionComments?: StrigaUserKycRejectionComments | null;
 
   @ApiProperty({
     type: () => StrigaUserKycTier,
