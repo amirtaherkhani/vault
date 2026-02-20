@@ -43,6 +43,10 @@ import type {
   VeroProfileResult,
   VeroTokenCacheEntry,
 } from './types/vero-auth-base.type';
+import { InternalEventsService } from '../common/internal-events/internal-events.service';
+import { DataSource } from 'typeorm';
+import { UserInternalEvent } from '../users/events/user-internal.event';
+import { InternalEventPayload } from '../common/internal-events/types/internal-events.type';
 
 @Injectable()
 export class AuthVeroService {
@@ -60,6 +64,8 @@ export class AuthVeroService {
     private readonly usersService: UsersService,
     private readonly sessionService: SessionService,
     private readonly cacheService: CacheService,
+    private readonly internalEventsService: InternalEventsService,
+    private readonly dataSource: DataSource,
   ) {
     const jwksUri =
       this.configService.get('vero.jwksUri', { infer: true }) ||
@@ -373,6 +379,7 @@ export class AuthVeroService {
       },
       ttlSeconds,
     );
+    await this.emitUserLoggedInEvent(user);
     const tokenExpires = exp ? exp * 1000 : 0;
     return {
       token: loginDto.veroToken,
@@ -380,6 +387,32 @@ export class AuthVeroService {
       tokenExpires,
       user,
     };
+  }
+
+  private async emitUserLoggedInEvent(user: User): Promise<void> {
+    const event = UserInternalEvent.loggedIn(user);
+    if (!event) {
+      return;
+    }
+
+    try {
+      await this.internalEventsService.emit(this.dataSource.manager, {
+        eventType: event.eventType,
+        payload: { ...event.payload } as InternalEventPayload,
+      });
+    } catch (error) {
+      const message = (error as Error)?.message ?? String(error);
+      if (message.includes('Internal events are disabled')) {
+        this.logger.warn(
+          `Internal events are disabled; skipping emit for: ${event.eventType}`,
+        );
+        return;
+      }
+      this.logger.error(
+        `Failed to emit internal event ${event.eventType}: ${message}`,
+      );
+      throw error;
+    }
   }
 
   async resolveUserFromExternalToken(

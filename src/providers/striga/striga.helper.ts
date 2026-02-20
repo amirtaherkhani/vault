@@ -77,7 +77,9 @@ export function getStrigaPlaceholderMobile(): {
   };
 }
 
-export function isStrigaPlaceholderMobile(mobile?: StrigaMobileLike | null): boolean {
+export function isStrigaPlaceholderMobile(
+  mobile?: StrigaMobileLike | null,
+): boolean {
   if (!mobile) {
     return false;
   }

@@ -6,6 +6,7 @@ import { UserEventDto } from '../dto/user.dto';
 import {
   VERO_LOGIN_USER_ADDED_EVENT,
   VERO_LOGIN_USER_DELETED_EVENT,
+  VERO_LOGIN_USER_LOGGED_IN_EVENT,
 } from '../types/user-event.type';
 
 export class UserInternalEvent extends InternalEventBase<UserEventDto> {
@@ -38,14 +39,29 @@ export class UserInternalEvent extends InternalEventBase<UserEventDto> {
     );
   }
 
+  static loggedIn(user: User): UserInternalEvent | null {
+    const eventType = this.resolveEventType(user.provider, 'loggedIn');
+    if (!eventType) {
+      return null;
+    }
+
+    return new UserInternalEvent(eventType, this.buildPayload(user));
+  }
+
   private static resolveEventType(
     provider: User['provider'],
-    action: 'created' | 'deleted',
+    action: 'created' | 'deleted' | 'loggedIn',
   ): string | null {
     if (provider === AuthProvidersEnum.vero) {
-      return action === 'created'
-        ? VERO_LOGIN_USER_ADDED_EVENT
-        : VERO_LOGIN_USER_DELETED_EVENT;
+      if (action === 'created') {
+        return VERO_LOGIN_USER_ADDED_EVENT;
+      }
+
+      if (action === 'deleted') {
+        return VERO_LOGIN_USER_DELETED_EVENT;
+      }
+
+      return VERO_LOGIN_USER_LOGGED_IN_EVENT;
     }
 
     return null;
