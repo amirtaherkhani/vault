@@ -136,13 +136,14 @@ export type StrigaCreateWalletRequestDto = Record<string, unknown>;
 
 @Exclude()
 export class StrigaUpdateUserRequestDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
     description: 'User ID returned by Striga create user endpoint',
   })
+  @IsOptional()
   @IsString()
   @Expose()
-  userId!: string;
+  userId?: string;
 
   @ApiPropertyOptional({ example: 'Claudia' })
   @IsOptional()
@@ -183,71 +184,11 @@ export class StrigaUpdateUserRequestDto {
   @Expose()
   address?: StrigaAddressDto;
 
-  @ApiPropertyOptional({ example: true })
-  @IsOptional()
-  @IsBoolean()
-  @Expose()
-  selfPepDeclaration?: boolean;
-
-  @ApiPropertyOptional({ example: 'TJ' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  documentIssuingCountry?: string;
-
-  @ApiPropertyOptional({ example: 'NF' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  nationality?: string;
-
-  @ApiPropertyOptional({ example: 'PRECIOUS_GOODS_JEWELRY' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  occupation?: string;
-
-  @ApiPropertyOptional({ example: 'OTHER' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  sourceOfFunds?: string;
-
-  @ApiPropertyOptional({ example: 'Sale of donkey' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  sourceOfFundsOther?: string;
-
-  @ApiPropertyOptional({ example: 'OTHER' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  purposeOfAccount?: string;
-
-  @ApiPropertyOptional({ example: 'To buy donkey' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  purposeOfAccountOther?: string;
-
   @ApiPropertyOptional({ example: 'Janiyaburgh' })
   @IsOptional()
   @IsString()
   @Expose()
   placeOfBirth?: string;
-
-  @ApiPropertyOptional({ example: 'MORE_THAN_15000_EUR' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  expectedOutgoingTxVolumeYearly?: string;
-
-  @ApiPropertyOptional({ example: 'MORE_THAN_15000_EUR' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  expectedIncomingTxVolumeYearly?: string;
 }
 
 @Exclude()
@@ -261,7 +202,7 @@ export class StrigaUpdateVerifiedCredentialsRequestDto {
   userId!: string;
 
   @ApiProperty({
-    example: 'test+updated@gmail.com',
+    example: 'user1@example.com',
     description: 'User email address',
   })
   @IsEmail()
@@ -275,6 +216,17 @@ export class StrigaUserByEmailRequestDto {
   @IsEmail()
   @Expose()
   email!: string;
+}
+
+@Exclude()
+export class StrigaExternalIdRequestDto {
+  @ApiProperty({
+    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
+    description: 'Striga user ID',
+  })
+  @IsString()
+  @Expose()
+  externalId!: string;
 }
 
 @Exclude()

@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  NotFoundException,
   OnModuleInit,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiGatewayService } from 'src/common/api-gateway/api-gateway.service';
@@ -23,6 +25,7 @@ import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
   StrigaCreateWalletRequestDto,
   StrigaCreateUserRequestDto,
+  StrigaExternalIdRequestDto,
   StrigaGetAllWalletsRequestDto,
   StrigaGetWalletAccountRequestDto,
   StrigaGetWalletAccountStatementRequestDto,
@@ -252,17 +255,90 @@ export class StrigaService
     return this.getAllWallets(body as StrigaGetAllWalletsRequestDto);
   }
 
-  async updateUser(
+  async getMyUserFromCloud(
+    request: StrigaRequestWithContext,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const authUserId = request.user?.id;
+    if (typeof authUserId === 'undefined' || authUserId === null) {
+      throw new UnauthorizedException('Authenticated user is required.');
+    }
+
+    const strigaUser =
+      await this.strigaUsersService.resolveStrigaUserForMe(authUserId);
+    const externalId = String(strigaUser?.externalId ?? '').trim();
+
+    if (!externalId) {
+      throw new NotFoundException(
+        'Striga user for current user was not found in local database.',
+      );
+    }
+
+    return this.getUserById(externalId);
+  }
+
+  async getUserFromCloudByExternalId(
+    payload: StrigaExternalIdRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const externalId = String(payload.externalId ?? '').trim();
+    if (!externalId) {
+      throw new BadRequestException('externalId is required.');
+    }
+
+    return this.getUserById(externalId);
+  }
+
+  async updateContactForCurrentUser(
+    request: StrigaRequestWithContext,
     payload: StrigaUpdateUserRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    const response = await this.callSignedAdmin(
+    const updatePayload: StrigaUpdateUserRequestDto = {
+      userId: this.getCurrentStrigaExternalId(request),
+      mobile: payload.mobile,
+      address: payload.address,
+    };
+
+    if (
+      typeof updatePayload.mobile === 'undefined' &&
+      typeof updatePayload.address === 'undefined'
+    ) {
+      throw new BadRequestException(
+        'At least one of mobile or address must be provided.',
+      );
+    }
+
+    const response = await this.callSignedUser(
       STRIGA_ENDPOINT_NAME.updateUser,
       {
-        body: payload,
+        body: updatePayload,
       },
     );
 
-    await this.syncLocalStrigaUserContact(payload);
+    await this.syncLocalStrigaUserContact(updatePayload);
+
+    return response;
+  }
+
+  async updateUser(
+    payload: StrigaUpdateUserRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const userId = String(payload.userId ?? '').trim();
+    if (!userId) {
+      throw new BadRequestException('userId is required.');
+    }
+
+    const updatePayload: StrigaUpdateUserRequestDto = {
+      ...payload,
+      userId,
+    };
+
+    const response = await this.callSignedAdmin(
+      STRIGA_ENDPOINT_NAME.updateUser,
+      {
+        body: updatePayload,
+      },
+    );
+
+    await this.syncLocalStrigaUserContact(updatePayload);
 
     return response;
   }

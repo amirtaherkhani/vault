@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Request,
   UseGuards,
@@ -25,33 +26,24 @@ import {
   RequireEnabled,
   RequireServiceReady,
 } from '../../utils/decorators/service-toggleable.decorators';
-import {
-  RequireStrigaKycApproved,
-  RequireStrigaUser,
-} from './decorators/striga-access.decorator';
+import { RequireStrigaUser } from './decorators/striga-access.decorator';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
-import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
+  StrigaExternalIdRequestDto,
   StrigaGetAllWalletsRequestDto,
   StrigaKycRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
+  StrigaUpdateUserRequestDto,
   StrigaVerifyEmailRequestDto,
   StrigaVerifyMobileRequestDto,
 } from './dto/striga-request.dto';
-import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaService } from './striga.service';
 import { StrigaRequestWithContext } from './types/striga-request-context.type';
 
 @ResponseModel('STRIGA')
-@UseGuards(
-  DynamicAuthGuard,
-  RolesGuard,
-  EnableGuard,
-  StrigaUserExistsGuard,
-  StrigaKycApprovedGuard,
-)
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @RequireEnabled('striga.enable')
 @RequireServiceReady(StrigaService)
 @ApiBearerAuth()
@@ -84,6 +76,8 @@ export class StrigaController {
   @ApiBody({ type: StrigaVerifyEmailRequestDto })
   @HttpCode(HttpStatus.OK)
   @Post('users/email/verify')
+  @UseGuards(StrigaUserExistsGuard)
+  @RequireStrigaUser()
   async verifyEmail(
     @Body() payload: StrigaVerifyEmailRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
@@ -102,6 +96,8 @@ export class StrigaController {
   @ApiBody({ type: StrigaResendEmailRequestDto })
   @HttpCode(HttpStatus.OK)
   @Post('users/email/resend')
+  @UseGuards(StrigaUserExistsGuard)
+  @RequireStrigaUser()
   async resendEmail(
     @Body() payload: StrigaResendEmailRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
@@ -120,6 +116,8 @@ export class StrigaController {
   @ApiBody({ type: StrigaVerifyMobileRequestDto })
   @HttpCode(HttpStatus.OK)
   @Post('users/mobile/verify')
+  @UseGuards(StrigaUserExistsGuard)
+  @RequireStrigaUser()
   async verifyMobile(
     @Body() payload: StrigaVerifyMobileRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
@@ -138,10 +136,62 @@ export class StrigaController {
   @ApiBody({ type: StrigaResendSmsRequestDto })
   @HttpCode(HttpStatus.OK)
   @Post('users/mobile/resend')
+  @UseGuards(StrigaUserExistsGuard)
+  @RequireStrigaUser()
   async resendSms(
     @Body() payload: StrigaResendSmsRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.resendSms(payload);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current Striga user', [RoleEnum.admin, RoleEnum.user])
+  @ApiOkResponse({
+    description: 'Current Striga user profile',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Get('users/me')
+  async getMyUserFromCloud(
+    @Request() request: StrigaRequestWithContext,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getMyUserFromCloud(request);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get Striga user by externalId', [RoleEnum.admin])
+  @ApiOkResponse({
+    description: 'Striga user profile by externalId',
+    type: StrigaBaseResponseDto,
+  })
+  @ApiBody({ type: StrigaExternalIdRequestDto })
+  @HttpCode(HttpStatus.OK)
+  @Post('users')
+  async getUserFromCloudByExternalId(
+    @Body() payload: StrigaExternalIdRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.getUserFromCloudByExternalId(payload);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @RequireStrigaUser()
+  @ApiOperationRoles('Update current Striga user phone/address', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiOkResponse({
+    description: 'Striga update user contact response for current user',
+    type: StrigaBaseResponseDto,
+  })
+  @ApiBody({ type: StrigaUpdateUserRequestDto })
+  @HttpCode(HttpStatus.OK)
+  @Patch('me')
+  @UseGuards(StrigaUserExistsGuard)
+  async updateMyContact(
+    @Request() request: StrigaRequestWithContext,
+    @Body() payload: StrigaUpdateUserRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return this.strigaService.updateContactForCurrentUser(request, payload);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -156,30 +206,12 @@ export class StrigaController {
   })
   @HttpCode(HttpStatus.OK)
   @Post('me/kyc/start')
+  @UseGuards(StrigaUserExistsGuard)
   async startMyKyc(
     @Request() request: StrigaRequestWithContext,
     @Body() payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return await this.strigaService.startKycForCurrentUser(request, payload);
-  }
-
-  @Roles(RoleEnum.admin, RoleEnum.user)
-  @RequireStrigaKycApproved()
-  @ApiOperationRoles('List Striga wallets for current user', [
-    RoleEnum.admin,
-    RoleEnum.user,
-  ])
-  @ApiOkResponse({
-    description: 'Striga wallets response for current user',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('me/wallets/list')
-  async getMyWallets(
-    @Request() request: StrigaRequestWithContext,
-    @Body() payload: StrigaGetAllWalletsRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return await this.strigaService.getWalletsForCurrentUser(request, payload);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
