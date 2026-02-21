@@ -580,7 +580,7 @@ export class StrigaUserWorkflowService {
     }
 
     const upsertResult =
-      await this.strigaUsersService.upsertFromCloudUser(sourceUser);
+      await this.strigaService.upsertLocalUserFromCloudPayload(sourceUser);
     const synced = upsertResult.user;
     const loggedExternalId = synced?.externalId ?? externalId ?? 'n/a';
     this.logger.debug(

@@ -9,7 +9,6 @@ const STRIGA_ENDPOINT_NAMES = [
   'getUserById',
   'getUserKycById',
   'createUser',
-  'createAccount',
   'getWalletAccount',
   'getWalletAccountStatement',
   'getAllWallets',

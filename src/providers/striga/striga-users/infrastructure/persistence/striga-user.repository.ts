@@ -23,6 +23,11 @@ export abstract class StrigaUserRepository {
     externalId?: StrigaUser['externalId'],
   ): Promise<NullableType<StrigaUser>>;
 
+  abstract findKycByIdOrExternalId(
+    id?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<StrigaUser['kyc'] | null>;
+
   abstract findUserByExternalId(
     externalId: StrigaUser['externalId'],
   ): Promise<NullableType<StrigaUser>>;

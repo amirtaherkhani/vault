@@ -128,7 +128,6 @@ export class StrigaCreateUserRequestDto {
   address?: StrigaAddressDto;
 }
 
-export type StrigaCreateAccountRequestDto = Record<string, unknown>;
 export type StrigaGetWalletAccountRequestDto = Record<string, unknown>;
 export type StrigaGetWalletAccountStatementRequestDto = Record<string, unknown>;
 export type StrigaGetAllWalletsRequestDto = Record<string, unknown>;
@@ -272,6 +271,14 @@ export class StrigaUpdateVerifiedCredentialsRequestDto {
 
 @Exclude()
 export class StrigaUserByEmailRequestDto {
+  @ApiProperty({ example: 'user1@example.com' })
+  @IsEmail()
+  @Expose()
+  email!: string;
+}
+
+@Exclude()
+export class StrigaUserByEmailParamDto {
   @ApiProperty({ example: 'user1@example.com' })
   @IsEmail()
   @Expose()

@@ -9,6 +9,8 @@ import {
   StrigaUserLoggedInEventHandler,
   StrigaKycWebhookEventHandler,
 } from './events/striga-user.event.handler';
+import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
+import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaUserWorkflowService } from './services/striga-user-workflow.service';
 import { StrigaUsersModule } from './striga-users/striga-users.module';
 import { StrigaController } from './striga.controller';
@@ -23,6 +25,8 @@ import { StrigaService } from './striga.service';
     StrigaUserAddedEventHandler,
     StrigaUserDeletedEventHandler,
     StrigaKycWebhookEventHandler,
+    StrigaUserExistsGuard,
+    StrigaKycApprovedGuard,
     EnableGuard,
   ],
   controllers: [StrigaController],

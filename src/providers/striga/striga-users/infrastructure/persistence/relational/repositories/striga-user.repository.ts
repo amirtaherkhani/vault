@@ -67,6 +67,29 @@ export class StrigaUserRelationalRepository implements StrigaUserRepository {
     return null;
   }
 
+  async findKycByIdOrExternalId(
+    id?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<StrigaUser['kyc'] | null> {
+    if (!id && !externalId) {
+      return null;
+    }
+
+    const qb = this.strigaUserRepository
+      .createQueryBuilder('strigaUser')
+      .select('strigaUser.kyc', 'kyc')
+      .limit(1);
+
+    if (id) {
+      qb.where('strigaUser.id = :id', { id });
+    } else {
+      qb.where('strigaUser.externalId = :externalId', { externalId });
+    }
+
+    const raw = await qb.getRawOne<{ kyc?: StrigaUser['kyc'] | null }>();
+    return raw?.kyc ?? null;
+  }
+
   async findUserByExternalId(
     externalId: StrigaUser['externalId'],
   ): Promise<NullableType<StrigaUser>> {

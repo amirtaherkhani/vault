@@ -25,10 +25,6 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.POST,
     path: '/user/create',
   },
-  createAccount: {
-    method: HttpMethod.POST,
-    path: '/account/create',
-  },
   getWalletAccount: {
     method: HttpMethod.POST,
     path: '/wallets/get/account',

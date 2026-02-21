@@ -1,4 +1,9 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiGatewayService } from 'src/common/api-gateway/api-gateway.service';
 import {
@@ -16,7 +21,6 @@ import { StrigaConfig } from './config/striga-config.type';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
 import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
-  StrigaCreateAccountRequestDto,
   StrigaCreateWalletRequestDto,
   StrigaCreateUserRequestDto,
   StrigaGetAllWalletsRequestDto,
@@ -32,7 +36,13 @@ import {
   StrigaVerifyEmailRequestDto,
   StrigaVerifyMobileRequestDto,
 } from './dto/striga-request.dto';
-import { StrigaUsersService } from './striga-users/striga-users.service';
+import { StrigaUser } from './striga-users/domain/striga-user';
+import { CreateStrigaUserDto } from './striga-users/dto/create-striga-user.dto';
+import { UpdateStrigaUserDto } from './striga-users/dto/update-striga-user.dto';
+import {
+  StrigaUsersService,
+  StrigaUserUpsertResult,
+} from './striga-users/striga-users.service';
 import {
   buildStrigaEndpointPath,
   createStrigaHmacAuthorization,
@@ -47,6 +57,7 @@ import {
   STRIGA_ENABLE,
   STRIGA_SANDBOX_BASE_URL,
 } from './types/striga-const.type';
+import { StrigaRequestWithContext } from './types/striga-request-context.type';
 
 @Injectable()
 export class StrigaService
@@ -168,14 +179,6 @@ export class StrigaService
     });
   }
 
-  async createAccount(
-    payload: StrigaCreateAccountRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.createAccount, {
-      body: payload,
-    });
-  }
-
   async getWalletAccount(
     payload: StrigaGetWalletAccountRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
@@ -219,20 +222,34 @@ export class StrigaService
     });
   }
 
-  async initKyc(
-    payload: StrigaKycRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.startKyc, {
-      body: payload,
-    });
-  }
-
   async startKyc(
     payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.callSignedUser(STRIGA_ENDPOINT_NAME.startKyc, {
       body: payload,
     });
+  }
+
+  async startKycForCurrentUser(
+    request: StrigaRequestWithContext,
+    payload: StrigaKycRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const body = this.withCurrentStrigaUserId(
+      request,
+      payload as Record<string, unknown>,
+    );
+    return this.startKyc(body as StrigaKycRequestDto);
+  }
+
+  async getWalletsForCurrentUser(
+    request: StrigaRequestWithContext,
+    payload: StrigaGetAllWalletsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    const body = this.withCurrentStrigaUserId(
+      request,
+      payload as Record<string, unknown>,
+    );
+    return this.getAllWallets(body as StrigaGetAllWalletsRequestDto);
   }
 
   async updateUser(
@@ -299,6 +316,89 @@ export class StrigaService
     return this.callSignedAdmin(STRIGA_ENDPOINT_NAME.resendSms, {
       body: payload,
     });
+  }
+
+  async upsertLocalUserFromCloudPayload(
+    cloudUser: Record<string, unknown>,
+  ): Promise<StrigaUserUpsertResult> {
+    const externalId = String(
+      cloudUser.userId ?? cloudUser.externalId ?? '',
+    ).trim();
+    if (!externalId) {
+      return { operation: 'skipped', user: null };
+    }
+
+    const email = String(cloudUser.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) {
+      return { operation: 'skipped', user: null };
+    }
+
+    const firstName = String(cloudUser.firstName ?? '').trim() || 'Unknown';
+    const lastName = String(cloudUser.lastName ?? '').trim() || 'Unknown';
+
+    const mobile = this.normalizeMobileFromCloud(
+      (cloudUser.mobile as Record<string, unknown>) ?? undefined,
+    );
+    const address = this.normalizeAddressFromCloud(
+      (cloudUser.address as Record<string, unknown>) ?? undefined,
+    );
+    const kyc = this.normalizeKycFromCloud(
+      (cloudUser.KYC as Record<string, unknown>) ??
+        (cloudUser.kyc as Record<string, unknown>) ??
+        undefined,
+    );
+
+    const payload: UpdateStrigaUserDto = {
+      externalId,
+      email,
+      firstName,
+      lastName,
+      mobile,
+      address,
+      kyc,
+    };
+
+    const existingByExternalId =
+      await this.strigaUsersService.findByExternalId(externalId);
+    if (existingByExternalId) {
+      if (!this.hasLocalUserChanges(existingByExternalId, payload)) {
+        return { operation: 'unchanged', user: existingByExternalId };
+      }
+
+      const updated = await this.strigaUsersService.update(
+        existingByExternalId.id,
+        payload,
+      );
+      return { operation: 'updated', user: updated };
+    }
+
+    const existingByEmail = await this.strigaUsersService.findByEmail(email);
+    if (existingByEmail) {
+      if (!this.hasLocalUserChanges(existingByEmail, payload)) {
+        return { operation: 'unchanged', user: existingByEmail };
+      }
+
+      const updated = await this.strigaUsersService.update(
+        existingByEmail.id,
+        payload,
+      );
+      return { operation: 'updated', user: updated };
+    }
+
+    const createPayload: CreateStrigaUserDto = {
+      externalId,
+      email,
+      firstName,
+      lastName,
+      mobile,
+      address,
+      kyc,
+    };
+
+    const created = await this.strigaUsersService.create(createPayload);
+    return { operation: 'created', user: created };
   }
 
   private async checkConnection(): Promise<boolean> {
@@ -463,5 +563,141 @@ export class StrigaService
       },
       groups,
     ) as StrigaBaseResponseDto<Record<string, unknown> | T | null>;
+  }
+
+  private normalizeMobileFromCloud(
+    mobile?: Record<string, unknown>,
+  ): StrigaUser['mobile'] {
+    return {
+      countryCode:
+        typeof mobile?.countryCode === 'string' ? mobile.countryCode : '',
+      number: typeof mobile?.number === 'string' ? mobile.number : '',
+    };
+  }
+
+  private normalizeAddressFromCloud(
+    address?: Record<string, unknown>,
+  ): StrigaUser['address'] {
+    return {
+      addressLine1:
+        typeof address?.addressLine1 === 'string' ? address.addressLine1 : '',
+      addressLine2:
+        typeof address?.addressLine2 === 'string' ? address.addressLine2 : '',
+      city: typeof address?.city === 'string' ? address.city : '',
+      state: typeof address?.state === 'string' ? address.state : '',
+      country: typeof address?.country === 'string' ? address.country : '',
+      postalCode:
+        typeof address?.postalCode === 'string' ? address.postalCode : '',
+    };
+  }
+
+  private normalizeKycFromCloud(
+    kyc?: Record<string, unknown>,
+  ): StrigaUser['kyc'] | undefined {
+    if (!kyc || typeof kyc !== 'object' || Array.isArray(kyc)) {
+      return undefined;
+    }
+
+    const normalizeTier = (tier: unknown) => {
+      if (!tier || typeof tier !== 'object' || Array.isArray(tier)) {
+        return undefined;
+      }
+      const tierObj = tier as Record<string, unknown>;
+      return {
+        status: typeof tierObj.status === 'string' ? tierObj.status : undefined,
+      };
+    };
+
+    return {
+      status: typeof kyc.status === 'string' ? kyc.status : null,
+      tier0: normalizeTier(kyc.tier0) ?? null,
+      tier1: normalizeTier(kyc.tier1) ?? null,
+      tier2: normalizeTier(kyc.tier2) ?? null,
+      tier3: normalizeTier(kyc.tier3) ?? null,
+    };
+  }
+
+  private hasLocalUserChanges(
+    current: StrigaUser,
+    payload: UpdateStrigaUserDto,
+  ): boolean {
+    const normalizedCurrentEmail = String(current.email ?? '')
+      .trim()
+      .toLowerCase();
+    const normalizedPayloadEmail = String(payload.email ?? '')
+      .trim()
+      .toLowerCase();
+
+    if (normalizedCurrentEmail !== normalizedPayloadEmail) {
+      return true;
+    }
+
+    if (String(current.firstName ?? '') !== String(payload.firstName ?? '')) {
+      return true;
+    }
+
+    if (String(current.lastName ?? '') !== String(payload.lastName ?? '')) {
+      return true;
+    }
+
+    const currentMobile = JSON.stringify(current.mobile ?? {});
+    const payloadMobile = JSON.stringify(payload.mobile ?? {});
+    if (currentMobile !== payloadMobile) {
+      return true;
+    }
+
+    const currentAddress = JSON.stringify(current.address ?? {});
+    const payloadAddress = JSON.stringify(payload.address ?? {});
+    if (currentAddress !== payloadAddress) {
+      return true;
+    }
+
+    if (typeof payload.kyc !== 'undefined') {
+      const currentKyc = JSON.stringify(current.kyc ?? null);
+      const payloadKyc = JSON.stringify(payload.kyc ?? null);
+      if (currentKyc !== payloadKyc) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  toSuccessResponse<T>(
+    data: T,
+    roles: RoleEnum | RoleEnum[] = [RoleEnum.admin, RoleEnum.user],
+  ): StrigaBaseResponseDto<Record<string, unknown> | T | null> {
+    return this.toResponse(data, roles);
+  }
+
+  private getCurrentStrigaExternalId(
+    request: StrigaRequestWithContext,
+  ): string {
+    const externalId = String(
+      request.striga?.strigaUser?.externalId ?? '',
+    ).trim();
+
+    if (!externalId) {
+      throw new BadRequestException(
+        'Current user does not have a linked Striga user.',
+      );
+    }
+
+    return externalId;
+  }
+
+  private withCurrentStrigaUserId(
+    request: StrigaRequestWithContext,
+    payload: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    const userId = this.getCurrentStrigaExternalId(request);
+    const nextPayload: Record<string, unknown> = { ...payload };
+
+    nextPayload.userId = userId;
+    if (Object.prototype.hasOwnProperty.call(nextPayload, 'externalId')) {
+      nextPayload.externalId = userId;
+    }
+
+    return nextPayload;
   }
 }

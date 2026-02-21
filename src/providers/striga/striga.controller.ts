@@ -1,321 +1,195 @@
 import {
-  Patch,
   Body,
   Controller,
   Get,
-  Param,
   HttpCode,
   HttpStatus,
   Post,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOkResponse,
-  ApiOperation,
-  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
+import { ResponseModel } from '../../common/api-gateway/response/decorators/response-model.decorator';
 import { EnableGuard } from '../../common/guards/service-enabled.guard';
 import { Roles } from '../../roles/roles.decorator';
 import { RoleEnum } from '../../roles/roles.enum';
 import { RolesGuard } from '../../roles/roles.guard';
+import { ApiOperationRoles } from '../../utils/decorators/swagger.decorator';
 import {
   RequireEnabled,
   RequireServiceReady,
 } from '../../utils/decorators/service-toggleable.decorators';
+import {
+  RequireStrigaKycApproved,
+  RequireStrigaUser,
+} from './decorators/striga-access.decorator';
 import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
 import { StrigaUserKycStatusResponseDto } from './dto/striga-kyc.response.dto';
 import {
-  StrigaCreateAccountRequestDto,
-  StrigaCreateWalletRequestDto,
-  StrigaCreateUserRequestDto,
   StrigaGetAllWalletsRequestDto,
-  StrigaGetWalletAccountRequestDto,
-  StrigaGetWalletAccountStatementRequestDto,
-  StrigaGetWalletRequestDto,
   StrigaKycRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
-  StrigaUpdateVerifiedCredentialsRequestDto,
-  StrigaUpdateUserRequestDto,
-  StrigaUserByEmailRequestDto,
-  StrigaUserIdParamDto,
   StrigaVerifyEmailRequestDto,
   StrigaVerifyMobileRequestDto,
 } from './dto/striga-request.dto';
+import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
+import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaService } from './striga.service';
+import { StrigaRequestWithContext } from './types/striga-request-context.type';
 
-@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
+@ResponseModel('STRIGA')
+@UseGuards(
+  DynamicAuthGuard,
+  RolesGuard,
+  EnableGuard,
+  StrigaUserExistsGuard,
+  StrigaKycApprovedGuard,
+)
 @RequireEnabled('striga.enable')
 @RequireServiceReady(StrigaService)
 @ApiBearerAuth()
-@Roles(RoleEnum.admin)
 @ApiTags('Striga')
 @Controller({ path: 'striga', version: '1' })
 export class StrigaController {
   constructor(private readonly strigaService: StrigaService) {}
 
-  @ApiOperation({ summary: 'Ping Striga API' })
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Ping Striga API', [RoleEnum.admin])
   @ApiOkResponse({
     description: 'Striga ping response',
     type: StrigaBaseResponseDto,
   })
   @HttpCode(HttpStatus.OK)
-  @Get('ping')
+  @Get('status')
   async ping(): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.ping();
   }
 
-  @ApiOperation({ summary: 'Get Striga user by ID' })
-  @ApiParam({
-    name: 'userId',
-    description: 'Unique user ID from Striga',
-    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-  })
-  @ApiOkResponse({
-    description: 'Striga user details response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Get('user/:userId')
-  async getUserById(
-    @Param() params: StrigaUserIdParamDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getUserById(params.userId);
-  }
-
-  @ApiOperation({ summary: 'Get Striga user KYC by user ID' })
-  @ApiParam({
-    name: 'userId',
-    description: 'Unique user ID from Striga',
-    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-  })
-  @ApiOkResponse({
-    description: 'Striga user KYC details response',
-    type: StrigaUserKycStatusResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Get('user/:userId/kyc')
-  async getUserKycById(
-    @Param() params: StrigaUserIdParamDto,
-  ): Promise<StrigaUserKycStatusResponseDto> {
-    return this.strigaService.getUserKycById(params.userId);
-  }
-
-  @ApiOperation({ summary: 'Get Striga user by email' })
-  @ApiOkResponse({
-    description: 'Striga user by email response',
-    type: StrigaBaseResponseDto,
-  })
-  @ApiBody({ type: StrigaUserByEmailRequestDto })
-  @HttpCode(HttpStatus.OK)
-  @Post('user/get-by-email')
-  async getUserByEmail(
-    @Body() payload: StrigaUserByEmailRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getUserByEmail(payload);
-  }
-
-  @ApiOperation({ summary: 'Verify Striga user email' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Verify Striga user email', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
     description: 'Striga verify email response',
     type: StrigaBaseResponseDto,
   })
   @ApiBody({ type: StrigaVerifyEmailRequestDto })
   @HttpCode(HttpStatus.OK)
-  @Post('user/verify-email')
+  @Post('users/email/verify')
   async verifyEmail(
     @Body() payload: StrigaVerifyEmailRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.verifyEmail(payload);
   }
 
-  @ApiOperation({ summary: 'Resend Striga verification email' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Resend Striga verification email', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
     description: 'Striga resend email response',
     type: StrigaBaseResponseDto,
   })
   @ApiBody({ type: StrigaResendEmailRequestDto })
   @HttpCode(HttpStatus.OK)
-  @Post('user/resend-email')
+  @Post('users/email/resend')
   async resendEmail(
     @Body() payload: StrigaResendEmailRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.resendEmail(payload);
   }
 
-  @ApiOperation({ summary: 'Verify Striga user mobile' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Verify Striga user mobile', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
     description: 'Striga verify mobile response',
     type: StrigaBaseResponseDto,
   })
   @ApiBody({ type: StrigaVerifyMobileRequestDto })
   @HttpCode(HttpStatus.OK)
-  @Post('user/verify-mobile')
+  @Post('users/mobile/verify')
   async verifyMobile(
     @Body() payload: StrigaVerifyMobileRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.verifyMobile(payload);
   }
 
-  @ApiOperation({ summary: 'Resend Striga mobile verification SMS' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Resend Striga mobile verification SMS', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
     description: 'Striga resend SMS response',
     type: StrigaBaseResponseDto,
   })
   @ApiBody({ type: StrigaResendSmsRequestDto })
   @HttpCode(HttpStatus.OK)
-  @Post('user/resend-sms')
+  @Post('users/mobile/resend')
   async resendSms(
     @Body() payload: StrigaResendSmsRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
     return this.strigaService.resendSms(payload);
   }
 
-  @ApiOperation({ summary: 'Create Striga user' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @RequireStrigaUser()
+  @ApiOperationRoles('Start KYC for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
   @ApiOkResponse({
-    description: 'Striga create user response',
-    type: StrigaBaseResponseDto,
-  })
-  @ApiBody({ type: StrigaCreateUserRequestDto })
-  @HttpCode(HttpStatus.OK)
-  @Post('user/create')
-  async createUser(
-    @Body() payload: StrigaCreateUserRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.createUser(payload);
-  }
-
-  @ApiOperation({ summary: 'Create account' })
-  @ApiOkResponse({
-    description: 'Striga create account response',
+    description: 'Striga start KYC response for current user',
     type: StrigaBaseResponseDto,
   })
   @HttpCode(HttpStatus.OK)
-  @Post('account/create')
-  async createAccount(
-    @Body() payload: StrigaCreateAccountRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.createAccount(payload);
-  }
-
-  @ApiOperation({ summary: 'Get Striga wallet account' })
-  @ApiOkResponse({
-    description: 'Striga wallet account response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('wallets/get/account')
-  async getWalletAccount(
-    @Body() payload: StrigaGetWalletAccountRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getWalletAccount(payload);
-  }
-
-  @ApiOperation({ summary: 'Get Striga wallet account statement' })
-  @ApiOkResponse({
-    description: 'Striga wallet account statement response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('wallets/get/account/statement')
-  async getWalletAccountStatement(
-    @Body() payload: StrigaGetWalletAccountStatementRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getWalletAccountStatement(payload);
-  }
-
-  @ApiOperation({ summary: 'Get all Striga wallets' })
-  @ApiOkResponse({
-    description: 'Striga get all wallets response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('wallets/get/all')
-  async getAllWallets(
-    @Body() payload: StrigaGetAllWalletsRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getAllWallets(payload);
-  }
-
-  @ApiOperation({ summary: 'Get Striga wallet' })
-  @ApiOkResponse({
-    description: 'Striga get wallet response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('wallets/get')
-  async getWallet(
-    @Body() payload: StrigaGetWalletRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.getWallet(payload);
-  }
-
-  @ApiOperation({ summary: 'Create Striga wallet' })
-  @ApiOkResponse({
-    description: 'Striga create wallet response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('wallets/create')
-  async createWallet(
-    @Body() payload: StrigaCreateWalletRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.createWallet(payload);
-  }
-
-  @ApiOperation({ summary: 'Update Striga user' })
-  @ApiOkResponse({
-    description: 'Striga update user response',
-    type: StrigaBaseResponseDto,
-  })
-  @ApiBody({ type: StrigaUpdateUserRequestDto })
-  @HttpCode(HttpStatus.OK)
-  @Patch('user/update')
-  async updateUser(
-    @Body() payload: StrigaUpdateUserRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.updateUser(payload);
-  }
-
-  @ApiOperation({ summary: 'Update Striga verified credentials' })
-  @ApiOkResponse({
-    description: 'Striga update verified credentials response',
-    type: StrigaBaseResponseDto,
-  })
-  @ApiBody({ type: StrigaUpdateVerifiedCredentialsRequestDto })
-  @HttpCode(HttpStatus.OK)
-  @Patch('user/update-verified-credentials')
-  async updateVerifiedCredentials(
-    @Body() payload: StrigaUpdateVerifiedCredentialsRequestDto,
-  ): Promise<StrigaBaseResponseDto<any>> {
-    return this.strigaService.updateVerifiedCredentials(payload);
-  }
-
-  @ApiOperation({ summary: 'Initialize KYC' })
-  @ApiOkResponse({
-    description: 'Striga init KYC response',
-    type: StrigaBaseResponseDto,
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post('kyc/init')
-  async initKyc(
+  @Post('me/kyc/start')
+  async startMyKyc(
+    @Request() request: StrigaRequestWithContext,
     @Body() payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
-    return await this.strigaService.initKyc(payload);
+    return await this.strigaService.startKycForCurrentUser(request, payload);
   }
 
-  @Roles(RoleEnum.user)
-  @ApiOperation({ summary: 'Start KYC' })
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @RequireStrigaKycApproved()
+  @ApiOperationRoles('List Striga wallets for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @ApiOkResponse({
+    description: 'Striga wallets response for current user',
+    type: StrigaBaseResponseDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  @Post('me/wallets/list')
+  async getMyWallets(
+    @Request() request: StrigaRequestWithContext,
+    @Body() payload: StrigaGetAllWalletsRequestDto,
+  ): Promise<StrigaBaseResponseDto<any>> {
+    return await this.strigaService.getWalletsForCurrentUser(request, payload);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Start KYC', [RoleEnum.admin, RoleEnum.user])
   @ApiOkResponse({
     description: 'Striga start KYC response',
     type: StrigaBaseResponseDto,
   })
   @HttpCode(HttpStatus.OK)
-  @Post('kyc/start')
+  @Post('users/kyc/start')
   async startKyc(
     @Body() payload: StrigaKycRequestDto,
   ): Promise<StrigaBaseResponseDto<any>> {
