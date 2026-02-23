@@ -214,14 +214,18 @@ export class StrigaUserService extends StrigaBaseService {
   }
 
   async verifyMobileForMe(
-    userId: number | string | undefined,
+    req: RequestWithUser,
     payload: StrigaVerifyMobileForMeDto,
   ): Promise<StrigaVerificationActionDto> {
+    const appUserId = req.user?.id;
     this.logger.debug(
-      `verifyMobileForMe: start appUserId=${String(userId ?? 'n/a')}`,
+      `verifyMobileForMe: start appUserId=${String(appUserId ?? 'n/a')}`,
     );
+    if (typeof appUserId === 'undefined' || appUserId === null) {
+      throw new BadRequestException('Authenticated user is required.');
+    }
 
-    const strigaUser = await this.strigaUsersService.findByUserId(userId);
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
     if (!strigaUser?.externalId) {
       throw new NotFoundException('Striga user not found for current user.');
     }
@@ -258,13 +262,17 @@ export class StrigaUserService extends StrigaBaseService {
   }
 
   async resendMobileForMe(
-    userId: number | string | undefined,
+    req: RequestWithUser,
   ): Promise<StrigaVerificationActionDto> {
+    const appUserId = req.user?.id;
     this.logger.debug(
-      `resendMobileForMe: start appUserId=${String(userId ?? 'n/a')}`,
+      `resendMobileForMe: start appUserId=${String(appUserId ?? 'n/a')}`,
     );
+    if (typeof appUserId === 'undefined' || appUserId === null) {
+      throw new BadRequestException('Authenticated user is required.');
+    }
 
-    const strigaUser = await this.strigaUsersService.findByUserId(userId);
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
     if (!strigaUser?.externalId) {
       throw new NotFoundException('Striga user not found for current user.');
     }

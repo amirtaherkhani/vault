@@ -106,7 +106,7 @@ export class StrigaController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaVerifyMobileForMeDto,
   ): Promise<StrigaVerificationActionDto> {
-    return this.strigaUserService.verifyMobileForMe(req.user?.id, body);
+    return this.strigaUserService.verifyMobileForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -122,7 +122,7 @@ export class StrigaController {
   async resendMobileForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaVerificationActionDto> {
-    return this.strigaUserService.resendMobileForMe(req.user?.id);
+    return this.strigaUserService.resendMobileForMe(req);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
