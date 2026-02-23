@@ -129,8 +129,13 @@ export abstract class StrigaBaseService {
   async startKycInProvider(
     payload: StrigaStartKycProviderRequestDto,
   ): Promise<StrigaBaseResponseDto> {
+    const providerPayload = {
+      userId: payload.externalId,
+      tier: payload.tier,
+    };
+
     return this.signedRequest(STRIGA_ENDPOINT_NAME.startKyc, {
-      body: payload,
+      body: providerPayload,
     });
   }
 

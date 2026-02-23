@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DataSource } from 'typeorm';
@@ -32,10 +33,16 @@ import {
 } from '../dto/striga-user-update.dto';
 import { StrigaKycTotalStatusDto } from '../dto/striga-kyc-status.dto';
 import { RequestWithUser } from '../../../utils/types/object.type';
+import {
+  StrigaStartKycForAdminDto,
+  StrigaStartKycForMeDto,
+  StrigaStartKycResponseDto,
+} from '../dto/striga-start-kyc.dto';
 
 @Injectable()
 export class StrigaUserService extends StrigaBaseService {
   private readonly defaultResponseRoles = [RoleEnum.admin, RoleEnum.user];
+  private readonly logger = new Logger(StrigaUserService.name);
 
   constructor(
     strigaService: StrigaService,
@@ -50,6 +57,10 @@ export class StrigaUserService extends StrigaBaseService {
     req: RequestWithUser,
     payload: StrigaVerifyEmailForMeDto,
   ): Promise<StrigaVerificationAcceptedDto> {
+    this.logger.debug(
+      `verifyEmailForMe: start appUserId=${String(req.user?.id ?? 'n/a')}`,
+    );
+
     const appUserId = req.user?.id;
     if (typeof appUserId === 'undefined' || appUserId === null) {
       throw new BadRequestException('Authenticated user is required.');
@@ -76,6 +87,10 @@ export class StrigaUserService extends StrigaBaseService {
       );
     }
 
+    this.logger.debug(
+      `verifyEmailForMe: done externalId=${strigaUser.externalId} accepted=${String(accepted)}`,
+    );
+
     return GroupPlainToInstance(
       StrigaVerificationAcceptedDto,
       {
@@ -88,29 +103,37 @@ export class StrigaUserService extends StrigaBaseService {
   async verifyEmailForAdmin(
     payload: StrigaVerifyEmailForAdminDto,
   ): Promise<StrigaVerificationAcceptedDto> {
-    const strigaUserId = String(payload.userId ?? '').trim();
-    if (!strigaUserId) {
-      throw new BadRequestException('userId is required.');
+    this.logger.debug(
+      `verifyEmailForAdmin: start externalId=${String(payload.externalId ?? 'n/a')}`,
+    );
+
+    const externalId = String(payload.externalId ?? '').trim();
+    if (!externalId) {
+      throw new BadRequestException('externalId is required.');
     }
 
     const localStrigaUser =
-      await this.strigaUsersService.findByExternalId(strigaUserId);
+      await this.strigaUsersService.findByExternalId(externalId);
     if (!localStrigaUser) {
       throw new NotFoundException('Striga user was not found.');
     }
 
     const providerResponse = await this.verifyEmailInProvider({
-      userId: strigaUserId,
+      userId: externalId,
       verificationId: payload.verificationId,
     });
     const accepted = providerResponse?.success === true;
 
     if (accepted) {
-      await this.strigaUsersService.updateKycByExternalId(strigaUserId, {
+      await this.strigaUsersService.updateKycByExternalId(externalId, {
         ...(localStrigaUser.kyc ?? {}),
         emailVerified: true,
       });
     }
+
+    this.logger.debug(
+      `verifyEmailForAdmin: done externalId=${externalId} accepted=${String(accepted)}`,
+    );
 
     return GroupPlainToInstance(
       StrigaVerificationAcceptedDto,
@@ -124,6 +147,10 @@ export class StrigaUserService extends StrigaBaseService {
   async resendEmailForMe(
     req: RequestWithUser,
   ): Promise<StrigaVerificationAcceptedDto> {
+    this.logger.debug(
+      `resendEmailForMe: start appUserId=${String(req.user?.id ?? 'n/a')}`,
+    );
+
     const appUserId = req.user?.id;
     if (typeof appUserId === 'undefined' || appUserId === null) {
       throw new BadRequestException('Authenticated user is required.');
@@ -138,6 +165,10 @@ export class StrigaUserService extends StrigaBaseService {
       userId: strigaUser.externalId,
     });
 
+    this.logger.debug(
+      `resendEmailForMe: done externalId=${strigaUser.externalId} accepted=${String(providerResponse?.success === true)}`,
+    );
+
     return GroupPlainToInstance(
       StrigaVerificationAcceptedDto,
       {
@@ -150,20 +181,28 @@ export class StrigaUserService extends StrigaBaseService {
   async resendEmailForAdmin(
     payload: StrigaResendEmailForAdminDto,
   ): Promise<StrigaVerificationAcceptedDto> {
-    const strigaUserId = String(payload.userId ?? '').trim();
-    if (!strigaUserId) {
-      throw new BadRequestException('userId is required.');
+    this.logger.debug(
+      `resendEmailForAdmin: start externalId=${String(payload.externalId ?? 'n/a')}`,
+    );
+
+    const externalId = String(payload.externalId ?? '').trim();
+    if (!externalId) {
+      throw new BadRequestException('externalId is required.');
     }
 
     const localStrigaUser =
-      await this.strigaUsersService.findByExternalId(strigaUserId);
+      await this.strigaUsersService.findByExternalId(externalId);
     if (!localStrigaUser) {
       throw new NotFoundException('Striga user was not found.');
     }
 
     const providerResponse = await this.resendEmailInProvider({
-      userId: strigaUserId,
+      userId: externalId,
     });
+
+    this.logger.debug(
+      `resendEmailForAdmin: done externalId=${externalId} accepted=${String(providerResponse?.success === true)}`,
+    );
 
     return GroupPlainToInstance(
       StrigaVerificationAcceptedDto,
@@ -178,6 +217,10 @@ export class StrigaUserService extends StrigaBaseService {
     userId: number | string | undefined,
     payload: StrigaVerifyMobileForMeDto,
   ): Promise<StrigaVerificationActionDto> {
+    this.logger.debug(
+      `verifyMobileForMe: start appUserId=${String(userId ?? 'n/a')}`,
+    );
+
     const strigaUser = await this.strigaUsersService.findByUserId(userId);
     if (!strigaUser?.externalId) {
       throw new NotFoundException('Striga user not found for current user.');
@@ -199,6 +242,10 @@ export class StrigaUserService extends StrigaBaseService {
       );
     }
 
+    this.logger.debug(
+      `verifyMobileForMe: done externalId=${strigaUser.externalId} accepted=${String(accepted)}`,
+    );
+
     return GroupPlainToInstance(
       StrigaVerificationActionDto,
       {
@@ -213,6 +260,10 @@ export class StrigaUserService extends StrigaBaseService {
   async resendMobileForMe(
     userId: number | string | undefined,
   ): Promise<StrigaVerificationActionDto> {
+    this.logger.debug(
+      `resendMobileForMe: start appUserId=${String(userId ?? 'n/a')}`,
+    );
+
     const strigaUser = await this.strigaUsersService.findByUserId(userId);
     if (!strigaUser?.externalId) {
       throw new NotFoundException('Striga user not found for current user.');
@@ -221,6 +272,10 @@ export class StrigaUserService extends StrigaBaseService {
     const providerResponse = await this.resendSmsInProvider({
       userId: strigaUser.externalId,
     });
+
+    this.logger.debug(
+      `resendMobileForMe: done externalId=${strigaUser.externalId} accepted=${String(providerResponse?.success === true)}`,
+    );
 
     return GroupPlainToInstance(
       StrigaVerificationActionDto,
@@ -237,6 +292,10 @@ export class StrigaUserService extends StrigaBaseService {
     req: RequestWithUser,
     payload: StrigaUpdateUserForMeDto,
   ): Promise<StrigaUser> {
+    this.logger.debug(
+      `updateUserForMe: start appUserId=${String(req.user?.id ?? 'n/a')}`,
+    );
+
     const appUserId = req.user?.id;
     if (typeof appUserId === 'undefined' || appUserId === null) {
       throw new BadRequestException('Authenticated user is required.');
@@ -264,20 +323,27 @@ export class StrigaUserService extends StrigaBaseService {
     };
 
     const synced = await this.upsertStrigaUserFromProvider(sourceUser);
+    this.logger.debug(
+      `updateUserForMe: done externalId=${synced.externalId} localId=${synced.id}`,
+    );
     return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
   }
 
   async updateUserForAdmin(
     payload: StrigaUpdateUserForAdminDto,
   ): Promise<StrigaUser> {
-    const strigaUserId = String(payload.userId ?? '').trim();
-    if (!strigaUserId) {
-      throw new BadRequestException('userId is required.');
+    this.logger.debug(
+      `updateUserForAdmin: start externalId=${String(payload.externalId ?? 'n/a')}`,
+    );
+
+    const externalId = String(payload.externalId ?? '').trim();
+    if (!externalId) {
+      throw new BadRequestException('externalId is required.');
     }
 
     const providerResponse = await this.updateUserInProvider({
       ...payload,
-      userId: strigaUserId,
+      userId: externalId,
     });
 
     const strigaCloudUser =
@@ -292,12 +358,110 @@ export class StrigaUserService extends StrigaBaseService {
     };
 
     const synced = await this.upsertStrigaUserFromProvider(sourceUser);
+    this.logger.debug(
+      `updateUserForAdmin: done externalId=${synced.externalId} localId=${synced.id}`,
+    );
     return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
+  }
+
+  async startKycForMe(
+    req: RequestWithUser,
+    payload: StrigaStartKycForMeDto,
+  ): Promise<StrigaStartKycResponseDto> {
+    this.logger.debug(
+      `startKycForMe: start appUserId=${String(req.user?.id ?? 'n/a')} tier=${payload.tier}`,
+    );
+
+    const appUserId = req.user?.id;
+    if (typeof appUserId === 'undefined' || appUserId === null) {
+      throw new BadRequestException('Authenticated user is required.');
+    }
+
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
+    if (!strigaUser?.externalId) {
+      throw new NotFoundException('Striga user not found for current user.');
+    }
+
+    this.validateStartKycPrerequisites(strigaUser);
+
+    const providerResponse = await this.startKycInProvider({
+      externalId: strigaUser.externalId,
+      tier: payload.tier,
+    });
+
+    const data = providerResponse?.data as Record<string, unknown> | null;
+    if (!data || typeof data !== 'object') {
+      throw new BadRequestException('Invalid Striga start KYC response.');
+    }
+
+    const responsePayload = {
+      ...data,
+      externalId: String(data.userId ?? strigaUser.externalId ?? '').trim(),
+    };
+
+    this.logger.debug(
+      `startKycForMe: done externalId=${strigaUser.externalId} tier=${payload.tier}`,
+    );
+
+    return GroupPlainToInstance(
+      StrigaStartKycResponseDto,
+      responsePayload,
+      this.defaultResponseRoles,
+    );
+  }
+
+  async startKycForAdmin(
+    payload: StrigaStartKycForAdminDto,
+  ): Promise<StrigaStartKycResponseDto> {
+    this.logger.debug(
+      `startKycForAdmin: start appUserId=${String(payload.userId ?? 'n/a')} tier=${payload.tier}`,
+    );
+
+    const appUserId = payload.userId;
+    if (typeof appUserId === 'undefined' || appUserId === null) {
+      throw new BadRequestException('userId is required.');
+    }
+
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
+    if (!strigaUser?.externalId) {
+      throw new NotFoundException('Striga user was not found.');
+    }
+
+    this.validateStartKycPrerequisites(strigaUser);
+
+    const providerResponse = await this.startKycInProvider({
+      externalId: strigaUser.externalId,
+      tier: payload.tier,
+    });
+
+    const data = providerResponse?.data as Record<string, unknown> | null;
+    if (!data || typeof data !== 'object') {
+      throw new BadRequestException('Invalid Striga start KYC response.');
+    }
+
+    const responsePayload = {
+      ...data,
+      externalId: String(data.userId ?? strigaUser.externalId ?? '').trim(),
+    };
+
+    this.logger.debug(
+      `startKycForAdmin: done appUserId=${String(appUserId)} externalId=${strigaUser.externalId} tier=${payload.tier}`,
+    );
+
+    return GroupPlainToInstance(
+      StrigaStartKycResponseDto,
+      responsePayload,
+      this.defaultResponseRoles,
+    );
   }
 
   async findKycTotalStatusForMe(
     req: RequestWithUser,
   ): Promise<StrigaKycTotalStatusDto> {
+    this.logger.debug(
+      `findKycTotalStatusForMe: start appUserId=${String(req.user?.id ?? 'n/a')}`,
+    );
+
     const appUserId = req.user?.id;
     if (typeof appUserId === 'undefined' || appUserId === null) {
       throw new BadRequestException('Authenticated user is required.');
@@ -325,6 +489,10 @@ export class StrigaUserService extends StrigaBaseService {
         toStatus(kyc.tier3?.status) === 'APPROVED',
     );
 
+    this.logger.debug(
+      `findKycTotalStatusForMe: done appUserId=${String(appUserId)} approved=${String(approved)}`,
+    );
+
     return GroupPlainToInstance(
       StrigaKycTotalStatusDto,
       { approved },
@@ -349,6 +517,10 @@ export class StrigaUserService extends StrigaBaseService {
       userId?: string | null;
     } = {},
   ): Promise<StrigaUser> {
+    this.logger.debug(
+      `upsertStrigaUserFromProvider: start providerUserId=${String(strigaCloudUser.userId ?? 'n/a')} email=${String(strigaCloudUser.email ?? 'n/a')}`,
+    );
+
     const externalId = String(strigaCloudUser.userId ?? '').trim();
     if (!externalId) {
       throw new BadRequestException('strigaCloudUser.userId is required.');
@@ -477,6 +649,10 @@ export class StrigaUserService extends StrigaBaseService {
         StrigaUserEvent.userSynced(eventPayload).getEvent(),
       );
 
+      this.logger.debug(
+        `upsertStrigaUserFromProvider: updated localId=${updated?.id ?? 'n/a'} externalId=${updated?.externalId ?? externalId}`,
+      );
+
       return updated as StrigaUser;
     }
 
@@ -496,6 +672,66 @@ export class StrigaUserService extends StrigaBaseService {
       StrigaUserEvent.userCreated(eventPayload).getEvent(),
     );
 
+    this.logger.debug(
+      `upsertStrigaUserFromProvider: created localId=${created?.id ?? 'n/a'} externalId=${created?.externalId ?? externalId}`,
+    );
+
     return created as StrigaUser;
+  }
+
+  private validateStartKycPrerequisites(strigaUser: StrigaUser): void {
+    const externalId = String(strigaUser.externalId ?? '').trim();
+
+    if (strigaUser.kyc?.emailVerified !== true) {
+      this.logger.warn(
+        `startKyc validation failed externalId=${externalId}: emailVerified is not true`,
+      );
+      throw new BadRequestException(
+        'Email must be verified before starting KYC.',
+      );
+    }
+
+    if (strigaUser.kyc?.mobileVerified !== true) {
+      this.logger.warn(
+        `startKyc validation failed externalId=${externalId}: mobileVerified is not true`,
+      );
+      throw new BadRequestException(
+        'Mobile must be verified before starting KYC.',
+      );
+    }
+
+    const dateOfBirth = strigaUser.dateOfBirth;
+    const hasDateOfBirth =
+      !!dateOfBirth &&
+      Number.isInteger(Number(dateOfBirth.year)) &&
+      Number.isInteger(Number(dateOfBirth.month)) &&
+      Number.isInteger(Number(dateOfBirth.day));
+    if (!hasDateOfBirth) {
+      this.logger.warn(
+        `startKyc validation failed externalId=${externalId}: dateOfBirth is missing`,
+      );
+      throw new BadRequestException(
+        'Date of birth is required before starting KYC.',
+      );
+    }
+
+    const address = strigaUser.address;
+    const hasAddress =
+      !!address &&
+      typeof address.addressLine1 === 'string' &&
+      address.addressLine1.trim().length > 0 &&
+      typeof address.city === 'string' &&
+      address.city.trim().length > 0 &&
+      typeof address.country === 'string' &&
+      address.country.trim().length > 0 &&
+      typeof address.postalCode === 'string' &&
+      address.postalCode.trim().length > 0;
+
+    if (!hasAddress) {
+      this.logger.warn(
+        `startKyc validation failed externalId=${externalId}: address is missing or incomplete`,
+      );
+      throw new BadRequestException('Address is required before starting KYC.');
+    }
   }
 }

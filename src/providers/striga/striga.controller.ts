@@ -9,7 +9,12 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 import { ResponseModel } from '../../common/api-gateway/response/decorators/response-model.decorator';
 import { EnableGuard } from '../../common/guards/service-enabled.guard';
@@ -34,6 +39,11 @@ import {
   StrigaUpdateUserForMeDto,
 } from './dto/striga-user-update.dto';
 import { StrigaKycTotalStatusDto } from './dto/striga-kyc-status.dto';
+import {
+  StrigaStartKycForAdminDto,
+  StrigaStartKycForMeDto,
+  StrigaStartKycResponseDto,
+} from './dto/striga-start-kyc.dto';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaUserService } from './services/striga-kyc.service';
 import { StrigaUser } from './striga-users/domain/striga-user';
@@ -161,5 +171,35 @@ export class StrigaController {
     @Request() req: RequestWithUser,
   ): Promise<StrigaKycTotalStatusDto> {
     return this.strigaUserService.findKycTotalStatusForMe(req);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Start KYC for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @RequireStrigaUser()
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('users/me/kyc/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: StrigaStartKycForMeDto })
+  @ApiOkResponse({ type: StrigaStartKycResponseDto })
+  async startKycForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaStartKycForMeDto,
+  ): Promise<StrigaStartKycResponseDto> {
+    return this.strigaUserService.startKycForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Start KYC by app user ID', [RoleEnum.admin])
+  @Post('users/kyc/start')
+  @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: StrigaStartKycForAdminDto })
+  @ApiOkResponse({ type: StrigaStartKycResponseDto })
+  async startKycForAdmin(
+    @Body() body: StrigaStartKycForAdminDto,
+  ): Promise<StrigaStartKycResponseDto> {
+    return this.strigaUserService.startKycForAdmin(body);
   }
 }

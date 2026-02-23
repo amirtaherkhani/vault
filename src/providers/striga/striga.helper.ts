@@ -136,7 +136,9 @@ export function buildStrigaKycSnapshotFromWebhook(
     return status.length ? status : undefined;
   };
 
-  const mapTier = (tier?: StrigaKycTierStatusLike): { status?: string } | null => {
+  const mapTier = (
+    tier?: StrigaKycTierStatusLike,
+  ): { status?: string } | null => {
     const status = normalizeStatus(tier?.status);
     return status ? { status } : null;
   };

@@ -22,27 +22,26 @@ export class StrigaStartKycForMeDto extends StrigaStartKycTierDto {}
 @Exclude()
 export class StrigaStartKycForAdminDto extends StrigaStartKycTierDto {
   @ApiProperty({
-    example: '2f1853b2-927a-4aa9-8bb1-3e51fb119ace',
-    description: 'Striga user ID',
-    format: 'uuid',
+    example: 1,
+    description: 'Application user ID',
   })
-  @IsString()
-  @IsUUID('4')
+  @Type(() => Number)
+  @IsInt()
   @Expose()
-  userId!: string;
+  userId!: number;
 }
 
 @Exclude()
 export class StrigaStartKycProviderRequestDto extends StrigaStartKycTierDto {
   @ApiProperty({
     example: '2f1853b2-927a-4aa9-8bb1-3e51fb119ace',
-    description: 'Unique Striga user ID',
+    description: 'Striga provider user ID',
     format: 'uuid',
   })
   @IsString()
   @IsUUID('4')
   @Expose()
-  userId!: string;
+  externalId!: string;
 }
 
 @Exclude()
@@ -60,10 +59,12 @@ export class StrigaStartKycResponseDto {
   @ApiProperty({
     example: '2f1853b2-927a-4aa9-8bb1-3e51fb119ace',
     format: 'uuid',
+    description: 'Striga provider user ID',
   })
   @IsString()
+  @IsUUID('4')
   @Expose()
-  userId!: string;
+  externalId!: string;
 
   @ApiProperty({
     example: 'https://in.sumsub.com/idensic/l/#/sbx_Eke06K3fpzlbWuf3',
