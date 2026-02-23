@@ -9,7 +9,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { DynamicAuthGuard } from '../../auth/guards/dynamic-auth.guard';
 import { ResponseModel } from '../../common/api-gateway/response/decorators/response-model.decorator';
 import { EnableGuard } from '../../common/guards/service-enabled.guard';
@@ -124,6 +124,7 @@ export class StrigaController {
   @UseGuards(StrigaUserExistsGuard)
   @Patch('users/me')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: StrigaUpdateUserForMeDto })
   @ApiOkResponse({ type: StrigaUser })
   async updateUserForMe(
     @Request() req: RequestWithUser,
@@ -138,6 +139,7 @@ export class StrigaController {
   ])
   @Patch('users')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: StrigaUpdateUserForAdminDto })
   @ApiOkResponse({ type: StrigaUser })
   async updateUserForAdmin(
     @Body() body: StrigaUpdateUserForAdminDto,

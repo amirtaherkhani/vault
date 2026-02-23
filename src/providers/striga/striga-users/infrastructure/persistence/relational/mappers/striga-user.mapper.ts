@@ -16,6 +16,8 @@ export class StrigaUserMapper {
 
     domainEntity.address = raw.address;
 
+    domainEntity.dateOfBirth = raw.dateOfBirth;
+
     domainEntity.kyc = raw.kyc;
 
     domainEntity.id = raw.id;
@@ -38,6 +40,8 @@ export class StrigaUserMapper {
     persistenceEntity.mobile = domainEntity.mobile;
 
     persistenceEntity.address = domainEntity.address;
+
+    persistenceEntity.dateOfBirth = domainEntity.dateOfBirth;
 
     persistenceEntity.kyc = domainEntity.kyc;
 

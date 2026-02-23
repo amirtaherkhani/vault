@@ -3,6 +3,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
+  IsInt,
   IsNotEmptyObject,
   IsOptional,
   IsString,
@@ -82,6 +83,36 @@ export class StrigaUserAddressDto {
   @IsString()
   @Expose()
   postalCode!: string;
+}
+
+@Exclude()
+export class StrigaUserDateOfBirthDto {
+  @ApiProperty({
+    example: 1,
+    description: 'Birth month',
+  })
+  @IsInt()
+  @Type(() => Number)
+  @Expose()
+  month!: number;
+
+  @ApiProperty({
+    example: 15,
+    description: 'Birth day',
+  })
+  @IsInt()
+  @Type(() => Number)
+  @Expose()
+  day!: number;
+
+  @ApiProperty({
+    example: 2000,
+    description: 'Birth year',
+  })
+  @IsInt()
+  @Type(() => Number)
+  @Expose()
+  year!: number;
 }
 
 @Exclude()
@@ -223,6 +254,17 @@ export class CreateStrigaUserDto {
   @IsNotEmptyObject()
   @Expose()
   address!: StrigaUserAddressDto;
+
+  @ApiPropertyOptional({
+    type: () => StrigaUserDateOfBirthDto,
+    nullable: true,
+    description: 'User date of birth',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaUserDateOfBirthDto)
+  @Expose()
+  dateOfBirth?: StrigaUserDateOfBirthDto | null;
 
   @ApiPropertyOptional({
     type: () => StrigaUserKycDto,

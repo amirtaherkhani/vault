@@ -6,7 +6,6 @@ import {
   StrigaGetWalletAccountRequestDto,
   StrigaGetWalletAccountStatementRequestDto,
   StrigaGetWalletRequestDto,
-  StrigaKycRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
   StrigaUpdateUserRequestDto,
@@ -16,6 +15,7 @@ import {
   StrigaVerifyMobileRequestDto,
 } from '../dto/striga-base.request.dto';
 import { StrigaBaseResponseDto } from '../dto/striga-base.response.dto';
+import { StrigaStartKycProviderRequestDto } from '../dto/striga-start-kyc.dto';
 import { StrigaService } from '../striga.service';
 import {
   STRIGA_ENDPOINT_NAME,
@@ -127,7 +127,7 @@ export abstract class StrigaBaseService {
   }
 
   async startKycInProvider(
-    payload: StrigaKycRequestDto,
+    payload: StrigaStartKycProviderRequestDto,
   ): Promise<StrigaBaseResponseDto> {
     return this.signedRequest(STRIGA_ENDPOINT_NAME.startKyc, {
       body: payload,

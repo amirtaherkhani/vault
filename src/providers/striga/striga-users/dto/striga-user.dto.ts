@@ -3,6 +3,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import { IsEmail, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 import {
   StrigaUserAddressDto,
+  StrigaUserDateOfBirthDto,
   StrigaUserKycDto,
   StrigaUserMobileDto,
 } from './create-striga-user.dto';
@@ -68,6 +69,17 @@ export class StrigaUserDto {
   @Type(() => StrigaUserAddressDto)
   @Expose()
   address!: StrigaUserAddressDto;
+
+  @ApiPropertyOptional({
+    type: () => StrigaUserDateOfBirthDto,
+    nullable: true,
+    description: 'User date of birth',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaUserDateOfBirthDto)
+  @Expose()
+  dateOfBirth?: StrigaUserDateOfBirthDto | null;
 
   @ApiPropertyOptional({
     type: () => StrigaUserKycDto,

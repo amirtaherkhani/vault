@@ -258,7 +258,12 @@ export class StrigaUserService extends StrigaBaseService {
       throw new BadRequestException('Invalid Striga update user response.');
     }
 
-    const synced = await this.upsertStrigaUserFromProvider(strigaCloudUser);
+    const sourceUser = {
+      ...strigaCloudUser,
+      dateOfBirth: strigaCloudUser.dateOfBirth ?? payload.dateOfBirth,
+    };
+
+    const synced = await this.upsertStrigaUserFromProvider(sourceUser);
     return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
   }
 
@@ -281,7 +286,12 @@ export class StrigaUserService extends StrigaBaseService {
       throw new BadRequestException('Invalid Striga update user response.');
     }
 
-    const synced = await this.upsertStrigaUserFromProvider(strigaCloudUser);
+    const sourceUser = {
+      ...strigaCloudUser,
+      dateOfBirth: strigaCloudUser.dateOfBirth ?? payload.dateOfBirth,
+    };
+
+    const synced = await this.upsertStrigaUserFromProvider(sourceUser);
     return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
   }
 
@@ -360,6 +370,9 @@ export class StrigaUserService extends StrigaBaseService {
     const address = strigaCloudUser.address as
       | StrigaUser['address']
       | undefined;
+    const dateOfBirth = strigaCloudUser.dateOfBirth as
+      | StrigaUser['dateOfBirth']
+      | undefined;
 
     const payload = strigaCloudUser as unknown as Record<string, unknown>;
 
@@ -437,6 +450,7 @@ export class StrigaUserService extends StrigaBaseService {
       lastName,
       mobile,
       address,
+      dateOfBirth,
       kyc,
     };
 

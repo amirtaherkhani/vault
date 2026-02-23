@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import {
   StrigaUserAddress,
+  StrigaUserDateOfBirth,
   StrigaUserKyc,
   StrigaUserMobile,
 } from '../../../../domain/striga-user';
@@ -52,6 +53,13 @@ export class StrigaUserEntity extends EntityRelationalHelper {
     nullable: false,
   })
   address!: StrigaUserAddress;
+
+  @Column({
+    type: 'jsonb',
+    nullable: true,
+    default: null,
+  })
+  dateOfBirth?: StrigaUserDateOfBirth | null;
 
   @Column({
     type: 'jsonb',

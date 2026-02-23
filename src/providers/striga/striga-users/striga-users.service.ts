@@ -68,6 +68,8 @@ export class StrigaUsersService {
 
       address: createStrigaUserDto.address,
 
+      dateOfBirth: createStrigaUserDto.dateOfBirth,
+
       kyc: createStrigaUserDto.kyc,
     });
   }
@@ -296,6 +298,8 @@ export class StrigaUsersService {
       mobile: updateStrigaUserDto.mobile,
 
       address: updateStrigaUserDto.address,
+
+      dateOfBirth: updateStrigaUserDto.dateOfBirth,
 
       kyc: updateStrigaUserDto.kyc,
     });

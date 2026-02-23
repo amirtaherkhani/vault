@@ -66,6 +66,33 @@ export class StrigaUserAddress {
 }
 
 @Exclude()
+export class StrigaUserDateOfBirth {
+  @ApiProperty({
+    type: () => Number,
+    nullable: false,
+    example: 1,
+  })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
+  month!: number;
+
+  @ApiProperty({
+    type: () => Number,
+    nullable: false,
+    example: 15,
+  })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
+  day!: number;
+
+  @ApiProperty({
+    type: () => Number,
+    nullable: false,
+    example: 2000,
+  })
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
+  year!: number;
+}
+
+@Exclude()
 export class StrigaUserKycTier {
   @ApiProperty({
     type: () => String,
@@ -177,6 +204,14 @@ export class StrigaUser {
   @Type(() => StrigaUserAddress)
   @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   address!: StrigaUserAddress;
+
+  @ApiProperty({
+    type: () => StrigaUserDateOfBirth,
+    nullable: true,
+  })
+  @Type(() => StrigaUserDateOfBirth)
+  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
+  dateOfBirth?: StrigaUserDateOfBirth | null;
 
   @ApiProperty({
     type: () => StrigaUserKyc,
