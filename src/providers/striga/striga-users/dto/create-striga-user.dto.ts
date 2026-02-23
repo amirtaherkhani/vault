@@ -1,6 +1,8 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Expose, Type } from 'class-transformer';
 import {
-  // decorators here
-
+  IsBoolean,
+  IsEmail,
   IsNotEmptyObject,
   IsOptional,
   IsString,
@@ -8,186 +10,228 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import {
-  // decorators here
-  ApiProperty,
-} from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-
+@Exclude()
 export class StrigaUserMobileDto {
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: '+372',
+    description: 'Phone country code',
   })
   @IsString()
+  @Expose()
   countryCode!: string;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: '56316716',
+    description: 'Phone number without country code',
   })
   @IsString()
+  @Expose()
   number!: string;
 }
 
+@Exclude()
 export class StrigaUserAddressDto {
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'Sepapaja 12',
+    description: 'Primary street line',
   })
   @IsString()
+  @Expose()
   addressLine1!: string;
 
-  @ApiProperty({
-    required: false,
-    type: () => String,
+  @ApiPropertyOptional({
+    example: 'Hajumaa',
+    description: 'Secondary address line',
+    nullable: true,
   })
   @IsOptional()
   @IsString()
+  @Expose()
   addressLine2?: string | null;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'Tallinn',
+    description: 'City',
   })
   @IsString()
+  @Expose()
   city!: string;
 
-  @ApiProperty({
-    required: false,
-    type: () => String,
+  @ApiPropertyOptional({
+    example: 'Tallinn',
+    description: 'State or region',
+    nullable: true,
   })
   @IsOptional()
   @IsString()
+  @Expose()
   state?: string | null;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'EE',
+    description: 'ISO country code',
   })
   @IsString()
+  @Expose()
   country!: string;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: '11412',
+    description: 'Postal code',
   })
   @IsString()
+  @Expose()
   postalCode!: string;
 }
 
+@Exclude()
 export class StrigaUserKycTierDto {
-  @ApiProperty({
-    required: false,
-    type: () => String,
+  @ApiPropertyOptional({
+    example: 'APPROVED',
+    description: 'Tier KYC status',
   })
   @IsOptional()
   @IsString()
+  @Expose()
   status?: string;
 }
 
+@Exclude()
 export class StrigaUserKycDto {
-  @ApiProperty({
-    required: false,
-    type: () => String,
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Email verification status from provider',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Expose()
+  emailVerified?: boolean | null;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Mobile verification status from provider',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Expose()
+  mobileVerified?: boolean | null;
+
+  @ApiPropertyOptional({
+    example: 'PENDING_REVIEW',
+    description: 'Overall KYC status',
+    nullable: true,
   })
   @IsOptional()
   @IsString()
+  @Expose()
   status?: string | null;
 
-  @ApiProperty({
-    required: false,
+  @ApiPropertyOptional({
     type: () => StrigaUserKycTierDto,
+    nullable: true,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierDto)
+  @Expose()
   tier0?: StrigaUserKycTierDto | null;
 
-  @ApiProperty({
-    required: false,
+  @ApiPropertyOptional({
     type: () => StrigaUserKycTierDto,
+    nullable: true,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierDto)
+  @Expose()
   tier1?: StrigaUserKycTierDto | null;
 
-  @ApiProperty({
-    required: false,
+  @ApiPropertyOptional({
     type: () => StrigaUserKycTierDto,
+    nullable: true,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierDto)
+  @Expose()
   tier2?: StrigaUserKycTierDto | null;
 
-  @ApiProperty({
-    required: false,
+  @ApiPropertyOptional({
     type: () => StrigaUserKycTierDto,
+    nullable: true,
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierDto)
+  @Expose()
   tier3?: StrigaUserKycTierDto | null;
 }
 
+@Exclude()
 export class CreateStrigaUserDto {
   @ApiProperty({
-    required: true,
-    type: () => String,
     format: 'uuid',
+    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
+    description: 'Striga user ID',
   })
   @IsUUID()
+  @Expose()
   externalId!: string;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'user@example.com',
+    description: 'User email',
   })
-  @IsString()
-  email: string;
+  @IsEmail()
+  @Expose()
+  email!: string;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'John',
+    description: 'User first name',
   })
   @IsString()
-  lastName: string;
+  @Expose()
+  firstName!: string;
 
   @ApiProperty({
-    required: true,
-    type: () => String,
+    example: 'Doe',
+    description: 'User last name',
   })
   @IsString()
-  firstName: string;
+  @Expose()
+  lastName!: string;
 
   @ApiProperty({
-    required: true,
     type: () => StrigaUserMobileDto,
+    description: 'User mobile details',
   })
   @ValidateNested()
   @Type(() => StrigaUserMobileDto)
   @IsNotEmptyObject()
+  @Expose()
   mobile!: StrigaUserMobileDto;
 
   @ApiProperty({
-    required: true,
     type: () => StrigaUserAddressDto,
+    description: 'User address details',
   })
   @ValidateNested()
   @Type(() => StrigaUserAddressDto)
   @IsNotEmptyObject()
+  @Expose()
   address!: StrigaUserAddressDto;
 
-  @ApiProperty({
-    required: false,
+  @ApiPropertyOptional({
     type: () => StrigaUserKycDto,
+    nullable: true,
+    description: 'Minimal KYC snapshot stored locally',
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycDto)
+  @Expose()
   kyc?: StrigaUserKycDto | null;
-
-  // Don't forget to use the class-validator decorators in the DTO properties.
 }

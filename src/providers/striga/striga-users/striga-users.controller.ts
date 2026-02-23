@@ -36,6 +36,7 @@ import {
 import { FindAllStrigaUsersDto } from './dto/find-all-striga-users.dto';
 import {
   FilterStrigaUsersDto,
+  StrigaUserByUserIdParamDto,
   StrigaUsersByIdsQueryDto,
 } from './dto/query-striga-user.dto';
 import { StrigaUsersService } from './striga-users.service';
@@ -45,7 +46,7 @@ import { StrigaUsersService } from './striga-users.service';
 @ApiBearerAuth()
 @UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
 @Controller({
-  path: 'striga/users',
+  path: 'users',
   version: '1',
 })
 export class StrigaUsersController {
@@ -59,7 +60,9 @@ export class StrigaUsersController {
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: StrigaUser })
-  async findByMe(@Request() req: RequestWithUser): Promise<StrigaUser | null> {
+  async findUserForMe(
+    @Request() req: RequestWithUser,
+  ): Promise<StrigaUser | null> {
     return this.strigaUsersService.resolveStrigaUserForMe(req.user?.id);
   }
 
@@ -134,9 +137,6 @@ export class StrigaUsersController {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Admin routes (static paths)
-  // ---------------------------------------------------------------------------
   @Roles(RoleEnum.admin)
   @ApiOperationRoles('Filter Striga users', [RoleEnum.admin])
   @Get('filter')
@@ -160,6 +160,24 @@ export class StrigaUsersController {
     @Query() query: StrigaUsersByIdsQueryDto,
   ): Promise<StrigaUser[]> {
     return this.strigaUsersService.findByIds(query.ids);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get Striga user by app user ID', [RoleEnum.admin])
+  @Get('user/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiParam({
+    name: 'userId',
+    type: Number,
+    required: true,
+    description: 'Application user ID',
+    example: 1,
+  })
+  @ApiOkResponse({ type: StrigaUser })
+  async findByUserId(
+    @Param() params: StrigaUserByUserIdParamDto,
+  ): Promise<StrigaUser | null> {
+    return this.strigaUsersService.findByUserId(params.userId);
   }
 
   @Roles(RoleEnum.admin)

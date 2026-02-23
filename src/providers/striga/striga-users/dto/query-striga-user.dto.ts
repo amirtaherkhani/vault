@@ -1,14 +1,25 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
-import { IsArray, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsEmail,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
+@Exclude()
 export class FilterStrigaUsersDto {
   @ApiPropertyOptional({
     description: 'Striga external user ID',
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
+    format: 'uuid',
   })
   @IsOptional()
-  @IsString()
+  @IsUUID()
+  @Expose()
   externalId?: string;
 
   @ApiPropertyOptional({
@@ -16,7 +27,8 @@ export class FilterStrigaUsersDto {
     example: 'user@example.com',
   })
   @IsOptional()
-  @IsString()
+  @IsEmail()
+  @Expose()
   email?: string;
 
   @ApiPropertyOptional({
@@ -25,6 +37,7 @@ export class FilterStrigaUsersDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   firstName?: string;
 
   @ApiPropertyOptional({
@@ -33,11 +46,13 @@ export class FilterStrigaUsersDto {
   })
   @IsOptional()
   @IsString()
+  @Expose()
   lastName?: string;
 }
 
+@Exclude()
 export class StrigaUsersByIdsQueryDto {
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Comma-separated list of local Striga user IDs',
     example:
       '8fa4f6ef-9e76-4cb2-97cb-1401e24e58f5,5db2f0cb-ef0c-4a1d-8577-6d3ebf4a8fc8',
@@ -52,6 +67,22 @@ export class StrigaUsersByIdsQueryDto {
           .filter((v) => v.length > 0),
   )
   @IsArray()
-  @IsString({ each: true })
+  @IsUUID('4', { each: true })
+  @Expose()
   ids!: string[];
+}
+
+@Exclude()
+export class StrigaUserByUserIdParamDto {
+  @ApiProperty({
+    description: 'Application user ID',
+    example: 1,
+    minimum: 1,
+    type: Number,
+  })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Expose()
+  userId!: number;
 }

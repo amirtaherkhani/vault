@@ -6,9 +6,15 @@ import { CreateStrigaUserDto } from './dto/create-striga-user.dto';
 import { UpdateStrigaUserDto } from './dto/update-striga-user.dto';
 import { StrigaUserRepository } from './infrastructure/persistence/striga-user.repository';
 import { IPaginationOptions } from '../../../utils/types/pagination-options.type';
-import { StrigaUser } from './domain/striga-user';
-import { StrigaKycWebhookEventDto } from '../dto/striga-kyc-webhook.dto';
+import {
+  StrigaUser,
+  StrigaUserAddress,
+  StrigaUserKyc,
+  StrigaUserMobile,
+} from './domain/striga-user';
 import { UsersService } from '../../../users/users.service';
+import { GroupPlainToInstances } from '../../../utils/transformers/class.transformer';
+import { RoleEnum } from '../../../roles/roles.enum';
 
 export type StrigaUserUpsertOperation =
   | 'created'
@@ -23,39 +29,13 @@ export type StrigaUserUpsertResult = {
 
 @Injectable()
 export class StrigaUsersService {
+  private readonly defaultResponseRoles = [RoleEnum.admin, RoleEnum.user];
+
   constructor(
     // Dependencies here
     private readonly strigaUserRepository: StrigaUserRepository,
     private readonly usersService: UsersService,
   ) {}
-
-  toKycSnapshotFromWebhook(
-    payload: StrigaKycWebhookEventDto,
-  ): StrigaUser['kyc'] {
-    return {
-      status: payload.status ?? null,
-      tier0: payload.tier0
-        ? {
-            status: payload.tier0.status,
-          }
-        : null,
-      tier1: payload.tier1
-        ? {
-            status: payload.tier1.status,
-          }
-        : null,
-      tier2: payload.tier2
-        ? {
-            status: payload.tier2.status,
-          }
-        : null,
-      tier3: payload.tier3
-        ? {
-            status: payload.tier3.status,
-          }
-        : null,
-    };
-  }
 
   async updateKycByExternalId(
     externalId: StrigaUser['externalId'],
@@ -97,20 +77,38 @@ export class StrigaUsersService {
   }: {
     paginationOptions: IPaginationOptions;
   }) {
-    return this.strigaUserRepository.findAllWithPagination({
-      paginationOptions: {
-        page: paginationOptions.page,
-        limit: paginationOptions.limit,
-      },
-    });
+    return this.strigaUserRepository
+      .findAllWithPagination({
+        paginationOptions: {
+          page: paginationOptions.page,
+          limit: paginationOptions.limit,
+        },
+      })
+      .then((rows) =>
+        GroupPlainToInstances(StrigaUser, rows, this.defaultResponseRoles),
+      );
   }
 
-  findById(id: StrigaUser['id']) {
-    return this.strigaUserRepository.findById(id);
+  async findById(id: StrigaUser['id']) {
+    const user = await this.strigaUserRepository.findById(id);
+    if (!user) {
+      return null;
+    }
+
+    const [result] = GroupPlainToInstances(
+      StrigaUser,
+      [user],
+      this.defaultResponseRoles,
+    );
+    return result ?? null;
   }
 
-  findByIds(ids: StrigaUser['id'][]) {
-    return this.strigaUserRepository.findByIds(ids);
+  async findByIds(ids: StrigaUser['id'][]) {
+    return GroupPlainToInstances(
+      StrigaUser,
+      await this.strigaUserRepository.findByIds(ids),
+      this.defaultResponseRoles,
+    );
   }
 
   findByExternalId(externalId: StrigaUser['externalId']) {
@@ -121,28 +119,27 @@ export class StrigaUsersService {
     return this.strigaUserRepository.findUserByEmail(email);
   }
 
-  filter(
+  async filter(
     externalId?: StrigaUser['externalId'],
     email?: StrigaUser['email'],
     firstName?: StrigaUser['firstName'],
     lastName?: StrigaUser['lastName'],
   ) {
-    return this.strigaUserRepository.filter(
+    const rows = await this.strigaUserRepository.filter(
       externalId,
       email,
       firstName,
       lastName,
     );
+    return GroupPlainToInstances(StrigaUser, rows, this.defaultResponseRoles);
   }
 
-  async resolveStrigaUserForMe(
-    authUserId?: number | string,
-  ): Promise<StrigaUser | null> {
-    if (typeof authUserId === 'undefined' || authUserId === null) {
+  async findByUserId(userId?: number | string): Promise<StrigaUser | null> {
+    if (typeof userId === 'undefined' || userId === null) {
       return null;
     }
 
-    const appUser = await this.usersService.findById(authUserId);
+    const appUser = await this.usersService.findById(userId);
     if (!appUser) {
       return null;
     }
@@ -157,8 +154,37 @@ export class StrigaUsersService {
     return this.findByEmail(email);
   }
 
-  findKyc(id?: StrigaUser['id'], externalId?: StrigaUser['externalId']) {
-    return this.strigaUserRepository.findKycByIdOrExternalId(id, externalId);
+  async resolveStrigaUserForMe(
+    userId?: number | string,
+  ): Promise<StrigaUser | null> {
+    const user = await this.findByUserId(userId);
+    if (!user) {
+      return null;
+    }
+
+    const [result] = GroupPlainToInstances(
+      StrigaUser,
+      [user],
+      this.defaultResponseRoles,
+    );
+    return result ?? null;
+  }
+
+  async findKyc(id?: StrigaUser['id'], externalId?: StrigaUser['externalId']) {
+    const kyc = await this.strigaUserRepository.findKycByIdOrExternalId(
+      id,
+      externalId,
+    );
+    if (!kyc) {
+      return null;
+    }
+
+    const [result] = GroupPlainToInstances(
+      StrigaUserKyc,
+      [kyc],
+      this.defaultResponseRoles,
+    );
+    return result ?? null;
   }
 
   async findPhone(
@@ -170,7 +196,15 @@ export class StrigaUsersService {
       externalId,
     );
 
-    return user?.mobile ?? null;
+    if (!user?.mobile) {
+      return null;
+    }
+    const [result] = GroupPlainToInstances(
+      StrigaUserMobile,
+      [user.mobile],
+      this.defaultResponseRoles,
+    );
+    return result ?? null;
   }
 
   async findAddress(
@@ -182,7 +216,15 @@ export class StrigaUsersService {
       externalId,
     );
 
-    return user?.address ?? null;
+    if (!user?.address) {
+      return null;
+    }
+    const [result] = GroupPlainToInstances(
+      StrigaUserAddress,
+      [user.address],
+      this.defaultResponseRoles,
+    );
+    return result ?? null;
   }
 
   updatePhone(

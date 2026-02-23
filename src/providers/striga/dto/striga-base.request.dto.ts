@@ -1,24 +1,12 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsEmail,
   IsInt,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
-
-@Exclude()
-export class StrigaUserIdParamDto {
-  @ApiProperty({
-    description: 'Unique user ID from Striga',
-    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-  })
-  @IsString()
-  @Expose()
-  userId!: string;
-}
 
 @Exclude()
 export class StrigaMobileDto {
@@ -135,7 +123,23 @@ export type StrigaGetWalletRequestDto = Record<string, unknown>;
 export type StrigaCreateWalletRequestDto = Record<string, unknown>;
 
 @Exclude()
-export class StrigaUpdateUserRequestDto {
+export class StrigaPingRequestDto {}
+
+@Exclude()
+export class StrigaUserIdRequestDto {
+  @ApiProperty({
+    example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
+    description: 'User ID returned by Striga create user endpoint',
+  })
+  @IsString()
+  @Expose()
+  userId!: string;
+}
+
+@Exclude()
+export class StrigaUpdateUserRequestDto extends PartialType(
+  StrigaCreateUserRequestDto,
+) {
   @ApiPropertyOptional({
     example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
     description: 'User ID returned by Striga create user endpoint',
@@ -145,45 +149,6 @@ export class StrigaUpdateUserRequestDto {
   @Expose()
   userId?: string;
 
-  @ApiPropertyOptional({ example: 'Claudia' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  firstName?: string;
-
-  @ApiPropertyOptional({ example: 'Tracy Lind' })
-  @IsOptional()
-  @IsString()
-  @Expose()
-  lastName?: string;
-
-  @ApiPropertyOptional({ example: 'user1@example.com' })
-  @IsOptional()
-  @IsEmail()
-  @Expose()
-  email?: string;
-
-  @ApiPropertyOptional({ type: StrigaMobileDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => StrigaMobileDto)
-  @Expose()
-  mobile?: StrigaMobileDto;
-
-  @ApiPropertyOptional({ type: StrigaDateOfBirthDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => StrigaDateOfBirthDto)
-  @Expose()
-  dateOfBirth?: StrigaDateOfBirthDto;
-
-  @ApiPropertyOptional({ type: StrigaAddressDto })
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => StrigaAddressDto)
-  @Expose()
-  address?: StrigaAddressDto;
-
   @ApiPropertyOptional({ example: 'Janiyaburgh' })
   @IsOptional()
   @IsString()
@@ -192,15 +157,7 @@ export class StrigaUpdateUserRequestDto {
 }
 
 @Exclude()
-export class StrigaUpdateVerifiedCredentialsRequestDto {
-  @ApiProperty({
-    example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
-    description: 'Unique user ID returned by Striga create user endpoint',
-  })
-  @IsString()
-  @Expose()
-  userId!: string;
-
+export class StrigaUpdateVerifiedCredentialsRequestDto extends StrigaUserIdRequestDto {
   @ApiProperty({
     example: 'user1@example.com',
     description: 'User email address',
@@ -211,12 +168,15 @@ export class StrigaUpdateVerifiedCredentialsRequestDto {
 }
 
 @Exclude()
-export class StrigaUserByEmailRequestDto {
+export class StrigaEmailRequestDto {
   @ApiProperty({ example: 'user1@example.com' })
   @IsEmail()
   @Expose()
   email!: string;
 }
+
+@Exclude()
+export class StrigaUserByEmailRequestDto extends StrigaEmailRequestDto {}
 
 @Exclude()
 export class StrigaExternalIdRequestDto {
@@ -230,20 +190,7 @@ export class StrigaExternalIdRequestDto {
 }
 
 @Exclude()
-export class StrigaUserByEmailParamDto {
-  @ApiProperty({ example: 'user1@example.com' })
-  @IsEmail()
-  @Expose()
-  email!: string;
-}
-
-@Exclude()
-export class StrigaVerifyEmailRequestDto {
-  @ApiProperty({ example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f' })
-  @IsString()
-  @Expose()
-  userId!: string;
-
+export class StrigaVerifyEmailRequestDto extends StrigaUserIdRequestDto {
   @ApiProperty({
     example: '123456',
     description: '6 character code. Sandbox default is 123456.',
@@ -254,20 +201,10 @@ export class StrigaVerifyEmailRequestDto {
 }
 
 @Exclude()
-export class StrigaResendEmailRequestDto {
-  @ApiProperty({ example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f' })
-  @IsString()
-  @Expose()
-  userId!: string;
-}
+export class StrigaResendEmailRequestDto extends StrigaUserIdRequestDto {}
 
 @Exclude()
-export class StrigaVerifyMobileRequestDto {
-  @ApiProperty({ example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f' })
-  @IsString()
-  @Expose()
-  userId!: string;
-
+export class StrigaVerifyMobileRequestDto extends StrigaUserIdRequestDto {
   @ApiProperty({
     example: '123456',
     description: '6 character code. Sandbox default is 123456.',
@@ -278,11 +215,6 @@ export class StrigaVerifyMobileRequestDto {
 }
 
 @Exclude()
-export class StrigaResendSmsRequestDto {
-  @ApiProperty({ example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f' })
-  @IsString()
-  @Expose()
-  userId!: string;
-}
+export class StrigaResendSmsRequestDto extends StrigaUserIdRequestDto {}
 
 export type StrigaKycRequestDto = Record<string, unknown>;

@@ -4,7 +4,7 @@ import { InternalEventHandler } from '../../../common/internal-events/helper/int
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { GroupPlainToInstance } from '../../../utils/transformers/class.transformer';
-import { StrigaKycWebhookEventDto } from '../dto/striga-kyc-webhook.dto';
+import { StrigaKycWebhookEventDto } from '../dto/striga.webhook.dto';
 import {
   VERO_LOGIN_USER_ADDED_EVENT,
   VERO_LOGIN_USER_DELETED_EVENT,

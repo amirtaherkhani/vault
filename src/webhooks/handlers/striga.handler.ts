@@ -2,7 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { plainToInstance } from 'class-transformer';
 import { Logger } from '@nestjs/common';
-import { StrigaKycWebhookDto } from '../../providers/striga/dto/striga-kyc-webhook.dto';
+import { StrigaKycWebhookDto } from '../../providers/striga/dto/striga.webhook.dto';
 import {
   StrigaParsedWebhookEvent,
   StrigaWebhookInput,

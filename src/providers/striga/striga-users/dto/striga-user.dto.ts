@@ -1,56 +1,98 @@
-import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Expose, Type } from 'class-transformer';
+import { IsEmail, IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
 import {
   StrigaUserAddressDto,
   StrigaUserKycDto,
   StrigaUserMobileDto,
 } from './create-striga-user.dto';
 
+@Exclude()
 export class StrigaUserDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  id: string;
-
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({
+    format: 'uuid',
+    example: '8fa4f6ef-9e76-4cb2-97cb-1401e24e58f5',
+    description: 'Local Striga user record ID',
+  })
   @IsUUID()
+  @Expose()
+  id!: string;
+
+  @ApiProperty({
+    format: 'uuid',
+    example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
+    description: 'External Striga user ID',
+  })
+  @IsUUID()
+  @Expose()
   externalId!: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
+  @ApiProperty({
+    example: 'user@example.com',
+    description: 'User email',
+  })
+  @IsEmail()
+  @Expose()
   email!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: 'John',
+    description: 'User first name',
+  })
   @IsString()
-  @IsNotEmpty()
+  @Expose()
   firstName!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: 'Doe',
+    description: 'User last name',
+  })
   @IsString()
-  @IsNotEmpty()
+  @Expose()
   lastName!: string;
 
-  @ApiProperty({ type: () => StrigaUserMobileDto })
+  @ApiProperty({
+    type: () => StrigaUserMobileDto,
+    description: 'User mobile',
+  })
   @ValidateNested()
   @Type(() => StrigaUserMobileDto)
+  @Expose()
   mobile!: StrigaUserMobileDto;
 
-  @ApiProperty({ type: () => StrigaUserAddressDto })
+  @ApiProperty({
+    type: () => StrigaUserAddressDto,
+    description: 'User address',
+  })
   @ValidateNested()
   @Type(() => StrigaUserAddressDto)
+  @Expose()
   address!: StrigaUserAddressDto;
 
-  @ApiProperty({ type: () => StrigaUserKycDto, required: false })
+  @ApiPropertyOptional({
+    type: () => StrigaUserKycDto,
+    nullable: true,
+    description: 'Minimal KYC snapshot',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycDto)
+  @Expose()
   kyc?: StrigaUserKycDto | null;
+
+  @ApiPropertyOptional({
+    example: '2026-02-21T11:25:30.000Z',
+    format: 'date-time',
+  })
+  @IsOptional()
+  @Expose()
+  createdAt?: Date;
+
+  @ApiPropertyOptional({
+    example: '2026-02-21T11:25:30.000Z',
+    format: 'date-time',
+  })
+  @IsOptional()
+  @Expose()
+  updatedAt?: Date;
 }

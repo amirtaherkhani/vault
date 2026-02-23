@@ -17,6 +17,26 @@ export type StrigaMobileLike = {
   number?: string | null;
 };
 
+type StrigaKycTierStatusLike = {
+  status?: unknown;
+} | null;
+
+type StrigaKycWebhookStatusLike = {
+  status?: unknown;
+  tier0?: StrigaKycTierStatusLike;
+  tier1?: StrigaKycTierStatusLike;
+  tier2?: StrigaKycTierStatusLike;
+  tier3?: StrigaKycTierStatusLike;
+};
+
+export type StrigaKycSnapshot = {
+  status?: string | null;
+  tier0?: { status?: string } | null;
+  tier1?: { status?: string } | null;
+  tier2?: { status?: string } | null;
+  tier3?: { status?: string } | null;
+};
+
 export const STRIGA_PLACEHOLDER_MOBILE = Object.freeze({
   countryCode: '+372',
   number: '55555555',
@@ -106,4 +126,38 @@ export function resolveStrigaInternalEventType(
   }
 
   return null;
+}
+
+export function buildStrigaKycSnapshotFromWebhook(
+  payload: StrigaKycWebhookStatusLike,
+): StrigaKycSnapshot {
+  const normalizeStatus = (value: unknown): string | undefined => {
+    const status = String(value ?? '').trim();
+    return status.length ? status : undefined;
+  };
+
+  const mapTier = (tier?: StrigaKycTierStatusLike): { status?: string } | null => {
+    const status = normalizeStatus(tier?.status);
+    return status ? { status } : null;
+  };
+
+  const snapshot: StrigaKycSnapshot = {};
+
+  if ('status' in payload) {
+    snapshot.status = normalizeStatus(payload.status) ?? null;
+  }
+  if ('tier0' in payload) {
+    snapshot.tier0 = mapTier(payload.tier0);
+  }
+  if ('tier1' in payload) {
+    snapshot.tier1 = mapTier(payload.tier1);
+  }
+  if ('tier2' in payload) {
+    snapshot.tier2 = mapTier(payload.tier2);
+  }
+  if ('tier3' in payload) {
+    snapshot.tier3 = mapTier(payload.tier3);
+  }
+
+  return snapshot;
 }

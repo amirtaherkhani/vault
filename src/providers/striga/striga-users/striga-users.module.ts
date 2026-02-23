@@ -5,7 +5,6 @@ import {
 import { EnableGuard } from '../../../common/guards/service-enabled.guard';
 import { UsersModule } from '../../../users/users.module';
 import { StrigaUsersService } from './striga-users.service';
-import { StrigaUsersController } from './striga-users.controller';
 import { RelationalStrigaUserPersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
 
 @Module({
@@ -14,7 +13,6 @@ import { RelationalStrigaUserPersistenceModule } from './infrastructure/persiste
     UsersModule,
     RelationalStrigaUserPersistenceModule,
   ],
-  controllers: [StrigaUsersController],
   providers: [StrigaUsersService, EnableGuard],
   exports: [StrigaUsersService, RelationalStrigaUserPersistenceModule],
 })

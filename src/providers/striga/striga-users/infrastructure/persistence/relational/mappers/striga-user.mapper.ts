@@ -1,5 +1,4 @@
 import { StrigaUser } from '../../../../domain/striga-user';
-
 import { StrigaUserEntity } from '../entities/striga-user.entity';
 
 export class StrigaUserMapper {
