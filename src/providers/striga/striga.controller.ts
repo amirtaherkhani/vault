@@ -36,6 +36,7 @@ import {
 } from './dto/striga-verification.dto';
 import {
   StrigaUpdateUserForAdminDto,
+  StrigaUpdateCredentialsForAdminDto,
   StrigaUpdateUserForMeDto,
 } from './dto/striga-user-update.dto';
 import { StrigaKycTotalStatusDto } from './dto/striga-kyc-status.dto';
@@ -155,6 +156,20 @@ export class StrigaController {
     @Body() body: StrigaUpdateUserForAdminDto,
   ): Promise<StrigaUser> {
     return this.strigaUserService.updateUserForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Update user verified credentials by Striga ID', [
+    RoleEnum.admin,
+  ])
+  @Patch('users/verified-credentials')
+  @HttpCode(HttpStatus.OK)
+  @ApiBody({ type: StrigaUpdateCredentialsForAdminDto })
+  @ApiOkResponse({ type: StrigaUser })
+  async updateVerifiedCredentialsForAdmin(
+    @Body() body: StrigaUpdateCredentialsForAdminDto,
+  ): Promise<StrigaUser> {
+    return this.strigaUserService.updateVerifiedCredentialsForAdmin(body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)

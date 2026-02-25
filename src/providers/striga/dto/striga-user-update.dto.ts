@@ -1,9 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 import {
   StrigaAddressDto,
   StrigaDateOfBirthDto,
+  StrigaExternalIdRequestDto,
   StrigaMobileDto,
 } from './striga-base.request.dto';
 
@@ -42,4 +49,15 @@ export class StrigaUpdateUserForAdminDto extends StrigaUpdateUserForMeDto {
   @IsUUID('4')
   @Expose()
   externalId!: string;
+}
+
+@Exclude()
+export class StrigaUpdateCredentialsForAdminDto extends StrigaExternalIdRequestDto {
+  @ApiProperty({
+    example: 'user1@example.com',
+    description: 'User email address',
+  })
+  @IsEmail()
+  @Expose()
+  email!: string;
 }

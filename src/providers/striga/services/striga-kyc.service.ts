@@ -29,6 +29,7 @@ import {
 } from '../dto/striga-verification.dto';
 import {
   StrigaUpdateUserForAdminDto,
+  StrigaUpdateCredentialsForAdminDto,
   StrigaUpdateUserForMeDto,
 } from '../dto/striga-user-update.dto';
 import { StrigaKycTotalStatusDto } from '../dto/striga-kyc-status.dto';
@@ -370,6 +371,62 @@ export class StrigaUserService extends StrigaBaseService {
       `updateUserForAdmin: done externalId=${synced.externalId} localId=${synced.id}`,
     );
     return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
+  }
+
+  /**
+   * Updates Striga verified credentials (email) in provider and syncs
+   * the local Striga user record with the new email.
+   */
+  async updateVerifiedCredentialsForAdmin(
+    payload: StrigaUpdateCredentialsForAdminDto,
+  ): Promise<StrigaUser> {
+    this.logger.debug(
+      `updateVerifiedCredentialsForAdmin: start externalId=${String(payload.externalId ?? 'n/a')}`,
+    );
+
+    const externalId = String(payload.externalId ?? '').trim();
+    if (!externalId) {
+      throw new BadRequestException('externalId is required.');
+    }
+
+    const normalizedEmail = String(payload.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!normalizedEmail) {
+      throw new BadRequestException('email is required.');
+    }
+
+    const localStrigaUser =
+      await this.strigaUsersService.findByExternalId(externalId);
+    if (!localStrigaUser) {
+      throw new NotFoundException('Striga user was not found.');
+    }
+
+    const existingByEmail =
+      await this.strigaUsersService.findByEmail(normalizedEmail);
+    if (existingByEmail && existingByEmail.id !== localStrigaUser.id) {
+      throw new BadRequestException(
+        'Another Striga user already uses this email.',
+      );
+    }
+
+    await this.updateVerifiedCredentialsInProvider({
+      userId: externalId,
+      email: normalizedEmail,
+    });
+
+    const updated = await this.strigaUsersService.update(localStrigaUser.id, {
+      email: normalizedEmail,
+    });
+    if (!updated) {
+      throw new NotFoundException('Striga user was not found.');
+    }
+
+    this.logger.debug(
+      `updateVerifiedCredentialsForAdmin: done externalId=${externalId} localId=${updated.id}`,
+    );
+
+    return GroupPlainToInstance(StrigaUser, updated, this.defaultResponseRoles);
   }
 
   async startKycForMe(

@@ -15,3 +15,7 @@
 - [x] E2E and units tests.
 - [x] Docker.
 - [x] CI (Github Actions).
+
+## Documentation
+
+- File storage and uploading guide: [docs/file-uploading.md](docs/file-uploading.md)

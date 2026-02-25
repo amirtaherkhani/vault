@@ -1,180 +1,307 @@
-# File uploading
+# File storage and uploading
 
 ---
 
 ## Table of Contents <!-- omit in toc -->
 
-- [Drivers support](#drivers-support)
-- [Uploading and attach file flow for `local` driver](#uploading-and-attach-file-flow-for-local-driver)
-  - [An example of uploading an avatar to a user profile (local)](#an-example-of-uploading-an-avatar-to-a-user-profile-local)
-  - [Video example](#video-example)
-- [Uploading and attach file flow for `s3` driver](#uploading-and-attach-file-flow-for-s3-driver)
-  - [Configuration for `s3` driver](#configuration-for-s3-driver)
-  - [An example of uploading an avatar to a user profile (S3)](#an-example-of-uploading-an-avatar-to-a-user-profile-s3)
-- [Uploading and attach file flow for `s3-presigned` driver](#uploading-and-attach-file-flow-for-s3-presigned-driver)
-  - [Configuration for `s3-presigned` driver](#configuration-for-s3-presigned-driver)
-  - [An example of uploading an avatar to a user profile (S3 Presigned URL)](#an-example-of-uploading-an-avatar-to-a-user-profile-s3-presigned-url)
-- [How to delete files?](#how-to-delete-files)
+- [Purpose](#purpose)
+- [Quick answer: disable local storage and use cloud](#quick-answer-disable-local-storage-and-use-cloud)
+- [Storage drivers](#storage-drivers)
+- [Environment variables](#environment-variables)
+- [Driver flows](#driver-flows)
+  - [Local driver (`FILE_DRIVER=local`)](#local-driver-file_driverlocal)
+  - [S3 driver (`FILE_DRIVER=s3`)](#s3-driver-file_drivers3)
+  - [S3 Presigned driver (`FILE_DRIVER=s3-presigned`)](#s3-presigned-driver-file_drivers3-presigned)
+- [Kubernetes and stateful architecture](#kubernetes-and-stateful-architecture)
+  - [Recommended for Kubernetes: stateless app + cloud object storage](#recommended-for-kubernetes-stateless-app--cloud-object-storage)
+  - [When local storage is required: stateful app pattern](#when-local-storage-is-required-stateful-app-pattern)
+- [Migration notes (local -> cloud)](#migration-notes-local---cloud)
+- [Verification checklist](#verification-checklist)
+- [How to delete files](#how-to-delete-files)
 
 ---
 
-## Drivers support
+## Purpose
 
-Out-of-box boilerplate supports the following drivers: `local`, `s3`, and `s3-presigned`. You can set it in the `.env` file, variable `FILE_DRIVER`. If you want to use another service for storing files, you can extend it.
-
-> For production we recommend using the "s3-presigned" driver to offload your server.
+This document explains how file storage works in this app, how to run with local disk or cloud storage, and how to deploy correctly on Kubernetes depending on stateless vs stateful requirements.
 
 ---
 
-## Uploading and attach file flow for `local` driver
+## Quick answer: disable local storage and use cloud
 
-Endpoint `/api/v1/files/upload` is used for uploading files, which returns `File` entity with `id` and `path`. After receiving `File` entity you can attach this to another entity.
+Yes, local file upload storage is disabled when you set:
 
-### An example of uploading an avatar to a user profile (local)
-
-```mermaid
-sequenceDiagram
-    participant A as Fronted App
-    participant B as Backend App
-
-    A->>B: Upload file via POST /api/v1/files/upload
-    B->>A: Receive File entity with "id" and "path" properties
-    note left of A: Attach File entity to User entity
-    A->>B: Update user via PATCH /api/v1/auth/me
+```dotenv
+FILE_DRIVER=s3
 ```
 
-### Video example
+or:
 
-<https://user-images.githubusercontent.com/6001723/224558636-d22480e4-f70a-4789-b6fc-6ea343685dc7.mp4>
-
-## Uploading and attach file flow for `s3` driver
-
-Endpoint `/api/v1/files/upload` is used for uploading files, which returns `File` entity with `id` and `path`. After receiving `File` entity you can attach this to another entity.
-
-### Configuration for `s3` driver
-
-1. Open https://s3.console.aws.amazon.com/s3/buckets
-1. Click "Create bucket"
-1. Create bucket (for example, `your-unique-bucket-name`)
-1. Open your bucket
-1. Click "Permissions" tab
-1. Find "Cross-origin resource sharing (CORS)" section
-1. Click "Edit"
-1. Paste the following configuration
-
-    ```json
-    [
-      {
-        "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET"],
-        "AllowedOrigins": ["*"],
-        "ExposeHeaders": []
-      }
-    ]
-    ```
-
-1. Click "Save changes"
-1. Update `.env` file with the following variables:
-
-    ```dotenv
-    FILE_DRIVER=s3
-    ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID
-    SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
-    AWS_S3_REGION=YOUR_AWS_S3_REGION
-    AWS_DEFAULT_S3_BUCKET=YOUR_AWS_DEFAULT_S3_BUCKET
-    ```
-
-### An example of uploading an avatar to a user profile (S3)
-
-```mermaid
-sequenceDiagram
-    participant A as Fronted App
-    participant B as Backend App
-    participant C as AWS S3
-
-    A->>B: Upload file via POST /api/v1/files/upload
-    B->>C: Upload file to S3
-    B->>A: Receive File entity with "id" and "path" properties
-    note left of A: Attach File entity to User entity
-    A->>B: Update user via PATCH /api/v1/auth/me
+```dotenv
+FILE_DRIVER=s3-presigned
 ```
 
-## Uploading and attach file flow for `s3-presigned` driver
+In these modes:
 
-Endpoint `/api/v1/files/upload` is used for uploading files. In this case `/api/v1/files/upload` receives only `fileName` property (without binary file), and returns the `presigned URL` and `File` entity with `id` and `path`. After receiving the `presigned URL` and `File` entity you need to upload your file to the `presigned URL` and after that attach `File` to another entity.
+- new uploads do not use `./files` local disk storage.
+- uploads are stored in S3-compatible object storage.
+- local download route for disk files is not the active upload path.
 
-### Configuration for `s3-presigned` driver
+Important:
 
-1. Open https://s3.console.aws.amazon.com/s3/buckets
-1. Click "Create bucket"
-1. Create bucket (for example, `your-unique-bucket-name`)
-1. Open your bucket
-1. Click "Permissions" tab
-1. Find "Cross-origin resource sharing (CORS)" section
-1. Click "Edit"
-1. Paste the following configuration
+- there is no `FILE_DRIVER=none`; you must choose one driver.
+- existing records created with `local` may require migration before full cloud-only operation.
 
-    ```json
-    [
-      {
-        "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET", "PUT"],
-        "AllowedOrigins": ["*"],
-        "ExposeHeaders": []
-      }
-    ]
-    ```
+---
 
-   For production we recommend to use more strict configuration:
+## Storage drivers
 
-   ```json
-   [
-     {
-       "AllowedHeaders": ["*"],
-       "AllowedMethods": ["PUT"],
-       "AllowedOrigins": ["https://your-domain.com"],
-       "ExposeHeaders": []
-     },
-      {
-        "AllowedHeaders": ["*"],
-        "AllowedMethods": ["GET"],
-        "AllowedOrigins": ["*"],
-        "ExposeHeaders": []
-      }
-   ]
-   ```
+Supported values for `FILE_DRIVER`:
 
-1. Click "Save changes"
-1. Update `.env` file with the following variables:
+- `local`
+- `s3`
+- `s3-presigned`
 
-    ```dotenv
-    FILE_DRIVER=s3-presigned
-    ACCESS_KEY_ID=YOUR_ACCESS_KEY_ID
-    SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
-    AWS_S3_REGION=YOUR_AWS_S3_REGION
-    AWS_DEFAULT_S3_BUCKET=YOUR_AWS_DEFAULT_S3_BUCKET
-    ```
+Operational behavior:
 
-### An example of uploading an avatar to a user profile (S3 Presigned URL)
+1. `local`
 
-```mermaid
-sequenceDiagram
-    participant C as AWS S3
-    participant A as Fronted App
-    
-    participant B as Backend App
+- Upload binary to backend.
+- Backend writes file to `./files`.
+- Backend serves file via API path.
+- Suitable for local development or single-node setups.
 
-    A->>B: Send file name (not binary file) via POST /api/v1/files/upload
-    note right of B: Generate presigned URL
-    B->>A: Receive presigned URL and File entity with "id" and "path" properties
-    A->>C: Upload file to S3 via presigned URL
-    note right of A: Attach File entity to User entity
-    A->>B: Update user via PATCH /api/v1/auth/me
+2. `s3`
+
+- Upload binary to backend.
+- Backend streams upload to S3 bucket.
+- File reference is stored in DB as S3 key.
+- Backend returns signed GET URL when serializing `File`.
+
+3. `s3-presigned`
+
+- Client sends metadata (`fileName`, `fileSize`) to backend.
+- Backend creates DB file record + presigned PUT URL.
+- Client uploads directly to S3.
+- Best production fit for high traffic and Kubernetes.
+
+---
+
+## Environment variables
+
+Base file storage section in `.env`:
+
+```dotenv
+########################################
+# File storage
+########################################
+FILE_DRIVER=local
+ACCESS_KEY_ID=
+SECRET_ACCESS_KEY=
+AWS_S3_REGION=
+AWS_DEFAULT_S3_BUCKET=
 ```
 
-## How to delete files?
+Cloud (S3 or S3 Presigned) requires:
 
-We prefer not to delete files, as this may have negative experience during restoring data. Also for this reason we also use [Soft-Delete](https://orkhan.gitbook.io/typeorm/docs/delete-query-builder#soft-delete) approach in database. However, if you need to delete files you can create your own handler, cronjob, etc.
+- `FILE_DRIVER=s3` or `FILE_DRIVER=s3-presigned`
+- non-empty `ACCESS_KEY_ID`
+- non-empty `SECRET_ACCESS_KEY`
+- non-empty `AWS_S3_REGION`
+- non-empty `AWS_DEFAULT_S3_BUCKET`
+
+Example for cloud mode:
+
+```dotenv
+FILE_DRIVER=s3-presigned
+ACCESS_KEY_ID=AKIA...
+SECRET_ACCESS_KEY=...
+AWS_S3_REGION=us-east-1
+AWS_DEFAULT_S3_BUCKET=my-vault-files
+```
+
+---
+
+## Driver flows
+
+### Local driver (`FILE_DRIVER=local`)
+
+1. Client `POST /api/v1/files/upload` with multipart file.
+2. Backend writes to `./files`.
+3. DB stores local API path.
+4. Client uses file entity in later requests (example: user avatar).
+
+### S3 driver (`FILE_DRIVER=s3`)
+
+1. Client `POST /api/v1/files/upload` with multipart file.
+2. Backend uploads object to S3.
+3. DB stores object key.
+4. Responses expose a signed GET URL for downloads.
+
+### S3 Presigned driver (`FILE_DRIVER=s3-presigned`)
+
+1. Client `POST /api/v1/files/upload` with metadata only.
+2. Backend returns:
+
+- `file` DB entity
+- `uploadSignedUrl` (temporary PUT URL)
+
+3. Client uploads binary directly to S3 using `uploadSignedUrl`.
+4. Client attaches returned `file` entity to domain object (profile, etc.).
+
+---
+
+## Kubernetes and stateful architecture
+
+### Recommended for Kubernetes: stateless app + cloud object storage
+
+Use this for production:
+
+- Set `FILE_DRIVER=s3` or `FILE_DRIVER=s3-presigned`.
+- Deploy app as a `Deployment` with multiple replicas.
+- Keep no persistent volume for `./files` (not needed for uploads).
+- Store AWS credentials in `Secret` (or use IAM role/workload identity).
+
+Why this is better:
+
+- horizontal scaling is straightforward.
+- no pod-local file coupling.
+- no shared filesystem requirement between replicas.
+
+Minimal Kubernetes env pattern:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vault-api
+  template:
+    metadata:
+      labels:
+        app: vault-api
+    spec:
+      containers:
+        - name: api
+          image: your-image:tag
+          env:
+            - name: FILE_DRIVER
+              value: 's3-presigned'
+            - name: AWS_S3_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: vault-file-storage
+                  key: AWS_S3_REGION
+            - name: AWS_DEFAULT_S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: vault-file-storage
+                  key: AWS_DEFAULT_S3_BUCKET
+            - name: ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: vault-file-storage
+                  key: ACCESS_KEY_ID
+            - name: SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: vault-file-storage
+                  key: SECRET_ACCESS_KEY
+```
+
+### When local storage is required: stateful app pattern
+
+If you intentionally keep `FILE_DRIVER=local` in Kubernetes:
+
+- treat app pods as stateful.
+- use `StatefulSet` + persistent volume claim(s).
+- avoid multi-replica without shared RWX volume strategy.
+
+Risks with local driver on multiple replicas:
+
+- each pod may have different local files.
+- request routing can hit a pod that does not have the file.
+- file availability and restore become operationally complex.
+
+Single-replica stateful example:
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vault-api
+spec:
+  serviceName: vault-api
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-api
+  template:
+    metadata:
+      labels:
+        app: vault-api
+    spec:
+      containers:
+        - name: api
+          image: your-image:tag
+          env:
+            - name: FILE_DRIVER
+              value: 'local'
+          volumeMounts:
+            - name: app-files
+              mountPath: /app/files
+  volumeClaimTemplates:
+    - metadata:
+        name: app-files
+      spec:
+        accessModes: ['ReadWriteOnce']
+        resources:
+          requests:
+            storage: 10Gi
+```
+
+---
+
+## Migration notes (local -> cloud)
+
+When moving from `local` to `s3`/`s3-presigned`:
+
+1. existing DB file paths created as local URLs are not automatically migrated.
+2. new uploads go to cloud, old local files still require old storage/access path.
+3. recommended migration:
+
+- copy old local files to S3.
+- rewrite DB file `path` values to S3 object keys.
+- verify URL generation from API responses.
+
+Plan migration before switching production traffic.
+
+---
+
+## Verification checklist
+
+After enabling cloud storage:
+
+1. Start app with `FILE_DRIVER=s3` or `s3-presigned`.
+2. Upload a test image through `/api/v1/files/upload`.
+3. Confirm object exists in S3 bucket.
+4. Confirm API returns file path as signed URL behavior.
+5. Restart pod and re-check file accessibility.
+6. Scale replicas and re-check file accessibility from different pods.
+
+Expected outcome in cloud mode:
+
+- upload/download behavior remains correct after restart and scale-out.
+
+---
+
+## How to delete files
+
+This project generally avoids hard-deleting file objects by default, similar to the soft-delete approach in database entities. If business rules require deletion, implement an explicit deletion flow or scheduled cleanup job.
 
 ---
 

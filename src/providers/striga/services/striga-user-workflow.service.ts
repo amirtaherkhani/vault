@@ -205,6 +205,7 @@ export class StrigaUserWorkflowService {
     );
 
     // TODO: Implement Striga user cleanup logic.
+    await Promise.resolve();
   }
 
   async processKycWebhook(
