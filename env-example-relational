@@ -70,10 +70,10 @@ AUTH_CONFIRM_EMAIL_TOKEN_EXPIRES_IN=1d
 # Auth via Vero
 ########################################
 AUTH_VERO_USE_EXTERNAL_TOKEN=false
-VERO_API_BASE_URL=https://gateway.veroapi.com/veritas
-VERO_JWKS_URL=https://gateway.veroapi.com/veritas/jwks
-VERO_CACHE_MAX_AGE=900000
-VERO_ENABLE_DYNAMIC_CACHE=false
+VERO_PROFILE_API_BASE_URL=https://gateway.veroapi.com/veritas
+VERO_JWKS_URI=https://gateway.veroapi.com/veritas/jwks
+VERO_JWKS_CACHE_MAX_AGE_MS=900000
+VERO_ENABLE_JWKS_VALIDATION=false
 
 ########################################
 # Sessions

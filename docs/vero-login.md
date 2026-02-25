@@ -9,10 +9,9 @@ The API supports Vero authentication in two modes:
 1. Internal JWT mode. The API validates the Vero token, upserts the user, and issues its own JWT + refresh token.
 2. External token mode. The API validates the Vero token, upserts the user, and returns the same Vero token verbatim.
 
-External token mode is enabled when either of these is true:
+External token mode is enabled only when this is true:
 
 - `AUTH_VERO_USE_EXTERNAL_TOKEN=true`
-- `VERO_ENABLE_DYNAMIC_CACHE=true`
 
 When external token mode is enabled, the API accepts Vero bearer tokens directly on protected endpoints.
 
@@ -29,13 +28,13 @@ These environment variables control Vero login behavior:
 
 - `AUTH_VERO_USE_EXTERNAL_TOKEN`  
   When true, the API returns the same Vero token and does not create a session.
-- `VERO_ENABLE_DYNAMIC_CACHE`  
-  When true, external token mode is enabled and JWT verification uses JWKS. It also enables adaptive JWKS cache timing.
-- `VERO_API_BASE_URL`  
-  Base URL used to fetch `/me/profile` when external token mode is enabled and dynamic cache is off.
-- `VERO_JWKS_URL`  
+- `VERO_ENABLE_JWKS_VALIDATION`  
+  When true, external token validation uses JWKS verification with adaptive JWKS cache timing.
+- `VERO_PROFILE_API_BASE_URL`  
+  Base URL used to fetch `/me/profile` when external token mode is enabled and JWKS validation is off.
+- `VERO_JWKS_URI`  
   JWKS endpoint used to verify RS256 tokens when needed.
-- `VERO_CACHE_MAX_AGE`  
+- `VERO_JWKS_CACHE_MAX_AGE_MS`  
   JWKS cache max age in milliseconds.
 
 Defaults are defined in `src/auth-vero/config/vero.config.ts`.
@@ -43,7 +42,7 @@ Defaults are defined in `src/auth-vero/config/vero.config.ts`.
 **Modes And Outcomes**
 
 **1) Internal JWT Mode**  
-Conditions: `AUTH_VERO_USE_EXTERNAL_TOKEN=false` and `VERO_ENABLE_DYNAMIC_CACHE=false`
+Conditions: `AUTH_VERO_USE_EXTERNAL_TOKEN=false`
 
 Behavior:
 
@@ -58,7 +57,7 @@ Result:
 - Protected endpoints require the internal JWT.
 
 **2) External Token Mode**  
-Conditions: `AUTH_VERO_USE_EXTERNAL_TOKEN=true` or `VERO_ENABLE_DYNAMIC_CACHE=true`
+Conditions: `AUTH_VERO_USE_EXTERNAL_TOKEN=true`
 
 Behavior:
 
@@ -69,7 +68,7 @@ Behavior:
 Result:
 
 - The response token is the same as the Vero token.
-- A session is created for the token (used for logout and tracking).
+- No session is created.
 - Refresh token remains an empty string.
 - Protected endpoints accept the Vero token directly.
 
@@ -77,11 +76,11 @@ Result:
 
 External token mode validates tokens in one of two ways:
 
-- `VERO_ENABLE_DYNAMIC_CACHE=true`  
-  The token is verified using JWKS (`VERO_JWKS_URL`), and claims are mapped directly.
+- `VERO_ENABLE_JWKS_VALIDATION=true`  
+  The token is verified using JWKS (`VERO_JWKS_URI`), and claims are mapped directly.
 
-- `VERO_ENABLE_DYNAMIC_CACHE=false`  
-  The API calls `GET /me/profile` on the Vero gateway (`VERO_API_BASE_URL`) to validate the token and retrieve profile data.
+- `VERO_ENABLE_JWKS_VALIDATION=false`  
+  The API calls `GET /me/profile` on the Vero gateway (`VERO_PROFILE_API_BASE_URL`) to validate the token and retrieve profile data.
 
 **Dynamic Auth Guard Behavior**
 
@@ -90,7 +89,7 @@ The dynamic guard allows the following:
 - External token mode enabled: `jwt` or `vero-bearer` are accepted.
 - External token mode disabled: only `jwt` is accepted.
 
-The guard is controlled by `AUTH_VERO_USE_EXTERNAL_TOKEN` and `VERO_ENABLE_DYNAMIC_CACHE`.
+The guard is controlled by `AUTH_VERO_USE_EXTERNAL_TOKEN`.
 
 **User Matching Rules**
 
@@ -158,10 +157,10 @@ The Vero token-to-user mapping is cached:
 **Troubleshooting**
 
 **The token changes after login**  
-You are in internal JWT mode. Set either `AUTH_VERO_USE_EXTERNAL_TOKEN=true` or `VERO_ENABLE_DYNAMIC_CACHE=true`.
+You are in internal JWT mode. Set `AUTH_VERO_USE_EXTERNAL_TOKEN=true`.
 
 **Bearer token is rejected on protected endpoints**  
-External token mode is not enabled. Set one of the external flags or use the internal JWT.
+External token mode is not enabled. Set `AUTH_VERO_USE_EXTERNAL_TOKEN=true` or use the internal JWT.
 
 **User not found after login**  
 Check that the Vero token contains a stable identifier and email, and that the user mapping rules are satisfied.

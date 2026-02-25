@@ -131,6 +131,8 @@ export function resolveStrigaInternalEventType(
 export function buildStrigaKycSnapshotFromWebhook(
   payload: StrigaKycWebhookStatusLike,
 ): StrigaKycSnapshot {
+  const isDefined = (value: unknown): boolean => typeof value !== 'undefined';
+
   const normalizeStatus = (value: unknown): string | undefined => {
     const status = String(value ?? '').trim();
     return status.length ? status : undefined;
@@ -145,19 +147,19 @@ export function buildStrigaKycSnapshotFromWebhook(
 
   const snapshot: StrigaKycSnapshot = {};
 
-  if ('status' in payload) {
+  if (isDefined(payload.status)) {
     snapshot.status = normalizeStatus(payload.status) ?? null;
   }
-  if ('tier0' in payload) {
+  if (isDefined(payload.tier0)) {
     snapshot.tier0 = mapTier(payload.tier0);
   }
-  if ('tier1' in payload) {
+  if (isDefined(payload.tier1)) {
     snapshot.tier1 = mapTier(payload.tier1);
   }
-  if ('tier2' in payload) {
+  if (isDefined(payload.tier2)) {
     snapshot.tier2 = mapTier(payload.tier2);
   }
-  if ('tier3' in payload) {
+  if (isDefined(payload.tier3)) {
     snapshot.tier3 = mapTier(payload.tier3);
   }
 

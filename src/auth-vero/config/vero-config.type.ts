@@ -1,7 +1,7 @@
 export type VeroConfig = {
   jwksUri?: string;
   jwksUriCacheMaxAge: number;
-  enableDynamicCache: boolean;
+  enableJwksValidation: boolean;
   apiBaseUrl: string;
   useExternalToken: boolean;
 };

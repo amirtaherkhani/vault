@@ -54,10 +54,7 @@ export class AuthVeroController {
   ): Promise<LoginResponseDto> {
     const sessionMetadata = extractSessionMetadata(headers);
     if (this.authVeroService.isExternalTokenMode()) {
-      return this.authVeroService.loginWithExternalToken(
-        loginDto,
-        sessionMetadata,
-      );
+      return this.authVeroService.loginWithExternalToken(loginDto);
     }
     const { profile, exp } =
       await this.authVeroService.getProfileByToken(loginDto);

@@ -7,7 +7,6 @@ import {
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import axios, { isAxiosError } from 'axios';
@@ -25,7 +24,7 @@ import {
   BASE_VALUE_JWKS_URL,
   DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS,
   DEFAULT_JWKS_CACHE_MAX_AGE,
-  VERO_ENABLE_DYNAMIC_CACHE,
+  VERO_ENABLE_JWKS_VALIDATION,
   VERO_PROFILE_PATH,
 } from './types/vero-auth-const.type';
 import { UsersService } from '../users/users.service';
@@ -36,9 +35,6 @@ import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants
 import { User } from '../users/domain/user';
 import { GroupPlainToInstances } from '../utils/transformers/class.transformer';
 import { CacheService } from '../common/cache';
-import { SessionService } from '../session/session.service';
-import type { Session } from '../session/domain/session';
-import { SessionMetadata } from '../session/types/session-base.type';
 import type {
   VeroProfileResult,
   VeroTokenCacheEntry,
@@ -53,7 +49,7 @@ export class AuthVeroService {
   private jwksClient: JwksClient;
   private lastKeyChangeTimestamp: number;
   private keyUsageCounter: number;
-  private enableDynamicCache: boolean;
+  private enableJwksValidation: boolean;
   private readonly logger = new Logger(AuthVeroService.name);
   private readonly localTokenCache = new Map<string, VeroTokenCacheEntry>();
 
@@ -62,7 +58,6 @@ export class AuthVeroService {
     private jwtService: JwtService,
     private veroMapper: VeroPayloadMapper,
     private readonly usersService: UsersService,
-    private readonly sessionService: SessionService,
     private readonly cacheService: CacheService,
     private readonly internalEventsService: InternalEventsService,
     private readonly dataSource: DataSource,
@@ -74,9 +69,9 @@ export class AuthVeroService {
       this.configService.get('vero.jwksUriCacheMaxAge', { infer: true }) ||
       DEFAULT_JWKS_CACHE_MAX_AGE;
 
-    this.enableDynamicCache =
-      this.configService.get('vero.enableDynamicCache', { infer: true }) ||
-      VERO_ENABLE_DYNAMIC_CACHE;
+    this.enableJwksValidation =
+      this.configService.get('vero.enableJwksValidation', { infer: true }) ||
+      VERO_ENABLE_JWKS_VALIDATION;
     this.lastKeyChangeTimestamp = Date.now();
     this.keyUsageCounter = 0;
 
@@ -92,9 +87,9 @@ export class AuthVeroService {
   }
 
   private adjustCacheDuration() {
-    if (!this.enableDynamicCache) {
+    if (!this.enableJwksValidation) {
       this.logger.debug(
-        'Dynamic cache adjustment is disabled. Using default cache duration.',
+        'JWKS validation mode is disabled. Using default cache duration.',
       );
       return;
     }
@@ -129,11 +124,9 @@ export class AuthVeroService {
 
   isExternalTokenMode(): boolean {
     return (
-      (this.configService.get('vero.useExternalToken', {
+      this.configService.get('vero.useExternalToken', {
         infer: true,
-      }) ??
-        false) ||
-      this.enableDynamicCache
+      }) ?? false
     );
   }
 
@@ -157,39 +150,12 @@ export class AuthVeroService {
     return `vero:token:${hash}`;
   }
 
-  private async createSessionForUser(
-    user: User,
-    metadata?: SessionMetadata,
-  ): Promise<Session> {
-    const hash = createHash('sha256')
-      .update(randomStringGenerator())
-      .digest('hex');
-    return this.sessionService.create(
-      {
-        user,
-        hash,
-        lastUsedAt: new Date(),
-      },
-      metadata,
-    );
-  }
-
   private resolveCacheTtlSecondsFromExpiresAt(expiresAt: number): number {
     const remainingSeconds = Math.ceil((expiresAt - Date.now()) / 1000);
     if (remainingSeconds <= 0) {
       return DEFAULT_VERO_TOKEN_CACHE_TTL_SECONDS;
     }
     return remainingSeconds;
-  }
-
-  private attachSessionToUser(
-    user: User,
-    sessionId?: Session['id'],
-  ): User & { sessionId?: Session['id'] } {
-    if (sessionId) {
-      (user as User & { sessionId?: Session['id'] }).sessionId = sessionId;
-    }
-    return user as User & { sessionId?: Session['id'] };
   }
 
   private async getCachedTokenEntry(
@@ -255,7 +221,7 @@ export class AuthVeroService {
         } else {
           const signingKey = (key as RsaSigningKey).getPublicKey();
 
-          if (this.enableDynamicCache) {
+          if (this.enableJwksValidation) {
             this.logger.debug('JWKS key retrieved.');
             this.lastKeyChangeTimestamp = Date.now();
             this.adjustCacheDuration();
@@ -326,44 +292,18 @@ export class AuthVeroService {
 
   async loginWithExternalToken(
     loginDto: AuthVeroLoginDto,
-    sessionMetadata?: SessionMetadata,
   ): Promise<{
     token: string;
     refreshToken: string;
     tokenExpires: number;
     user: User;
   }> {
-    const { profile, exp, rawProfile } = this.enableDynamicCache
+    const { profile, exp, rawProfile } = this.enableJwksValidation
       ? await this.getProfileFromVerifiedToken(loginDto.veroToken)
       : await this.getProfileFromExternalToken(loginDto.veroToken);
     const user = await this.resolveUserFromVeroProfile(profile, rawProfile);
     const identity = this.resolveVeroIdentity(profile, rawProfile);
     const cached = await this.getCachedTokenEntry(loginDto.veroToken);
-    let sessionId = cached?.sessionId;
-    if (!sessionId) {
-      const session = await this.createSessionForUser(user, sessionMetadata);
-      sessionId = session.id;
-    } else if (sessionMetadata) {
-      const updates: Partial<Session> = {
-        lastUsedAt: new Date(),
-      };
-      if (sessionMetadata.deviceName) {
-        updates.deviceName = sessionMetadata.deviceName;
-      }
-      if (sessionMetadata.deviceType) {
-        updates.deviceType = sessionMetadata.deviceType;
-      }
-      if (sessionMetadata.appVersion) {
-        updates.appVersion = sessionMetadata.appVersion;
-      }
-      if (sessionMetadata.country) {
-        updates.country = sessionMetadata.country;
-      }
-      if (sessionMetadata.city) {
-        updates.city = sessionMetadata.city;
-      }
-      await this.sessionService.update(sessionId, updates);
-    }
     const ttlSeconds = cached
       ? this.resolveCacheTtlSecondsFromExpiresAt(cached.expiresAt)
       : this.resolveTokenCacheTtlSeconds(exp);
@@ -375,7 +315,6 @@ export class AuthVeroService {
         internalUserId: user.id,
         veroIdentity: identity,
         expiresAt,
-        sessionId,
       },
       ttlSeconds,
     );
@@ -417,47 +356,26 @@ export class AuthVeroService {
 
   async resolveUserFromExternalToken(
     token: string,
-    options: { attachSession?: boolean } = {},
-  ): Promise<User & { sessionId?: Session['id'] }> {
+  ): Promise<User> {
     if (!this.isExternalTokenMode()) {
       throw new UnauthorizedException('Vero external token auth is disabled.');
     }
 
-    const attachSession = options.attachSession ?? true;
     const cached = await this.getCachedTokenEntry(token);
     if (cached) {
       const cachedUser = await this.usersService.findById(
         cached.internalUserId,
       );
       if (cachedUser) {
-        let sessionId = cached.sessionId;
-        if (!sessionId) {
-          const session = await this.createSessionForUser(cachedUser);
-          sessionId = session.id;
-          const ttlSeconds = this.resolveCacheTtlSecondsFromExpiresAt(
-            cached.expiresAt,
-          );
-          await this.setCachedTokenEntry(
-            token,
-            {
-              ...cached,
-              sessionId,
-            },
-            ttlSeconds,
-          );
-        }
-        return attachSession
-          ? this.attachSessionToUser(cachedUser, sessionId)
-          : cachedUser;
+        return cachedUser;
       }
     }
 
-    const { profile, exp, rawProfile } = this.enableDynamicCache
+    const { profile, exp, rawProfile } = this.enableJwksValidation
       ? await this.getProfileFromVerifiedToken(token)
       : await this.getProfileFromExternalToken(token);
     const user = await this.resolveUserFromVeroProfile(profile, rawProfile);
     const identity = this.resolveVeroIdentity(profile, rawProfile);
-    const session = await this.createSessionForUser(user);
     const ttlSeconds = this.resolveTokenCacheTtlSeconds(exp);
     const expiresAt = exp ? exp * 1000 : Date.now() + ttlSeconds * 1000;
     await this.setCachedTokenEntry(
@@ -466,11 +384,10 @@ export class AuthVeroService {
         internalUserId: user.id,
         veroIdentity: identity,
         expiresAt,
-        sessionId: session.id,
       },
       ttlSeconds,
     );
-    return attachSession ? this.attachSessionToUser(user, session.id) : user;
+    return user;
   }
 
   private async fetchVeroProfile(token: string): Promise<any> {

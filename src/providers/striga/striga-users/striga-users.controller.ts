@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   Request,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,6 +22,7 @@ import { RoleEnum } from '../../../roles/roles.enum';
 import { RolesGuard } from '../../../roles/roles.guard';
 import { ApiOperationRoles } from '../../../utils/decorators/swagger.decorator';
 import { RequireEnabled } from '../../../utils/decorators/service-toggleable.decorators';
+import { SerializeGroups } from '../../../utils/transformers/enum.transformer';
 import {
   InfinityPaginationResponse,
   InfinityPaginationResponseDto,
@@ -45,6 +47,7 @@ import { StrigaUsersService } from './striga-users.service';
 @ApiTags('Striga')
 @ApiBearerAuth()
 @UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
+@SerializeOptions(SerializeGroups([RoleEnum.admin, RoleEnum.user]))
 @Controller({
   path: 'users',
   version: '1',

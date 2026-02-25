@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Request,
+  SerializeOptions,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -26,6 +27,7 @@ import {
   RequireEnabled,
   RequireServiceReady,
 } from '../../utils/decorators/service-toggleable.decorators';
+import { SerializeGroups } from '../../utils/transformers/enum.transformer';
 import { RequestWithUser } from '../../utils/types/object.type';
 import { RequireStrigaUser } from './decorators/striga-access.decorator';
 import {
@@ -56,6 +58,7 @@ import { StrigaService } from './striga.service';
 @RequireServiceReady(StrigaService)
 @ApiBearerAuth()
 @ApiTags('Striga')
+@SerializeOptions(SerializeGroups([RoleEnum.admin, RoleEnum.user]))
 @Controller({ path: '', version: '1' })
 export class StrigaController {
   constructor(private readonly strigaUserService: StrigaUserService) {}

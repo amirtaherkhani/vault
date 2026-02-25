@@ -2,211 +2,315 @@
 
 ## Table of Contents <!-- omit in toc -->
 
-- [General info](#general-info)
-  - [Auth via email flow](#auth-via-email-flow)
-  - [Auth via external services or social networks flow](#auth-via-external-services-or-social-networks-flow)
+- [Overview](#overview)
+- [Core Concepts](#core-concepts)
+- [Endpoints Summary](#endpoints-summary)
 - [Configure Auth](#configure-auth)
-- [Auth via Apple](#auth-via-apple)
-- [Auth via Facebook](#auth-via-facebook)
-- [Auth via Google](#auth-via-google)
-- [Auth via Vero](#auth-via-vero)
-- [About JWT strategy](#about-jwt-strategy)
-- [Refresh token flow](#refresh-token-flow)
-  - [Video example](#video-example)
-  - [Support login for multiple devices / Sessions](#support-login-for-multiple-devices--sessions)
-- [Logout](#logout)
-- [Q\&A](#qa)
-  - [After `POST /api/v1/auth/logout` or removing session from the database, the user can still make requests with an `access token` for some time. Why?](#after-post-apiv1authlogout-or-removing-session-from-the-database-the-user-can-still-make-requests-with-an-access-token-for-some-time-why)
+- [Email Auth](#email-auth)
+- [Google Auth](#google-auth)
+- [Apple Auth](#apple-auth)
+- [Vero Auth](#vero-auth)
+- [Protected APIs And Guards](#protected-apis-and-guards)
+- [Refresh Token Flow](#refresh-token-flow)
+- [Logout Behavior](#logout-behavior)
+- [Session Storage](#session-storage)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## General info
+## Overview
 
-### Auth via email flow
+This project supports these login flows:
 
-By default boilerplate used sign in and sign up via email and password.
+1. Email/password
+2. Google
+3. Apple
+4. Vero
 
-```mermaid
-sequenceDiagram
-    participant A as Fronted App (Web, Mobile, Desktop)
-    participant B as Backend App
+The API has two token styles:
 
-    A->>B: 1. Sign up via email and password
-    A->>B: 2. Sign in via email and password
-    B->>A: 3. Get a JWT token
-    A->>B: 4. Make any requests using a JWT token
-```
+1. Internal app JWT flow (used by email, google, apple, and vero internal mode)
+2. External Vero token flow (returns and accepts the same Vero token)
 
-<https://user-images.githubusercontent.com/6001723/224566194-1c1f4e98-5691-4703-b30e-92f99ec5d929.mp4>
+Default base path for endpoints in this doc: `/api/v1`.
 
-### Auth via external services or social networks flow
+## Core Concepts
 
-Also you can sign up via another external services or social networks like Apple, Facebook and Google.
+- Access token: token sent to protected APIs in `Authorization: Bearer <token>`.
+- Refresh token: used to rotate access token in internal JWT flow.
+- Session: DB record representing one logged-in device/app context.
+- Session hash: value bound to refresh token to support rotation and invalidation.
 
-```mermaid
-sequenceDiagram
-    participant B as External Auth Services (Apple, Google, etc)
-    participant A as Fronted App (Web, Mobile, Desktop)
-    participant C as Backend App
+Important behavior:
 
-    A->>B: 1. Sign in through an external service
-    B->>A: 2. Get Access Token
-    A->>C: 3. Send Access Token to auth endpoint
-    C->>A: 4. Get a JWT token
-    A->>C: 5. Make any requests using a JWT token
-```
+- Internal JWT login creates a session.
+- Vero external-token login does not create a session.
+- Logout removes (soft-deletes) the current session row.
+- Access JWTs are stateless and can remain valid until expiry even after logout.
 
-For auth with external services or social networks you need:
+## Endpoints Summary
 
-1. Sign in through an external service and get access token(s).
-1. Call one of endpoints with access token received in frontend app on 1-st step and get JWT token from the backend app.
-
-   ```text
-   POST /api/v1/auth/facebook/login
-
-   POST /api/v1/auth/google/login
-
-   POST /api/v1/auth/apple/login
-   ```
-
-1. Make any requests using a JWT token
-
----
+| Flow | Endpoint | Request body | Token returned | Session created | Refresh token |
+| --- | --- | --- | --- | --- | --- |
+| Email | `POST /auth/email/login` | `{ email, password }` | Internal JWT | Yes | Yes |
+| Google | `POST /auth/google/login` | `{ idToken }` | Internal JWT | Yes | Yes |
+| Apple | `POST /auth/apple/login` | `{ idToken, firstName?, lastName? }` | Internal JWT | Yes | Yes |
+| Vero internal mode | `POST /auth/vero/login` | `{ veroToken }` | Internal JWT | Yes | Yes |
+| Vero external mode | `POST /auth/vero/login` | `{ veroToken }` | Same Vero token | No | No (`""`) |
 
 ## Configure Auth
 
-1. Generate secret keys for `access token` and `refresh token`:
+Set core JWT secrets/expirations in `.env`:
 
-   ```bash
-   node -e "console.log('\nAUTH_JWT_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_REFRESH_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_FORGOT_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_CONFIRM_EMAIL_SECRET=' + require('crypto').randomBytes(256).toString('base64'));"
-   ```
+```text
+AUTH_JWT_SECRET=...
+AUTH_JWT_TOKEN_EXPIRES_IN=15m
+AUTH_REFRESH_SECRET=...
+AUTH_REFRESH_TOKEN_EXPIRES_IN=3650d
+AUTH_FORGOT_SECRET=...
+AUTH_FORGOT_TOKEN_EXPIRES_IN=30m
+AUTH_CONFIRM_EMAIL_SECRET=...
+AUTH_CONFIRM_EMAIL_TOKEN_EXPIRES_IN=1d
+```
 
-1. Go to `/.env` and replace `AUTH_JWT_SECRET` and `AUTH_REFRESH_SECRET` with output from step 1.
+Generate strong random secrets:
 
-   ```text
-   AUTH_JWT_SECRET=HERE_SECRET_KEY_FROM_STEP_1
-   AUTH_REFRESH_SECRET=HERE_SECRET_KEY_FROM_STEP_1
-   ```
+```bash
+node -e "console.log('\nAUTH_JWT_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_REFRESH_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_FORGOT_SECRET=' + require('crypto').randomBytes(256).toString('base64') + '\n\nAUTH_CONFIRM_EMAIL_SECRET=' + require('crypto').randomBytes(256).toString('base64'));"
+```
 
-## Auth via Apple
+## Email Auth
 
-1. [Set up your service on Apple](https://www.npmjs.com/package/apple-signin-auth)
-1. Change `APPLE_APP_AUDIENCE` in `.env`
+### Login
 
-   ```text
-   APPLE_APP_AUDIENCE=["com.company", "com.company.web"]
-   ```
+- Endpoint: `POST /auth/email/login`
+- Body:
 
-## Auth via Facebook
+```json
+{
+  "email": "user@example.com",
+  "password": "your-password"
+}
+```
 
-1. Go to https://developers.facebook.com/apps/creation/ and create a new app
-   <img alt="image" src="https://github.com/brocoders/nestjs-boilerplate/assets/6001723/05721db2-9d26-466a-ad7a-072680d0d49b">
+### Behavior
 
-   <img alt="image" src="https://github.com/brocoders/nestjs-boilerplate/assets/6001723/9f4aae18-61da-4abc-9304-821a0995a306">
-2. Go to `Settings` -> `Basic` and get `App ID` and `App Secret` from your app
-   <img alt="image" src="https://github.com/brocoders/nestjs-boilerplate/assets/6001723/b0fc7d50-4bc6-45d0-8b20-fda0b6c01ac2">
-3. Change `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` in `.env`
+1. Validates email/password.
+2. Creates session row in DB.
+3. Returns `token`, `refreshToken`, `tokenExpires`, `user`.
 
-   ```text
-   FACEBOOK_APP_ID=123
-   FACEBOOK_APP_SECRET=abc
-   ```
+## Google Auth
 
-## Auth via Google
+### Setup
 
-1. You need a `CLIENT_ID`, `CLIENT_SECRET`. You can find these pieces of information by going to the [Developer Console](https://console.cloud.google.com/), clicking your project (if doesn't have create it here https://console.cloud.google.com/projectcreate) -> `APIs & services` -> `credentials`.
-1. Change `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
+Set:
 
-   ```text
-   GOOGLE_CLIENT_ID=abc
-   GOOGLE_CLIENT_SECRET=abc
-   ```
+```text
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+```
 
-## Auth via Vero
+### Login
 
-Vero authentication supports two modes:
+- Endpoint: `POST /auth/google/login`
+- Body:
 
-1. **Default mode (internal JWT issued):** The API validates the Vero token, upserts the user, and returns an internal JWT.
-2. **External token mode (Vero token reused):** The API validates the Vero token against Vero's `/me/profile` endpoint, upserts the user, and returns the same Vero token verbatim for subsequent API calls.
+```json
+{
+  "idToken": "google-id-token"
+}
+```
 
-To enable external token mode, set:
+### Behavior
+
+1. Verifies Google ID token.
+2. Resolves/creates user (`provider=google`, `socialId=sub`).
+3. Creates session row.
+4. Returns internal JWT + refresh token.
+
+## Apple Auth
+
+### Setup
+
+Set:
+
+```text
+APPLE_APP_AUDIENCE=["com.company", "com.company.web"]
+```
+
+### Login
+
+- Endpoint: `POST /auth/apple/login`
+- Body:
+
+```json
+{
+  "idToken": "apple-id-token",
+  "firstName": "Optional",
+  "lastName": "Optional"
+}
+```
+
+### Behavior
+
+1. Verifies Apple ID token.
+2. Resolves/creates user (`provider=apple`, `socialId=sub`).
+3. Creates session row.
+4. Returns internal JWT + refresh token.
+
+## Vero Auth
+
+Vero has two distinct modes.
+
+### 1) Internal mode
+
+Condition:
+
+```text
+AUTH_VERO_USE_EXTERNAL_TOKEN=false
+```
+
+Behavior:
+
+1. `POST /auth/vero/login` with `veroToken`.
+2. Validate Vero token and map profile.
+3. Resolve/create user (`provider=vero`, `socialId` based identity mapping).
+4. Create session row.
+5. Return internal JWT + refresh token.
+
+Expiry note:
+
+- Initial internal access token tries to align with incoming Vero token `exp` when available.
+- Session row itself does not have a dedicated expiry column.
+
+### 2) External mode
+
+Condition:
 
 ```text
 AUTH_VERO_USE_EXTERNAL_TOKEN=true
 ```
 
-If Vero is not hosted at the default gateway, override the base URL used for the profile check:
+Behavior:
+
+1. `POST /auth/vero/login` with `veroToken`.
+2. Validate token and resolve/create user.
+3. Return the same Vero token as `token`.
+4. `refreshToken` is empty.
+5. No session row is created.
+
+### Vero validation configuration
 
 ```text
-VERO_API_BASE_URL=https://gateway.veroapi.com/veritas
+AUTH_VERO_USE_EXTERNAL_TOKEN=false
+VERO_ENABLE_JWKS_VALIDATION=false
+VERO_PROFILE_API_BASE_URL=https://gateway.veroapi.com/veritas
+VERO_JWKS_URI=https://gateway.veroapi.com/veritas/jwks
+VERO_JWKS_CACHE_MAX_AGE_MS=900000
 ```
 
-When external token mode is enabled, the client should:
+Variable roles:
 
-1. Obtain a Vero JWT externally.
-2. Call `POST /api/v1/auth/vero/login` with the Vero token.
-3. Reuse the same Vero token in the `Authorization: Bearer <token>` header for all protected APIs.
+- `AUTH_VERO_USE_EXTERNAL_TOKEN`: controls whether external mode is enabled.
+- `VERO_ENABLE_JWKS_VALIDATION`: chooses validation path for Vero token checks.
+- `VERO_JWKS_URI`: JWKS endpoint for local RS256 verification.
+- `VERO_JWKS_CACHE_MAX_AGE_MS`: JWKS cache max age config.
+- `VERO_PROFILE_API_BASE_URL`: base URL for profile validation path (`/me/profile`).
 
-For a full walkthrough of Vero login behavior, configuration flags, and response differences, see `docs/vero-login.md`.
+Validation path:
 
-## About JWT strategy
+- `VERO_ENABLE_JWKS_VALIDATION=true`: validate via JWKS.
+- `VERO_ENABLE_JWKS_VALIDATION=false`: validate via `GET /me/profile`.
 
-In the `validate` method of the `src/auth/strategies/jwt.strategy.ts` file, you can see that we do not check if the user exists in the database because it is redundant, it may lose the benefits of the JWT approach and can affect the application performance.
+More details: `docs/vero-login.md`.
 
-To better understand how JWT works, watch the video explanation https://www.youtube.com/watch?v=Y2H3DXDeS3Q and read this article https://jwt.io/introduction/
+## Protected APIs And Guards
 
-```typescript
-// src/auth/strategies/jwt.strategy.ts
+Most protected endpoints use dynamic auth guard behavior:
 
-@Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  // ...
+- `AUTH_VERO_USE_EXTERNAL_TOKEN=false`:
+  - Accept internal JWT only.
+- `AUTH_VERO_USE_EXTERNAL_TOKEN=true`:
+  - Accept internal JWT or Vero bearer token.
 
-  public validate(payload) {
-    if (!payload.id) {
-      throw new UnauthorizedException();
-    }
+`/auth/me`, `/auth/logout`, `/auth/update`, and many feature controllers use this behavior.
 
-    return payload;
-  }
-}
+## Refresh Token Flow
+
+Internal JWT flows only.
+
+1. Login returns `token`, `refreshToken`, `tokenExpires`.
+2. Use access token for regular API calls.
+3. When expired, call:
+
+```text
+POST /auth/refresh
+Authorization: Bearer <refreshToken>
 ```
 
-> If you need to get full user information, get it in services.
+Refresh checks:
 
-## Refresh token flow
+1. Session exists.
+2. Session hash matches refresh payload hash.
+3. Hash rotates after successful refresh.
 
-1. On sign in (`POST /api/v1/auth/email/login`) you will receive `token`, `tokenExpires` and `refreshToken` in response.
-1. On each regular request you need to send `token` in `Authorization` header.
-1. If `token` is expired (check with `tokenExpires` property on client app) you need to send `refreshToken` to `POST /api/v1/auth/refresh` in `Authorization` header to refresh `token`. You will receive new `token`, `tokenExpires` and `refreshToken` in response.
+Also available via sessions module:
 
-For session management (listing, closing sessions, and device metadata), see `docs/sessions.md`.
+```text
+POST /sessions/refresh
+Authorization: Bearer <refreshToken>
+```
 
-### Video example
+## Logout Behavior
 
-https://github.com/brocoders/nestjs-boilerplate/assets/6001723/f6fdcc89-5ec6-472b-a6fc-d24178ad1bbb
+Call:
 
-### Support login for multiple devices / Sessions
+```text
+POST /auth/logout
+Authorization: Bearer <accessToken>
+```
 
-Boilerplate supports login for multiple devices with a Refresh Token flow. This is possible due to `sessions`. When a user logs in, a new session is created and stored in the database. The session record contains `sessionId (id)`, `userId`, and `hash`.
+What happens:
 
-On each `POST /api/v1/auth/refresh` request we check `hash` from the database with `hash` from the Refresh Token. If they are equal, we return new `token`, `tokenExpires`, and `refreshToken`. Then we update `hash` in the database to disallow the use of the previous Refresh Token.
+1. Current session id is read from token payload.
+2. Session is soft-deleted in DB.
+3. Refresh flow for that session stops working.
 
-## Logout
+What does not happen:
 
-1. Call following endpoint:
+- Existing access JWT is not instantly revoked. It remains valid until `exp`.
 
-   ```text
-   POST /api/v1/auth/logout
-   ```
+In external Vero mode, logout is not a primary revocation control because no session is created in that mode.
 
-2. Remove `access token` and `refresh token` from your client app (cookies, localStorage, etc).
+## Session Storage
 
-## Q&A
+Sessions are handled by the relational database (`session` table, soft delete), not Redis.
 
-### After `POST /api/v1/auth/logout` or removing session from the database, the user can still make requests with an `access token` for some time. Why?
+Redis is used in this project for other concerns (for example cache, internal events, socket adapters), and optionally for Vero token-to-user cache when cache is enabled.
 
-It's because we use `JWT`. `JWTs` are stateless, so we can't revoke them, but don't worry, this is the correct behavior and the access token will expire after the time specified in `AUTH_JWT_TOKEN_EXPIRES_IN` (the default value is 15 minutes). If you still need to revoke `JWT` tokens immediately, you can check if a session exists in [jwt.strategy.ts](https://github.com/brocoders/nestjs-boilerplate/blob/2896589f52d2df025f12069ba82ba4fac1db8ebd/src/auth/strategies/jwt.strategy.ts#L20-L26) on each request. However, it's not recommended because it can affect the application's performance.
+Session APIs and device metadata details: `docs/sessions.md`.
+
+## Troubleshooting
+
+### Token still works for a short time after logout
+
+Expected for stateless JWT access tokens. This is normal unless you add per-request DB session checks for access tokens.
+
+### Vero external mode returns internal JWT
+
+Check:
+
+```text
+AUTH_VERO_USE_EXTERNAL_TOKEN=true
+```
+
+### Vero bearer token rejected on protected APIs
+
+Check:
+
+1. `AUTH_VERO_USE_EXTERNAL_TOKEN=true`
+2. Token is valid and not expired.
+3. Vero validation path config (`VERO_ENABLE_JWKS_VALIDATION`, `VERO_JWKS_URI`, `VERO_PROFILE_API_BASE_URL`) is correct.
 
 ---
 

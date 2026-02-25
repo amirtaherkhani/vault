@@ -42,7 +42,6 @@ import {
 
 @Injectable()
 export class StrigaUserService extends StrigaBaseService {
-  private readonly defaultResponseRoles = [RoleEnum.admin, RoleEnum.user];
   private readonly logger = new Logger(StrigaUserService.name);
 
   constructor(
@@ -97,7 +96,7 @@ export class StrigaUserService extends StrigaBaseService {
       {
         accepted,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -141,7 +140,7 @@ export class StrigaUserService extends StrigaBaseService {
       {
         accepted,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -175,7 +174,7 @@ export class StrigaUserService extends StrigaBaseService {
       {
         accepted: providerResponse?.success === true,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -210,7 +209,7 @@ export class StrigaUserService extends StrigaBaseService {
       {
         accepted: providerResponse?.success === true,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -258,7 +257,7 @@ export class StrigaUserService extends StrigaBaseService {
         action: 'verify',
         accepted,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -293,7 +292,7 @@ export class StrigaUserService extends StrigaBaseService {
         action: 'resend',
         accepted: providerResponse?.success === true,
       },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -335,7 +334,10 @@ export class StrigaUserService extends StrigaBaseService {
     this.logger.debug(
       `updateUserForMe: done externalId=${synced.externalId} localId=${synced.id}`,
     );
-    return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
+    return GroupPlainToInstance(StrigaUser, synced, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   async updateUserForAdmin(
@@ -370,7 +372,10 @@ export class StrigaUserService extends StrigaBaseService {
     this.logger.debug(
       `updateUserForAdmin: done externalId=${synced.externalId} localId=${synced.id}`,
     );
-    return GroupPlainToInstance(StrigaUser, synced, this.defaultResponseRoles);
+    return GroupPlainToInstance(StrigaUser, synced, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   /**
@@ -426,7 +431,10 @@ export class StrigaUserService extends StrigaBaseService {
       `updateVerifiedCredentialsForAdmin: done externalId=${externalId} localId=${updated.id}`,
     );
 
-    return GroupPlainToInstance(StrigaUser, updated, this.defaultResponseRoles);
+    return GroupPlainToInstance(StrigaUser, updated, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   async startKycForMe(
@@ -471,7 +479,7 @@ export class StrigaUserService extends StrigaBaseService {
     return GroupPlainToInstance(
       StrigaStartKycResponseDto,
       responsePayload,
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -516,7 +524,7 @@ export class StrigaUserService extends StrigaBaseService {
     return GroupPlainToInstance(
       StrigaStartKycResponseDto,
       responsePayload,
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -561,7 +569,7 @@ export class StrigaUserService extends StrigaBaseService {
     return GroupPlainToInstance(
       StrigaKycTotalStatusDto,
       { approved },
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 

@@ -4,7 +4,7 @@ This document explains how sessions work in the app, how the server manages them
 
 **Overview**
 
-Sessions are created whenever a user logs in (email/password or social login, including Vero). Each session represents a distinct device/app instance. You can list sessions, close a specific session, or close all sessions. Sessions are also used to support refresh tokens in internal JWT mode.
+Sessions are created on internal JWT logins (email/password, google, apple, and vero internal mode). Each session represents a distinct device/app instance. You can list sessions, close a specific session, or close all sessions. Sessions are also used to support refresh tokens in internal JWT mode.
 
 **Key Concepts**
 
@@ -41,10 +41,10 @@ x-city
 
 **Authentication Modes**
 
-Both internal JWT mode and Vero external-token mode create sessions.
+Session creation depends on auth mode.
 
 - Internal JWT mode: sessions + refresh tokens.
-- Vero external-token mode: sessions + no refresh token.
+- Vero external-token mode: no session + no refresh token.
 
 **API Reference**
 
@@ -131,8 +131,8 @@ It does not apply to Vero tokens.
 x-device-name: iPhone 15
 x-device-type: ios
 x-app-version: 1.4.2
-x-country: IR
-x-city: Tehran
+x-country: US
+x-city: San Francisco
 ```
 
 2. Use the access token returned by login.

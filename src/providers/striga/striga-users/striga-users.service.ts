@@ -29,8 +29,6 @@ export type StrigaUserUpsertResult = {
 
 @Injectable()
 export class StrigaUsersService {
-  private readonly defaultResponseRoles = [RoleEnum.admin, RoleEnum.user];
-
   constructor(
     // Dependencies here
     private readonly strigaUserRepository: StrigaUserRepository,
@@ -87,7 +85,10 @@ export class StrigaUsersService {
         },
       })
       .then((rows) =>
-        GroupPlainToInstances(StrigaUser, rows, this.defaultResponseRoles),
+        GroupPlainToInstances(StrigaUser, rows, [
+          RoleEnum.admin,
+          RoleEnum.user,
+        ]),
       );
   }
 
@@ -100,7 +101,7 @@ export class StrigaUsersService {
     const [result] = GroupPlainToInstances(
       StrigaUser,
       [user],
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
   }
@@ -109,7 +110,7 @@ export class StrigaUsersService {
     return GroupPlainToInstances(
       StrigaUser,
       await this.strigaUserRepository.findByIds(ids),
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
   }
 
@@ -133,7 +134,10 @@ export class StrigaUsersService {
       firstName,
       lastName,
     );
-    return GroupPlainToInstances(StrigaUser, rows, this.defaultResponseRoles);
+    return GroupPlainToInstances(StrigaUser, rows, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   async findByUserId(userId?: number | string): Promise<StrigaUser | null> {
@@ -167,7 +171,7 @@ export class StrigaUsersService {
     const [result] = GroupPlainToInstances(
       StrigaUser,
       [user],
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
   }
@@ -184,7 +188,7 @@ export class StrigaUsersService {
     const [result] = GroupPlainToInstances(
       StrigaUserKyc,
       [kyc],
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
   }
@@ -204,7 +208,7 @@ export class StrigaUsersService {
     const [result] = GroupPlainToInstances(
       StrigaUserMobile,
       [user.mobile],
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
   }
@@ -224,7 +228,7 @@ export class StrigaUsersService {
     const [result] = GroupPlainToInstances(
       StrigaUserAddress,
       [user.address],
-      this.defaultResponseRoles,
+      [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
   }
