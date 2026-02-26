@@ -4,8 +4,6 @@ export type StrigaWalletSummary = {
   subCurrencies: string[];
   createdAt: string | null;
   walletCount: number | null;
-  walletLabel: string | null;
-  selectionReason: 'wallet-label' | 'createdAt' | 'list-order';
 };
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -32,15 +30,6 @@ function toRecordList(value: unknown): Record<string, unknown>[] {
   return records;
 }
 
-function toCreatedAtTimestamp(value: unknown): number {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const ts = Date.parse(value);
-  return Number.isNaN(ts) ? Number.POSITIVE_INFINITY : ts;
-}
-
 function getWalletCountHint(data: unknown): number | null {
   const record = toRecord(data);
   if (!record) {
@@ -64,38 +53,6 @@ function getWalletCountHint(data: unknown): number | null {
   }
 
   return null;
-}
-
-function toTrimmedString(value: unknown): string | null {
-  if (typeof value !== 'string') {
-    return null;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function resolveWalletLabel(walletRecord: Record<string, unknown>): string | null {
-  return (
-    toTrimmedString(walletRecord.comment) ??
-    toTrimmedString(walletRecord.name) ??
-    toTrimmedString(walletRecord.label) ??
-    null
-  );
-}
-
-function parseWalletOrdinalFromLabel(label: string | null): number | null {
-  if (!label) {
-    return null;
-  }
-
-  const match = label.match(/wallet\s*([0-9]+)/i);
-  if (!match?.[1]) {
-    return null;
-  }
-
-  const ordinal = Number(match[1]);
-  return Number.isInteger(ordinal) && ordinal > 0 ? ordinal : null;
 }
 
 function extractWalletRecords(data: unknown): Record<string, unknown>[] {
@@ -153,7 +110,6 @@ function extractWalletRecords(data: unknown): Record<string, unknown>[] {
 function mapWalletSummary(
   walletRecord: Record<string, unknown>,
   walletCount: number | null,
-  selectionReason: StrigaWalletSummary['selectionReason'],
 ): StrigaWalletSummary | null {
   const walletId = String(
     walletRecord.walletId ?? walletRecord.parentWalletId ?? '',
@@ -207,16 +163,12 @@ function mapWalletSummary(
     }
   }
 
-  const walletLabel = resolveWalletLabel(walletRecord);
-
   return {
     walletId,
     subAccountIds,
     subCurrencies,
     createdAt,
     walletCount,
-    walletLabel,
-    selectionReason,
   };
 }
 
@@ -228,65 +180,10 @@ export function extractPrimaryWalletSummaryFromPayload(
     return null;
   }
 
-  const walletsWithMeta = walletRecords.map((walletRecord, index) => {
-    const walletLabel = resolveWalletLabel(walletRecord);
-    const walletOrdinal = parseWalletOrdinalFromLabel(walletLabel);
-
-    return {
-      walletRecord,
-      index,
-      walletLabel,
-      walletOrdinal,
-      createdAtTs: toCreatedAtTimestamp(walletRecord.createdAt),
-    };
-  });
-
-  // Prefer explicit wallet ordering label (Wallet 1, Wallet 2, ...).
-  const labeledWallets = walletsWithMeta.filter(
-    (wallet) => wallet.walletOrdinal !== null,
-  );
-  if (labeledWallets.length > 0) {
-    labeledWallets.sort((left, right) => {
-      if (left.walletOrdinal !== right.walletOrdinal) {
-        return (left.walletOrdinal ?? Number.MAX_SAFE_INTEGER) -
-          (right.walletOrdinal ?? Number.MAX_SAFE_INTEGER);
-      }
-
-      if (left.createdAtTs !== right.createdAtTs) {
-        return left.createdAtTs - right.createdAtTs;
-      }
-
-      return left.index - right.index;
-    });
-
-    const primaryWallet = labeledWallets[0].walletRecord;
-    const walletCount = getWalletCountHint(data) ?? walletRecords.length;
-    return mapWalletSummary(primaryWallet, walletCount, 'wallet-label');
-  }
-
-  // Fallback to earliest createdAt when labels are not available.
-  const createdAtAwareWallets = walletsWithMeta.filter(
-    (wallet) => Number.isFinite(wallet.createdAtTs),
-  );
-  if (createdAtAwareWallets.length > 0) {
-    createdAtAwareWallets.sort((left, right) => {
-      if (left.createdAtTs !== right.createdAtTs) {
-        return left.createdAtTs - right.createdAtTs;
-      }
-
-      return left.index - right.index;
-    });
-
-    const primaryWallet = createdAtAwareWallets[0].walletRecord;
-    const walletCount = getWalletCountHint(data) ?? walletRecords.length;
-    return mapWalletSummary(primaryWallet, walletCount, 'createdAt');
-  }
-
-  // Final fallback keeps provider list order.
-  const primaryWallet = walletsWithMeta[0].walletRecord;
-
+  // IMPORTANT: pick first wallet in provider list order.
+  const primaryWallet = walletRecords[0];
   const walletCount = getWalletCountHint(data) ?? walletRecords.length;
-  return mapWalletSummary(primaryWallet, walletCount, 'list-order');
+  return mapWalletSummary(primaryWallet, walletCount);
 }
 
 function toTimestamp(value: unknown): number | null {

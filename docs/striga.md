@@ -72,7 +72,7 @@ Wallet resolution always targets one primary wallet:
    - `startDate` = Striga cloud user `createdAt`
    - `endDate` = current request timestamp
    - `page` = `1`
-4. If multiple wallets exist, select earliest by `createdAt`.
+4. If multiple wallets exist, select the first wallet from provider list order (`wallets[0]`).
 
 Helper location:
 

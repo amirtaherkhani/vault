@@ -509,11 +509,11 @@ export class StrigaUserWorkflowService {
       if (wallet) {
         if ((wallet.walletCount ?? 0) > 1) {
           this.logger.debug(
-            `[trace=${traceId}] Multiple wallets detected count=${wallet.walletCount}; selected walletId=${wallet.walletId} reason=${wallet.selectionReason} label=${wallet.walletLabel ?? 'n/a'} createdAt=${wallet.createdAt ?? 'n/a'}.`,
+            `[trace=${traceId}] Multiple wallets detected count=${wallet.walletCount}; selected first wallet in provider list walletId=${wallet.walletId} createdAt=${wallet.createdAt ?? 'n/a'}.`,
           );
         }
         this.logger.debug(
-          `[trace=${traceId}] Resolved Striga wallet via wallets/get/all walletId=${wallet.walletId} subAccounts=${wallet.subAccountIds.length} count=${wallet.walletCount ?? 'n/a'} reason=${wallet.selectionReason}.`,
+          `[trace=${traceId}] Resolved Striga wallet via wallets/get/all walletId=${wallet.walletId} subAccounts=${wallet.subAccountIds.length} count=${wallet.walletCount ?? 'n/a'}.`,
         );
         return wallet;
       }
@@ -536,8 +536,6 @@ export class StrigaUserWorkflowService {
         subCurrencies: [],
         createdAt: null,
         walletCount: null,
-        walletLabel: null,
-        selectionReason: 'list-order',
       };
     }
 
@@ -663,7 +661,7 @@ export class StrigaUserWorkflowService {
     }
     const providerWalletId = providerWallet.walletId;
     this.logger.debug(
-      `[trace=${traceId}] ${source}: wallet selected walletId=${providerWalletId} reason=${providerWallet.selectionReason} label=${providerWallet.walletLabel ?? 'n/a'} subAccounts=${providerWallet.subAccountIds.length} currencies=${providerWallet.subCurrencies.join(',') || 'n/a'}.`,
+      `[trace=${traceId}] ${source}: wallet selected walletId=${providerWalletId} subAccounts=${providerWallet.subAccountIds.length} currencies=${providerWallet.subCurrencies.join(',') || 'n/a'}.`,
     );
 
     const upsertedAccount = existingStrigaAccount
