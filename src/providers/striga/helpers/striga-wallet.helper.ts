@@ -6,13 +6,6 @@ export type StrigaWalletSummary = {
   walletCount: number | null;
 };
 
-function formatUtcDate(value: Date): string {
-  const year = value.getUTCFullYear();
-  const month = String(value.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(value.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -208,36 +201,48 @@ export function extractPrimaryWalletSummaryFromPayload(
   return mapWalletSummary(primaryWallet, walletCount);
 }
 
-export function buildFindAllWalletsPayloadCandidates(
-  userId: string,
-  now: Date = new Date(),
-): Record<string, unknown>[] {
-  const startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+function toTimestamp(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
 
-  return [
-    {
-      userId,
-      page: 1,
-      startDate: formatUtcDate(startDate),
-      endDate: formatUtcDate(now),
-    },
-    {
-      userId,
-      page: 1,
-      startDate: startDate.getTime(),
-      endDate: now.getTime(),
-    },
-    {
-      userId,
-      page: 1,
-      startDate: Math.floor(startDate.getTime() / 1000),
-      endDate: Math.floor(now.getTime() / 1000),
-    },
-    {
-      userId,
-      page: 1,
-      startDate: startDate.toISOString(),
-      endDate: now.toISOString(),
-    },
-  ];
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const asNumber = Number(value);
+    if (Number.isFinite(asNumber)) {
+      return asNumber;
+    }
+
+    const asDate = Date.parse(value);
+    if (!Number.isNaN(asDate)) {
+      return asDate;
+    }
+  }
+
+  return null;
+}
+
+export function resolveWalletsDateRangeFromProviderUser(
+  providerUser: Record<string, unknown> | null,
+  requestTs: number = Date.now(),
+): { startDate: number; endDate: number } {
+  const fallbackStartDate = requestTs - 90 * 24 * 60 * 60 * 1000;
+  const providerCreatedAt = toTimestamp(providerUser?.createdAt);
+
+  return {
+    startDate: providerCreatedAt ?? fallbackStartDate,
+    endDate: requestTs,
+  };
+}
+
+export function buildFindAllWalletsPayload(params: {
+  userId: string;
+  startDate: number;
+  endDate: number;
+}): Record<string, unknown> {
+  return {
+    userId: params.userId,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    page: 1,
+  };
 }

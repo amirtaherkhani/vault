@@ -67,8 +67,11 @@ Main code:
 Wallet resolution always targets one primary wallet:
 
 1. If local wallet id exists (`account.accountId`), verify via `/wallets/get/account`.
-2. If needed, fallback to `/wallets/get` by wallet id.
-3. If wallet id is missing or unresolved, call `/wallets/get/all` by Striga `externalId`.
+2. If wallet id is missing or unresolved, call `/wallets/get/all` by Striga `externalId`.
+3. For `/wallets/get/all` payload:
+   - `startDate` = Striga cloud user `createdAt`
+   - `endDate` = current request timestamp
+   - `page` = `1`
 4. If multiple wallets exist, select earliest by `createdAt`.
 
 Helper location:

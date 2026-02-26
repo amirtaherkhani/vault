@@ -17,8 +17,9 @@ import {
   getStrigaPlaceholderMobile,
 } from '../striga.helper';
 import {
-  buildFindAllWalletsPayloadCandidates,
+  buildFindAllWalletsPayload,
   extractPrimaryWalletSummaryFromPayload,
+  resolveWalletsDateRangeFromProviderUser,
   StrigaWalletSummary,
 } from '../helpers/striga-wallet.helper';
 import { StrigaUsersService } from '../striga-users/striga-users.service';
@@ -483,42 +484,46 @@ export class StrigaUserWorkflowService {
       }
     }
 
-    const payloadCandidates = buildFindAllWalletsPayloadCandidates(
-      externalUserId,
+    const providerUser = await this.findCloudUserById(externalUserId, traceId);
+    const requestTs = Date.now();
+    const dateRange = resolveWalletsDateRangeFromProviderUser(
+      providerUser,
+      requestTs,
     );
-    for (let i = 0; i < payloadCandidates.length; i += 1) {
-      const payload = payloadCandidates[i];
-      try {
-        // IMPORTANT: if no usable local wallet id exists, recover wallet via /wallets/get/all using Striga external user id.
-        this.logger.debug(
-          `[trace=${traceId}] Resolving Striga wallet via wallets/get/all userId=${externalUserId} candidate=${i + 1}/${payloadCandidates.length} payloadKeys=${Object.keys(payload).join(',')}.`,
-        );
-        const allWalletsResponse =
-          await this.strigaWalletService.findAllWalletsFromProvider(payload);
-        const wallet = extractPrimaryWalletSummaryFromPayload(
-          allWalletsResponse?.data,
-        );
-        if (!wallet) {
-          this.logger.debug(
-            `[trace=${traceId}] wallets/get/all returned no wallet for candidate=${i + 1}/${payloadCandidates.length}.`,
-          );
-          continue;
-        }
-
+    const payload = buildFindAllWalletsPayload({
+      userId: externalUserId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+    try {
+      // IMPORTANT: if no usable local wallet id exists, recover wallet via /wallets/get/all using Striga external user id.
+      // startDate is provider user createdAt, endDate is current request timestamp, and page must be 1.
+      this.logger.debug(
+        `[trace=${traceId}] Resolving Striga wallet via wallets/get/all userId=${externalUserId} page=${String(payload.page)} startDate=${String(payload.startDate)} endDate=${String(payload.endDate)}.`,
+      );
+      const allWalletsResponse =
+        await this.strigaWalletService.findAllWalletsFromProvider(payload);
+      const wallet = extractPrimaryWalletSummaryFromPayload(
+        allWalletsResponse?.data,
+      );
+      if (wallet) {
         if ((wallet.walletCount ?? 0) > 1) {
           this.logger.debug(
             `[trace=${traceId}] Multiple wallets detected count=${wallet.walletCount}; selected earliest wallet by createdAt=${wallet.createdAt ?? 'n/a'} walletId=${wallet.walletId}.`,
           );
         }
         this.logger.debug(
-          `[trace=${traceId}] Resolved Striga wallet via wallets/get/all walletId=${wallet.walletId} subAccounts=${wallet.subAccountIds.length} count=${wallet.walletCount ?? 'n/a'} candidate=${i + 1}/${payloadCandidates.length}.`,
+          `[trace=${traceId}] Resolved Striga wallet via wallets/get/all walletId=${wallet.walletId} subAccounts=${wallet.subAccountIds.length} count=${wallet.walletCount ?? 'n/a'}.`,
         );
         return wallet;
-      } catch (error) {
-        this.logger.debug(
-          `[trace=${traceId}] wallets/get/all failed for userId=${externalUserId} candidate=${i + 1}/${payloadCandidates.length} reason=${this.formatError(error)}.`,
-        );
       }
+      this.logger.debug(
+        `[trace=${traceId}] wallets/get/all returned no wallet for userId=${externalUserId}.`,
+      );
+    } catch (error) {
+      this.logger.debug(
+        `[trace=${traceId}] wallets/get/all failed for userId=${externalUserId} reason=${this.formatError(error)}.`,
+      );
     }
 
     if (normalizedLocalWalletId) {
