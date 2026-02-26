@@ -8,6 +8,7 @@ import {
   StrigaUserAddedEventHandler,
   StrigaUserDeletedEventHandler,
   StrigaUserLoggedInEventHandler,
+  StrigaKycWebhookEmitterEventHandler,
   StrigaKycWebhookEventHandler,
 } from './events/striga-user.event.handler';
 import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
@@ -46,6 +47,7 @@ import { StrigaService } from './striga.service';
     StrigaUserAddedEventHandler,
     StrigaUserDeletedEventHandler,
     StrigaKycWebhookEventHandler,
+    StrigaKycWebhookEmitterEventHandler,
     StrigaUserExistsGuard,
     StrigaKycApprovedGuard,
     EnableGuard,

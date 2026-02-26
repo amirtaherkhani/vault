@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { InternalEventHandlerBase } from '../../../common/internal-events/base/internal-event-handler.base';
 import { InternalEventHandler } from '../../../common/internal-events/helper/internal-event-handler.decorator';
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
@@ -139,5 +140,68 @@ export class StrigaKycWebhookEventHandler extends InternalEventHandlerBase {
     );
 
     await this.workflow.processKycWebhook(payload, traceId);
+  }
+}
+
+@Injectable()
+export class StrigaKycWebhookEmitterEventHandler {
+  private readonly logger = new Logger(
+    StrigaKycWebhookEmitterEventHandler.name,
+  );
+
+  @OnEvent('striga.KYC_INITIATED')
+  onKycInitiated(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_INITIATED payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_PENDING_REVIEW')
+  onKycPendingReview(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_PENDING_REVIEW payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_ON_HOLD')
+  onKycOnHold(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_ON_HOLD payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_APPROVED')
+  onKycApproved(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_APPROVED payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_REJECTED')
+  onKycRejected(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_REJECTED payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_REJECTED_FINAL')
+  onKycRejectedFinal(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_REJECTED_FINAL payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_SUSPENDED')
+  onKycSuspended(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_SUSPENDED payload=${JSON.stringify(payload)}`,
+    );
+  }
+
+  @OnEvent('striga.KYC_USER_ACCOUNT_ACTION_NEEDED')
+  onKycUserAccountActionNeeded(payload: Record<string, unknown>): void {
+    this.logger.debug(
+      `Webhook emitter event received: striga.KYC_USER_ACCOUNT_ACTION_NEEDED payload=${JSON.stringify(payload)}`,
+    );
   }
 }

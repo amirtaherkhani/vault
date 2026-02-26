@@ -78,7 +78,7 @@ export class AddressBooksController {
     );
   }
 
-  @ApiOperationRoles('Create address book entry for logged-in user')
+  @ApiOperationRoles('Create address book entry for current user')
   @Post('me')
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: AddressBookDto })
@@ -89,7 +89,7 @@ export class AddressBooksController {
     return this.addressBooksService.createByMe(dto, request.user.id);
   }
 
-  @ApiOperationRoles('Get all address books for logged-in user')
+  @ApiOperationRoles('Get all address books for current user')
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -112,7 +112,7 @@ export class AddressBooksController {
     return this.addressBooksService.findAllByUserId(req.user.id);
   }
 
-  @ApiOperationRoles('Get favorite address books for logged-in user')
+  @ApiOperationRoles('Get favorite address books for current user')
   @Get('me/favorites')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -122,7 +122,7 @@ export class AddressBooksController {
     return this.addressBooksService.findFavoritesByMe(req.user.id);
   }
 
-  @ApiOperationRoles('Filter address books for logged-in user')
+  @ApiOperationRoles('Filter address books for current user')
   @Get('me/filter')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -142,7 +142,7 @@ export class AddressBooksController {
     );
   }
 
-  @ApiOperationRoles('Get address book by ID for logged-in user')
+  @ApiOperationRoles('Get address book by ID for current user')
   @Get('me/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto })
@@ -150,7 +150,7 @@ export class AddressBooksController {
     return this.addressBooksService.findByMe(params.id, req.user.id);
   }
 
-  @ApiOperationRoles('Delete address book entry for logged-in user')
+  @ApiOperationRoles('Delete address book entry for current user')
   @Delete('me/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeByMe(

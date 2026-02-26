@@ -242,14 +242,26 @@ export class StrigaUserWorkflowService {
       return;
     }
 
-    const strigaUser =
-      await this.strigaUsersService.findByExternalId(externalId);
+    let strigaUser = await this.strigaUsersService.findByExternalId(externalId);
 
     if (!strigaUser) {
       this.logger.warn(
-        `[trace=${traceId}] Local Striga user not found for externalId=${externalId}; skipping KYC/account sync.`,
+        `[trace=${traceId}] Local Striga user not found for externalId=${externalId}; attempting recovery from provider.`,
       );
-      return;
+      const cloudUser = await this.findCloudUserById(externalId, traceId);
+      if (cloudUser) {
+        await this.syncUserFromProviderPayload(cloudUser, traceId, {
+          source: 'workflow',
+          trigger: 'webhook',
+        });
+        strigaUser = await this.strigaUsersService.findByExternalId(externalId);
+      }
+      if (!strigaUser) {
+        this.logger.warn(
+          `[trace=${traceId}] Local Striga user still missing after recovery for externalId=${externalId}; skipping KYC/account sync.`,
+        );
+        return;
+      }
     }
 
     const kycSnapshot = buildStrigaKycSnapshotFromWebhook(payload);
@@ -265,10 +277,20 @@ export class StrigaUserWorkflowService {
       `[trace=${traceId}] Updated local Striga user KYC snapshot localId=${updatedStrigaUser?.id ?? strigaUser.id} externalId=${externalId}.`,
     );
 
-    const tier1Approved = this.isTierApproved(payload.tier1?.status);
-    const tier2Approved = this.isTierApproved(payload.tier2?.status);
+    const persistedKyc = (updatedStrigaUser?.kyc ?? strigaUser.kyc) ?? {};
+    const tier1Status =
+      persistedKyc.tier1?.status ?? payload.tier1?.status ?? null;
+    const tier2Status =
+      persistedKyc.tier2?.status ?? payload.tier2?.status ?? null;
+
+    const tier1Approved = this.isTierApproved(tier1Status);
+    const tier2Approved = this.isTierApproved(tier2Status);
     const accountKycStatus =
       tier1Approved && tier2Approved ? KycStatus.VERIFIED : KycStatus.PENDING;
+
+    this.logger.debug(
+      `[trace=${traceId}] Effective KYC tier statuses for account sync tier1=${String(tier1Status ?? 'n/a')} tier2=${String(tier2Status ?? 'n/a')}.`,
+    );
 
     if (!tier1Approved && !tier2Approved) {
       this.logger.debug(

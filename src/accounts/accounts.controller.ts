@@ -96,7 +96,7 @@ export class AccountsController {
     return infinityPagination(accounts, { page, limit });
   }
 
-  @ApiOperationRoles('Get accounts for logged-in user')
+  @ApiOperationRoles('Get accounts for current user')
   @Get('me')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -104,7 +104,7 @@ export class AccountsController {
     return this.accountsService.findAllByUserId(req.user.id, [RoleEnum.user]);
   }
 
-  @ApiOperationRoles('Filter accounts for logged-in user')
+  @ApiOperationRoles('Filter accounts for current user')
   @Get('me/filter')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -121,7 +121,7 @@ export class AccountsController {
     );
   }
 
-  @ApiOperationRoles('Get active accounts for logged-in user')
+  @ApiOperationRoles('Get active accounts for current user')
   @Get('me/actives')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -131,7 +131,7 @@ export class AccountsController {
     return this.accountsService.findActives(req.user.id, [RoleEnum.user]);
   }
 
-  @ApiOperationRoles('Get account by provider for logged-in user')
+  @ApiOperationRoles('Get account by provider for current user')
   @Get('me/providers/:providerName')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
@@ -145,7 +145,7 @@ export class AccountsController {
     );
   }
 
-  @ApiOperationRoles('Count accounts for logged-in user')
+  @ApiOperationRoles('Count accounts for current user')
   @Get('me/count')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: Number })
@@ -153,7 +153,7 @@ export class AccountsController {
     return this.accountsService.countAll(req.user.id);
   }
 
-  @ApiOperationRoles('Count active accounts for logged-in user')
+  @ApiOperationRoles('Count active accounts for current user')
   @Get('me/actives/count')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: Number })
@@ -171,7 +171,7 @@ export class AccountsController {
     };
   }
 
-  @ApiOperationRoles('Get account by ID for logged-in user')
+  @ApiOperationRoles('Get account by ID for current user')
   @Get('me/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
