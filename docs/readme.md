@@ -11,6 +11,7 @@
 - [Command Line Interface](cli.md)
 - [Database](database.md)
 - [Auth](auth.md)
+- [Striga Integration Notes](striga.md)
 - [Serialization](serialization.md)
 - [File storage and uploading](file-uploading.md)
 - [Tests](tests.md)
