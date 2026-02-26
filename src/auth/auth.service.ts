@@ -36,7 +36,7 @@ import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
-import { SessionMetadata } from '../session/types/session-base.type';
+import { SessionMetadata, SessionUser } from '../session/types/session-base.type';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';
@@ -707,8 +707,11 @@ export class AuthService {
     await this.usersService.remove(user.id);
   }
 
-  async logout(data: Pick<JwtRefreshPayloadType, 'sessionId'>) {
-    return this.sessionService.deleteById(data.sessionId);
+  async logout(user: SessionUser | undefined): Promise<void> {
+    if (!user?.sessionId) {
+      return;
+    }
+    await this.sessionService.deleteById(user.sessionId);
   }
 
   private async getTokensData(data: {

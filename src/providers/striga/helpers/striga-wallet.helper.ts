@@ -6,6 +6,13 @@ export type StrigaWalletSummary = {
   walletCount: number | null;
 };
 
+function formatUtcDate(value: Date): string {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(value.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -199,4 +206,38 @@ export function extractPrimaryWalletSummaryFromPayload(
 
   const walletCount = getWalletCountHint(data) ?? walletRecords.length;
   return mapWalletSummary(primaryWallet, walletCount);
+}
+
+export function buildFindAllWalletsPayloadCandidates(
+  userId: string,
+  now: Date = new Date(),
+): Record<string, unknown>[] {
+  const startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+
+  return [
+    {
+      userId,
+      page: 1,
+      startDate: formatUtcDate(startDate),
+      endDate: formatUtcDate(now),
+    },
+    {
+      userId,
+      page: 1,
+      startDate: startDate.getTime(),
+      endDate: now.getTime(),
+    },
+    {
+      userId,
+      page: 1,
+      startDate: Math.floor(startDate.getTime() / 1000),
+      endDate: Math.floor(now.getTime() / 1000),
+    },
+    {
+      userId,
+      page: 1,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+    },
+  ];
 }

@@ -76,7 +76,7 @@ Response:
 ]
 ```
 
-**Close One Session**
+**Close One Session (Other Devices)**
 
 ```
 DELETE /api/v1/sessions/:id
@@ -85,15 +85,16 @@ Authorization: Bearer <token>
 
 Returns `204 No Content` if the session exists and belongs to the user.
 
-**Close All Sessions**
+If `:id` is your current session id, the API returns `400`. Use `POST /api/v1/auth/logout` for current-session logout.
+
+**Close All Other Sessions**
 
 ```
-DELETE /api/v1/sessions?includeCurrent=false
+DELETE /api/v1/sessions
 Authorization: Bearer <token>
 ```
 
-- `includeCurrent=false` (default) keeps the current session open.
-- `includeCurrent=true` closes all sessions including the current one.
+This endpoint closes all sessions except the current one.
 
 Returns `204 No Content`.
 
@@ -111,17 +112,16 @@ You can change the default window with `SESSION_ACTIVE_WITHIN_DAYS` (set to `0` 
 
 To return all sessions for a request, pass `activeWithinDays=all` or `activeWithinDays=0`.
 
-**Renew Session (Internal JWT only)**
+**Refresh Access Token (Internal JWT only)**
+
+Use the auth refresh endpoint:
 
 ```
-POST /api/v1/sessions/refresh
+POST /api/v1/auth/refresh
 Authorization: Bearer <refresh token>
 ```
 
 Returns a new JWT + refresh token.
-
-This endpoint requires the refresh token (internal JWT flow).
-It does not apply to Vero tokens.
 
 **Client Usage Pattern (Telegram-style)**
 
@@ -138,7 +138,8 @@ x-city: San Francisco
 2. Use the access token returned by login.
 3. Call `GET /api/v1/sessions` to list active sessions.
 4. Show the list to the user.
-5. Let the user close a session by calling `DELETE /api/v1/sessions/:id`.
+5. Let the user close another session by calling `DELETE /api/v1/sessions/:id`.
+6. Let the user log out current device via `POST /api/v1/auth/logout`.
 
 **Notes**
 

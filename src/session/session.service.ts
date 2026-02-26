@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -123,6 +124,12 @@ export class SessionService {
     if (!user?.id) {
       throw new UnauthorizedException();
     }
+    if (user.sessionId !== undefined && String(id) === String(user.sessionId)) {
+      throw new BadRequestException(
+        'Use POST /api/v1/auth/logout to close the current session',
+      );
+    }
+
     const session = await this.findById(id);
     if (!session || String(session.user?.id) !== String(user.id)) {
       throw new NotFoundException('Session not found');
@@ -130,19 +137,14 @@ export class SessionService {
     await this.deleteById(session.id);
   }
 
-  async deleteAllForUser(
-    user: SessionUser | undefined,
-    includeCurrent?: string | boolean,
-  ): Promise<void> {
+  async deleteAllForUser(user: SessionUser | undefined): Promise<void> {
     if (!user?.id) {
       throw new UnauthorizedException();
     }
-    const shouldIncludeCurrent =
-      includeCurrent === true || includeCurrent === 'true';
-    if (shouldIncludeCurrent || !user.sessionId) {
-      await this.deleteByUserId({ userId: user.id });
+    if (!user.sessionId) {
       return;
     }
+
     await this.deleteByUserIdWithExclude({
       userId: user.id,
       excludeSessionId: user.sessionId,

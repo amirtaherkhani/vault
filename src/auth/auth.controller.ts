@@ -29,6 +29,7 @@ import { SerializeGroups } from '../utils/transformers/enum.transformer';
 import { RoleEnum } from '../roles/roles.enum';
 import { DynamicAuthGuard } from './guards/dynamic-auth.guard';
 import { extractSessionMetadata } from '../session/utils/session-metadata';
+import { SessionRequest } from '../session/types/session-base.type';
 
 @ApiTags('Auth')
 @Controller({
@@ -123,10 +124,8 @@ export class AuthController {
   @Post('logout')
   @UseGuards(DynamicAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  public async logout(@Request() request): Promise<void> {
-    await this.service.logout({
-      sessionId: request.user.sessionId,
-    });
+  public async logout(@Request() request: SessionRequest): Promise<void> {
+    await this.service.logout(request.user);
   }
 
   @ApiBearerAuth()

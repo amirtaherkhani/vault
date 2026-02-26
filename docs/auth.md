@@ -254,13 +254,6 @@ Refresh checks:
 2. Session hash matches refresh payload hash.
 3. Hash rotates after successful refresh.
 
-Also available via sessions module:
-
-```text
-POST /sessions/refresh
-Authorization: Bearer <refreshToken>
-```
-
 ## Logout Behavior
 
 Call:
@@ -275,6 +268,8 @@ What happens:
 1. Current session id is read from token payload.
 2. Session is soft-deleted in DB.
 3. Refresh flow for that session stops working.
+
+Use session APIs for other devices only (`DELETE /sessions/:id`, `DELETE /sessions`).
 
 What does not happen:
 

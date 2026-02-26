@@ -5,18 +5,14 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  Post,
   Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import { SessionService } from './session.service';
 import { SessionDto } from './dto/session.dto';
 import { DynamicAuthGuard } from '../auth/guards/dynamic-auth.guard';
-import { AuthService } from '../auth/auth.service';
-import { RefreshResponseDto } from '../auth/dto/refresh-response.dto';
 import { SessionRequest } from './types/session-base.type';
 
 @ApiTags('Sessions')
@@ -26,10 +22,7 @@ import { SessionRequest } from './types/session-base.type';
   version: '1',
 })
 export class SessionsController {
-  constructor(
-    private readonly sessionService: SessionService,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly sessionService: SessionService) {}
 
   @ApiOkResponse({
     type: SessionDto,
@@ -60,20 +53,7 @@ export class SessionsController {
   @UseGuards(DynamicAuthGuard)
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAll(
-    @Request() request: SessionRequest,
-    @Query('includeCurrent') includeCurrent?: string,
-  ): Promise<void> {
-    await this.sessionService.deleteAllForUser(request.user, includeCurrent);
-  }
-
-  @ApiOkResponse({
-    type: RefreshResponseDto,
-  })
-  @UseGuards(AuthGuard('jwt-refresh'))
-  @Post('refresh')
-  @HttpCode(HttpStatus.OK)
-  refresh(@Request() request: SessionRequest): Promise<RefreshResponseDto> {
-    return this.authService.refreshTokenFromUser(request.user);
+  async deleteAll(@Request() request: SessionRequest): Promise<void> {
+    await this.sessionService.deleteAllForUser(request.user);
   }
 }
