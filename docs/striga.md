@@ -29,6 +29,12 @@ For Striga provider rows in local `account` table:
 - `account.name = wallet-1`
 - Only one wallet is stored locally (primary wallet).
 
+For Striga card recovery:
+
+- Local `striga_card.parentWalletId` maps to Striga `walletId`.
+- Local `striga_card.linkedAccountId` maps to Striga wallet sub-account id (`accounts.<ASSET>.accountId`).
+- Workflow only manages virtual cards.
+
 ## ID Semantics
 
 - `userId`: app user id.
@@ -77,6 +83,25 @@ Wallet resolution always targets one primary wallet:
 Helper location:
 
 - `src/providers/striga/helpers/striga-wallet.helper.ts`
+
+### 4) Card Recovery/Creation Strategy
+
+Card workflow is triggered after local STRIGA account recovery succeeds.
+
+1. Read local STRIGA account row for app user (`providerName = striga`).
+2. Use wallet id from local `account.accountId`.
+3. Fetch cloud cards by Striga user and recover wallet cards into local `striga_card`.
+4. Fetch wallet sub-accounts via `/wallets/get` and filter by configured assets.
+5. Create missing virtual cards (`nameOnCard = Vero Vault`) and save locally.
+
+Main code:
+
+- `src/providers/striga/services/striga-card-workflow.service.ts`
+
+Config:
+
+- `STRIGA_CARD_ASSET_NAMES` (default `EUR`)
+- `STRIGA_CARD_DEFAULT_PASSWORD` (default `VeroVault123!`)
 
 ## How To Extend Safely
 

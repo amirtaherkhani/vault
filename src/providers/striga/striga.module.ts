@@ -8,16 +8,18 @@ import {
   StrigaUserAddedEventHandler,
   StrigaUserDeletedEventHandler,
   StrigaUserLoggedInEventHandler,
-  StrigaKycWebhookEmitterEventHandler,
   StrigaKycWebhookEventHandler,
+  StrigaUserKycTierUpdatedEventHandler,
 } from './events/striga-user.event.handler';
 import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaCardService } from './services/striga-card.service';
+import { StrigaCardWorkflowService } from './services/striga-card-workflow.service';
 import { StrigaTransactionService } from './services/striga-transaction.service';
 import { StrigaUserService } from './services/striga-kyc.service';
 import { StrigaUserWorkflowService } from './services/striga-user-workflow.service';
 import { StrigaWalletService } from './services/striga-wallet.service';
+import { StrigaCardsModule } from './striga-cards/striga-cards.module';
 import { StrigaUsersController } from './striga-users/striga-users.controller';
 import { StrigaUsersModule } from './striga-users/striga-users.module';
 import { StrigaController } from './striga.controller';
@@ -29,6 +31,7 @@ import { StrigaService } from './striga.service';
     UsersModule,
     AccountsModule,
     StrigaUsersModule,
+    StrigaCardsModule,
     RouterModule.register([
       {
         path: 'striga',
@@ -38,6 +41,7 @@ import { StrigaService } from './striga.service';
   ],
   providers: [
     StrigaUserWorkflowService,
+    StrigaCardWorkflowService,
     StrigaService,
     StrigaUserService,
     StrigaWalletService,
@@ -47,7 +51,7 @@ import { StrigaService } from './striga.service';
     StrigaUserAddedEventHandler,
     StrigaUserDeletedEventHandler,
     StrigaKycWebhookEventHandler,
-    StrigaKycWebhookEmitterEventHandler,
+    StrigaUserKycTierUpdatedEventHandler,
     StrigaUserExistsGuard,
     StrigaKycApprovedGuard,
     EnableGuard,

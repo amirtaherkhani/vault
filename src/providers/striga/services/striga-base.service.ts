@@ -26,6 +26,10 @@ import {
   StrigaVerifyMobileRequestDto,
 } from '../dto/striga-base.request.dto';
 import { StrigaBaseResponseDto } from '../dto/striga-base.response.dto';
+import {
+  extractWalletAccountsByCurrenciesFromPayload,
+  StrigaWalletAccountSummary,
+} from '../helpers/striga-wallet.helper';
 import { StrigaStartKycProviderRequestDto } from '../dto/striga-start-kyc.dto';
 import { StrigaService } from '../striga.service';
 import {
@@ -46,6 +50,10 @@ export abstract class StrigaBaseService {
 
   getCardCreateAssetNames(): string[] {
     return this.strigaService.getCardCreateAssetNames();
+  }
+
+  getCardDefaultPassword(): string {
+    return this.strigaService.getCardDefaultPassword();
   }
 
   protected signedRequest<T = unknown>(
@@ -184,6 +192,17 @@ export abstract class StrigaBaseService {
     return this.signedRequest(STRIGA_ENDPOINT_NAME.getWallet, {
       body: payload,
     });
+  }
+
+  async findWalletAccountsByCurrenciesFromProvider(
+    payload: StrigaGetWalletRequestDto,
+    currencyNames: string[],
+  ): Promise<StrigaWalletAccountSummary[]> {
+    const response = await this.findWalletFromProvider(payload);
+    return extractWalletAccountsByCurrenciesFromPayload(
+      response?.data,
+      currencyNames,
+    );
   }
 
   async createWalletInProvider(

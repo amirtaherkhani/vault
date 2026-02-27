@@ -1,18 +1,24 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { Injectable } from '@nestjs/common';
 import { InternalEventHandlerBase } from '../../../common/internal-events/base/internal-event-handler.base';
 import { InternalEventHandler } from '../../../common/internal-events/helper/internal-event-handler.decorator';
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { GroupPlainToInstance } from '../../../utils/transformers/class.transformer';
 import { StrigaKycWebhookEventDto } from '../dto/striga.webhook.dto';
+import { StrigaUserKycTierUpdatedEventPayload } from './striga-user.event';
 import {
   VERO_LOGIN_USER_ADDED_EVENT,
   VERO_LOGIN_USER_DELETED_EVENT,
   VERO_LOGIN_USER_LOGGED_IN_EVENT,
 } from '../../../users/types/user-event.type';
+import { UsersService } from '../../../users/users.service';
+import { StrigaUsersService } from '../striga-users/striga-users.service';
+import { StrigaCardWorkflowService } from '../services/striga-card-workflow.service';
 import { StrigaUserWorkflowService } from '../services/striga-user-workflow.service';
-import { STRIGA_WEBHOOK_KYC_EVENT } from '../types/striga-event.type';
+import {
+  STRIGA_USER_KYC_TIER_UPDATED_EVENT,
+  STRIGA_WEBHOOK_KYC_EVENT,
+} from '../types/striga-event.type';
 
 @Injectable()
 @InternalEventHandler(VERO_LOGIN_USER_LOGGED_IN_EVENT)
@@ -144,64 +150,116 @@ export class StrigaKycWebhookEventHandler extends InternalEventHandlerBase {
 }
 
 @Injectable()
-export class StrigaKycWebhookEmitterEventHandler {
-  private readonly logger = new Logger(
-    StrigaKycWebhookEmitterEventHandler.name,
-  );
-
-  @OnEvent('striga.KYC_INITIATED')
-  onKycInitiated(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_INITIATED payload=${JSON.stringify(payload)}`,
-    );
+@InternalEventHandler(STRIGA_USER_KYC_TIER_UPDATED_EVENT)
+export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBase {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly strigaUsersService: StrigaUsersService,
+    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
+  ) {
+    super(StrigaUserKycTierUpdatedEventHandler.name);
   }
 
-  @OnEvent('striga.KYC_PENDING_REVIEW')
-  onKycPendingReview(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_PENDING_REVIEW payload=${JSON.stringify(payload)}`,
-    );
+  async handle(event: InternalEvent): Promise<void> {
+    const payload =
+      event.payload as Partial<StrigaUserKycTierUpdatedEventPayload>;
+    const eventId = this.id(event);
+
+    this.received(event, eventId, payload, true);
+
+    try {
+      await this.onKycTierUpdated(payload, eventId);
+      this.processed(event, eventId);
+    } catch (error) {
+      this.failed(event, eventId, error);
+    }
   }
 
-  @OnEvent('striga.KYC_ON_HOLD')
-  onKycOnHold(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_ON_HOLD payload=${JSON.stringify(payload)}`,
-    );
-  }
+  private async onKycTierUpdated(
+    payload: Partial<StrigaUserKycTierUpdatedEventPayload>,
+    traceId: string,
+  ): Promise<void> {
+    const tier = String(payload.tier ?? '')
+      .trim()
+      .toLowerCase();
+    if (!tier) {
+      this.logger.warn(
+        `[trace=${traceId}] Missing tier in Striga KYC tier-updated payload; skipping handler.`,
+      );
+      return;
+    }
 
-  @OnEvent('striga.KYC_APPROVED')
-  onKycApproved(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_APPROVED payload=${JSON.stringify(payload)}`,
-    );
-  }
+    const previousStatus = String(payload.previousStatus ?? '')
+      .trim()
+      .toUpperCase();
+    const currentStatus = String(payload.currentStatus ?? '')
+      .trim()
+      .toUpperCase();
+    const isTier1ApprovedTransition =
+      tier === 'tier1' &&
+      currentStatus === 'APPROVED' &&
+      previousStatus !== 'APPROVED';
 
-  @OnEvent('striga.KYC_REJECTED')
-  onKycRejected(payload: Record<string, unknown>): void {
     this.logger.debug(
-      `Webhook emitter event received: striga.KYC_REJECTED payload=${JSON.stringify(payload)}`,
+      `[trace=${traceId}] Handling internal event kyc:tier:update source=${String(payload.source ?? 'n/a')} trigger=${String(payload.trigger ?? 'n/a')} localId=${String(payload.localId ?? 'n/a')} externalId=${String(payload.externalId ?? payload.userId ?? 'n/a')} tier=${tier} previous=${previousStatus || 'null'} current=${currentStatus || 'null'}.`,
     );
-  }
 
-  @OnEvent('striga.KYC_REJECTED_FINAL')
-  onKycRejectedFinal(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_REJECTED_FINAL payload=${JSON.stringify(payload)}`,
+    if (!isTier1ApprovedTransition) {
+      this.logger.debug(
+        `[trace=${traceId}] kyc:tier:update does not match card-trigger condition (tier1 transition to APPROVED); card workflow skipped.`,
+      );
+      return;
+    }
+
+    const externalId = String(
+      payload.externalId ?? payload.userId ?? '',
+    ).trim();
+    if (!externalId) {
+      this.logger.warn(
+        `[trace=${traceId}] Missing Striga externalId in kyc:tier:update payload; card workflow skipped.`,
+      );
+      return;
+    }
+
+    const strigaUser =
+      await this.strigaUsersService.findByExternalId(externalId);
+    if (!strigaUser) {
+      this.logger.warn(
+        `[trace=${traceId}] Striga user not found for externalId=${externalId}; card workflow skipped.`,
+      );
+      return;
+    }
+
+    const email = String(strigaUser.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!email) {
+      this.logger.warn(
+        `[trace=${traceId}] Striga user email is empty for externalId=${externalId}; card workflow skipped.`,
+      );
+      return;
+    }
+
+    const appUser = await this.usersService.findByEmail(email);
+    const appUserId = Number(appUser?.id);
+    if (!appUser || Number.isNaN(appUserId)) {
+      this.logger.warn(
+        `[trace=${traceId}] App user not found by email=${email}; card workflow skipped for externalId=${externalId}.`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `[trace=${traceId}] kyc:tier:update matched tier1->APPROVED; starting card workflow externalId=${externalId} appUserId=${String(appUserId)}.`,
     );
-  }
-
-  @OnEvent('striga.KYC_SUSPENDED')
-  onKycSuspended(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_SUSPENDED payload=${JSON.stringify(payload)}`,
-    );
-  }
-
-  @OnEvent('striga.KYC_USER_ACCOUNT_ACTION_NEEDED')
-  onKycUserAccountActionNeeded(payload: Record<string, unknown>): void {
-    this.logger.debug(
-      `Webhook emitter event received: striga.KYC_USER_ACCOUNT_ACTION_NEEDED payload=${JSON.stringify(payload)}`,
+    await this.strigaCardWorkflowService.processUserCards({
+      strigaUser,
+      appUserId,
+      traceId,
+      source: 'kyc:tier:update',
+    });
+    this.logger.log(
+      `[trace=${traceId}] Card workflow completed from kyc:tier:update externalId=${externalId} appUserId=${String(appUserId)}.`,
     );
   }
 }

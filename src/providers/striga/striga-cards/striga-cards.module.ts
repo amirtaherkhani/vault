@@ -1,3 +1,4 @@
+import { StrigaUsersModule } from '../striga-users/striga-users.module';
 import {
   // do not remove this comment
   Module,
@@ -8,6 +9,8 @@ import { RelationalStrigaCardPersistenceModule } from './infrastructure/persiste
 
 @Module({
   imports: [
+    StrigaUsersModule,
+
     // do not remove this comment
     RelationalStrigaCardPersistenceModule,
   ],

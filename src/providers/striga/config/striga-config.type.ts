@@ -28,4 +28,9 @@ export interface StrigaConfig {
    * Example env value: `BTC,USDC,ETH`
    */
   cardCreateAssetNames: string[];
+
+  /**
+   * Default 3DS password used for automatic virtual card creation workflows.
+   */
+  cardDefaultPassword: string;
 }

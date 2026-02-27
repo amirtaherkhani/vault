@@ -7,6 +7,7 @@ import { StrigaCard } from '../../../../domain/striga-card';
 import { StrigaCardRepository } from '../../striga-card.repository';
 import { StrigaCardMapper } from '../mappers/striga-card.mapper';
 import { IPaginationOptions } from '../../../../../../../utils/types/pagination-options.type';
+import { StrigaUser } from '../../../../../striga-users/domain/striga-user';
 
 @Injectable()
 export class StrigaCardRelationalRepository implements StrigaCardRepository {
@@ -50,6 +51,89 @@ export class StrigaCardRelationalRepository implements StrigaCardRepository {
     });
 
     return entities.map((entity) => StrigaCardMapper.toDomain(entity));
+  }
+
+  async findByStrigaUserIdOrExternalId(
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<StrigaCard[]> {
+    if (!userId && !externalId) {
+      return [];
+    }
+
+    const qb = this.strigaCardRepository
+      .createQueryBuilder('strigaCard')
+      .leftJoinAndSelect('strigaCard.user', 'strigaUser');
+
+    if (userId) {
+      qb.where('strigaUser.id = :userId', { userId });
+    } else {
+      qb.where('strigaUser.externalId = :externalId', { externalId });
+    }
+
+    const entities = await qb.getMany();
+    return entities.map((entity) => StrigaCardMapper.toDomain(entity));
+  }
+
+  async findByParentWalletId(
+    parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
+  ): Promise<StrigaCard[]> {
+    const entities = await this.strigaCardRepository.find({
+      where: { parentWalletId },
+    });
+
+    return entities.map((entity) => StrigaCardMapper.toDomain(entity));
+  }
+
+  async findByLinkedAccountId(
+    linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
+  ): Promise<NullableType<StrigaCard>> {
+    const entity = await this.strigaCardRepository.findOne({
+      where: { linkedAccountId },
+      order: { createdAt: 'ASC' },
+    });
+
+    return entity ? StrigaCardMapper.toDomain(entity) : null;
+  }
+
+  async findByParentWalletIdAndLinkedAccountId(
+    parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
+    linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
+  ): Promise<NullableType<StrigaCard>> {
+    const entity = await this.strigaCardRepository.findOne({
+      where: { parentWalletId, linkedAccountId },
+      order: { createdAt: 'ASC' },
+    });
+
+    return entity ? StrigaCardMapper.toDomain(entity) : null;
+  }
+
+  async findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
+    linkedAccountCurrency: NonNullable<StrigaCard['linkedAccountCurrency']>,
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<NullableType<StrigaCard>> {
+    if (!linkedAccountCurrency || (!userId && !externalId)) {
+      return null;
+    }
+
+    const qb = this.strigaCardRepository
+      .createQueryBuilder('strigaCard')
+      .leftJoinAndSelect('strigaCard.user', 'strigaUser')
+      .where('strigaCard.linkedAccountCurrency = :linkedAccountCurrency', {
+        linkedAccountCurrency,
+      })
+      .orderBy('strigaCard.createdAt', 'ASC')
+      .limit(1);
+
+    if (userId) {
+      qb.andWhere('strigaUser.id = :userId', { userId });
+    } else {
+      qb.andWhere('strigaUser.externalId = :externalId', { externalId });
+    }
+
+    const entity = await qb.getOne();
+    return entity ? StrigaCardMapper.toDomain(entity) : null;
   }
 
   async update(

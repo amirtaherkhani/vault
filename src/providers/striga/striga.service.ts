@@ -28,7 +28,8 @@ import {
   StrigaPathParams,
 } from './types/striga-base.type';
 import {
-  STRIGA_CARD_CREATE_ASSET_NAMES,
+  STRIGA_CARD_ASSET_NAMES,
+  STRIGA_CARD_DEFAULT_PASSWORD,
   STRIGA_ENABLE,
   STRIGA_SANDBOX_BASE_URL,
 } from './types/striga-const.type';
@@ -56,9 +57,15 @@ export class StrigaService
 
   @ConfigGet('striga.cardCreateAssetNames', {
     inferEnvVar: true,
-    defaultValue: STRIGA_CARD_CREATE_ASSET_NAMES,
+    defaultValue: STRIGA_CARD_ASSET_NAMES,
   })
   private readonly cardCreateAssetNames!: StrigaConfig['cardCreateAssetNames'];
+
+  @ConfigGet('striga.cardDefaultPassword', {
+    inferEnvVar: true,
+    defaultValue: STRIGA_CARD_DEFAULT_PASSWORD,
+  })
+  private readonly cardDefaultPassword!: StrigaConfig['cardDefaultPassword'];
 
   constructor(
     private readonly apiSdkService: ApiGatewayService,
@@ -134,6 +141,10 @@ export class StrigaService
     return Array.isArray(this.cardCreateAssetNames)
       ? [...this.cardCreateAssetNames]
       : [];
+  }
+
+  getCardDefaultPassword(): string {
+    return String(this.cardDefaultPassword ?? '').trim();
   }
 
   async pingFromProvider(

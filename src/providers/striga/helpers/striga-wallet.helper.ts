@@ -6,6 +6,12 @@ export type StrigaWalletSummary = {
   walletCount: number | null;
 };
 
+export type StrigaWalletAccountSummary = {
+  walletId: string;
+  accountId: string;
+  currency: string;
+};
+
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -230,4 +236,95 @@ export function buildFindAllWalletsPayload(params: {
     endDate: params.endDate,
     page: 1,
   };
+}
+
+export function extractWalletAccountsByCurrenciesFromPayload(
+  data: unknown,
+  currencyNames: string[],
+): StrigaWalletAccountSummary[] {
+  const normalizedCurrencies = Array.from(
+    new Set(
+      (Array.isArray(currencyNames) ? currencyNames : [])
+        .map((item) =>
+          String(item ?? '')
+            .trim()
+            .toUpperCase(),
+        )
+        .filter((item) => item.length > 0),
+    ),
+  );
+
+  if (normalizedCurrencies.length === 0) {
+    return [];
+  }
+
+  const walletRecords = extractWalletRecords(data);
+  if (walletRecords.length === 0) {
+    return [];
+  }
+
+  // IMPORTANT: pick first wallet in provider list order.
+  const primaryWallet = walletRecords[0];
+  const walletId = String(
+    primaryWallet.walletId ?? primaryWallet.parentWalletId ?? '',
+  ).trim();
+  if (!walletId) {
+    return [];
+  }
+
+  const accountsValue = primaryWallet.accounts;
+  const results: StrigaWalletAccountSummary[] = [];
+  if (
+    accountsValue &&
+    typeof accountsValue === 'object' &&
+    !Array.isArray(accountsValue)
+  ) {
+    for (const [currency, account] of Object.entries(
+      accountsValue as Record<string, unknown>,
+    )) {
+      const normalizedCurrency = String(currency ?? '')
+        .trim()
+        .toUpperCase();
+      if (!normalizedCurrencies.includes(normalizedCurrency)) {
+        continue;
+      }
+
+      const accountRecord = toRecord(account);
+      if (!accountRecord) {
+        continue;
+      }
+
+      const accountId = String(accountRecord.accountId ?? '').trim();
+      if (!accountId) {
+        continue;
+      }
+
+      results.push({
+        walletId,
+        accountId,
+        currency: normalizedCurrency,
+      });
+    }
+  }
+
+  // /wallets/get/account compatibility for direct account payloads.
+  if (results.length === 0) {
+    const fallbackCurrency = String(primaryWallet.currency ?? '')
+      .trim()
+      .toUpperCase();
+    const fallbackAccountId = String(primaryWallet.accountId ?? '').trim();
+    if (
+      fallbackAccountId &&
+      fallbackCurrency &&
+      normalizedCurrencies.includes(fallbackCurrency)
+    ) {
+      results.push({
+        walletId,
+        accountId: fallbackAccountId,
+        currency: fallbackCurrency,
+      });
+    }
+  }
+
+  return results;
 }

@@ -1,15 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { AccountsService } from '../../../accounts/accounts.service';
 import {
   AccountProviderName,
   AccountStatus,
   KycStatus,
 } from '../../../accounts/types/account-enum.type';
+import { InternalEventsService } from '../../../common/internal-events/internal-events.service';
 import { UserEventDto } from '../../../users/dto/user.dto';
 import { UsersService } from '../../../users/users.service';
 import { StrigaKycWebhookEventDto } from '../dto/striga.webhook.dto';
 import { StrigaCreateUserRequestDto } from '../dto/striga-base.request.dto';
 import { StrigaCloudUserResponseDto } from '../dto/striga-base.response.dto';
+import { StrigaUserEvent } from '../events/striga-user.event';
 import { StrigaUserService } from './striga-kyc.service';
 import { StrigaWalletService } from './striga-wallet.service';
 import {
@@ -35,6 +38,8 @@ export class StrigaUserWorkflowService {
     private readonly usersService: UsersService,
     private readonly accountsService: AccountsService,
     private readonly strigaUsersService: StrigaUsersService,
+    private readonly internalEventsService: InternalEventsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -400,6 +405,9 @@ export class StrigaUserWorkflowService {
     }
 
     const kycSnapshot = buildStrigaKycSnapshotFromWebhook(payload);
+    const previousTierStatuses = this.extractTierStatuses(
+      strigaUser.kyc ?? null,
+    );
     const mergedKycSnapshot = {
       ...(strigaUser.kyc ?? {}),
       ...kycSnapshot,
@@ -408,12 +416,23 @@ export class StrigaUserWorkflowService {
       strigaUser.id,
       { kyc: mergedKycSnapshot },
     );
+    const effectiveStrigaUser =
+      (updatedStrigaUser as StrigaUser | null) ?? strigaUser;
+    const currentTierStatuses = this.extractTierStatuses(
+      effectiveStrigaUser.kyc ?? mergedKycSnapshot,
+    );
     this.logger.debug(
       `[trace=${traceId}] Updated local Striga user KYC snapshot localId=${updatedStrigaUser?.id ?? strigaUser.id} externalId=${externalId}.`,
     );
+    await this.emitKycTierUpdatedEvents(
+      effectiveStrigaUser,
+      previousTierStatuses,
+      currentTierStatuses,
+      traceId,
+    );
 
     await this.recoverLocalAccountFromStrigaState(
-      (updatedStrigaUser as StrigaUser | null) ?? strigaUser,
+      effectiveStrigaUser,
       traceId,
       'kyc-webhook',
     );
@@ -437,6 +456,97 @@ export class StrigaUserWorkflowService {
         .trim()
         .toUpperCase() === 'APPROVED'
     );
+  }
+
+  private extractTierStatuses(
+    kyc: StrigaUser['kyc'] | Record<string, unknown> | null | undefined,
+  ): Record<string, string | null> {
+    if (!kyc || typeof kyc !== 'object' || Array.isArray(kyc)) {
+      return {};
+    }
+
+    const statuses: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(kyc)) {
+      if (!/^tier\d+$/i.test(key)) {
+        continue;
+      }
+
+      const tierValue =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? (value as Record<string, unknown>).status
+          : null;
+
+      statuses[key] = this.normalizeTierStatus(tierValue);
+    }
+
+    return statuses;
+  }
+
+  private normalizeTierStatus(value: unknown): string | null {
+    const status = String(value ?? '')
+      .trim()
+      .toUpperCase();
+    return status.length ? status : null;
+  }
+
+  private async emitKycTierUpdatedEvents(
+    strigaUser: StrigaUser,
+    previousTierStatuses: Record<string, string | null>,
+    currentTierStatuses: Record<string, string | null>,
+    traceId: string,
+  ): Promise<void> {
+    const tierKeys = Array.from(
+      new Set([
+        ...Object.keys(previousTierStatuses),
+        ...Object.keys(currentTierStatuses),
+      ]),
+    ).sort((a, b) => {
+      const aNumber = Number.parseInt(a.replace(/\D+/g, ''), 10);
+      const bNumber = Number.parseInt(b.replace(/\D+/g, ''), 10);
+      if (Number.isNaN(aNumber) || Number.isNaN(bNumber)) {
+        return a.localeCompare(b);
+      }
+      return aNumber - bNumber;
+    });
+
+    this.logger.debug(
+      `[trace=${traceId}] Evaluating kyc:tier:update emission localId=${strigaUser.id ?? 'n/a'} externalId=${strigaUser.externalId ?? 'n/a'} tiers=${tierKeys.join(',') || 'none'}.`,
+    );
+
+    let emittedCount = 0;
+    for (const tier of tierKeys) {
+      const previousStatus = previousTierStatuses[tier] ?? null;
+      const currentStatus = currentTierStatuses[tier] ?? null;
+      if (previousStatus === currentStatus) {
+        continue;
+      }
+
+      await this.internalEventsService.emit(
+        this.dataSource.manager,
+        StrigaUserEvent.userKycTierUpdated({
+          source: 'workflow',
+          trigger: 'webhook',
+          email: strigaUser.email ?? null,
+          userId: strigaUser.externalId ?? null,
+          localId: strigaUser.id ?? null,
+          externalId: strigaUser.externalId ?? null,
+          tier,
+          previousStatus,
+          currentStatus,
+        }).getEvent(),
+      );
+
+      this.logger.log(
+        `[trace=${traceId}] Emitted internal event kyc:tier:update localId=${strigaUser.id ?? 'n/a'} externalId=${strigaUser.externalId ?? 'n/a'} tier=${tier} previous=${previousStatus ?? 'null'} current=${currentStatus ?? 'null'}.`,
+      );
+      emittedCount += 1;
+    }
+
+    if (!emittedCount) {
+      this.logger.debug(
+        `[trace=${traceId}] No KYC tier status change detected; kyc:tier:update was not emitted.`,
+      );
+    }
   }
 
   /**

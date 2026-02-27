@@ -2,6 +2,7 @@ import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
 import { NullableType } from '../../../../../utils/types/nullable.type';
 import { IPaginationOptions } from '../../../../../utils/types/pagination-options.type';
 import { StrigaCard } from '../../domain/striga-card';
+import { StrigaUser } from '../../../striga-users/domain/striga-user';
 
 export abstract class StrigaCardRepository {
   abstract create(
@@ -17,6 +18,30 @@ export abstract class StrigaCardRepository {
   abstract findById(id: StrigaCard['id']): Promise<NullableType<StrigaCard>>;
 
   abstract findByIds(ids: StrigaCard['id'][]): Promise<StrigaCard[]>;
+
+  abstract findByStrigaUserIdOrExternalId(
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<StrigaCard[]>;
+
+  abstract findByParentWalletId(
+    parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
+  ): Promise<StrigaCard[]>;
+
+  abstract findByLinkedAccountId(
+    linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
+  ): Promise<NullableType<StrigaCard>>;
+
+  abstract findByParentWalletIdAndLinkedAccountId(
+    parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
+    linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
+  ): Promise<NullableType<StrigaCard>>;
+
+  abstract findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
+    linkedAccountCurrency: NonNullable<StrigaCard['linkedAccountCurrency']>,
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+  ): Promise<NullableType<StrigaCard>>;
 
   abstract update(
     id: StrigaCard['id'],

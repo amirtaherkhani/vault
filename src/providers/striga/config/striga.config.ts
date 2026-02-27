@@ -2,11 +2,13 @@ import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { createToggleableConfig } from '../../../config/config.helper';
 import { StrigaConfig } from './striga-config.type';
 import {
-  STRIGA_CARD_CREATE_ASSET_NAMES,
+  STRIGA_CARD_ASSET_NAMES,
+  STRIGA_CARD_DEFAULT_PASSWORD,
   STRIGA_ENABLE,
   STRIGA_MAX_RETRIES,
   STRIGA_REQUEST_TIMEOUT_MS,
   STRIGA_SANDBOX_BASE_URL,
+  STRIGA_SUPPORTED_CARD_ASSET_NAMES,
 } from '../types/striga-const.type';
 
 function parseCsvToUppercaseList(
@@ -20,9 +22,14 @@ function parseCsvToUppercaseList(
   const normalized = value
     .split(',')
     .map((item) => item.trim().toUpperCase())
-    .filter((item) => item.length > 0);
+    .filter(
+      (item) =>
+        item.length > 0 &&
+        (STRIGA_SUPPORTED_CARD_ASSET_NAMES as readonly string[]).includes(item),
+    );
 
-  return Array.from(new Set(normalized));
+  const deduplicated = Array.from(new Set(normalized));
+  return deduplicated.length > 0 ? deduplicated : [...fallback];
 }
 
 class StrigaEnvironmentVariablesValidator {
@@ -58,7 +65,11 @@ class StrigaEnvironmentVariablesValidator {
 
   @IsString()
   @IsOptional()
-  STRIGA_CARD_CREATE_ASSET_NAMES?: string;
+  STRIGA_CARD_ASSET_NAMES?: string;
+
+  @IsString()
+  @IsOptional()
+  STRIGA_CARD_DEFAULT_PASSWORD?: string;
 }
 
 const defaults: StrigaConfig = {
@@ -70,7 +81,8 @@ const defaults: StrigaConfig = {
   baseUrl: STRIGA_SANDBOX_BASE_URL,
   requestTimeoutMs: STRIGA_REQUEST_TIMEOUT_MS,
   maxRetries: STRIGA_MAX_RETRIES,
-  cardCreateAssetNames: STRIGA_CARD_CREATE_ASSET_NAMES,
+  cardCreateAssetNames: STRIGA_CARD_ASSET_NAMES,
+  cardDefaultPassword: STRIGA_CARD_DEFAULT_PASSWORD,
 };
 
 export default createToggleableConfig<
@@ -89,8 +101,10 @@ export default createToggleableConfig<
       env.STRIGA_REQUEST_TIMEOUT_MS ?? defaults.requestTimeoutMs,
     maxRetries: env.STRIGA_MAX_RETRIES ?? defaults.maxRetries,
     cardCreateAssetNames: parseCsvToUppercaseList(
-      env.STRIGA_CARD_CREATE_ASSET_NAMES,
+      env.STRIGA_CARD_ASSET_NAMES,
       defaults.cardCreateAssetNames,
     ),
+    cardDefaultPassword:
+      env.STRIGA_CARD_DEFAULT_PASSWORD ?? defaults.cardDefaultPassword,
   }),
 });

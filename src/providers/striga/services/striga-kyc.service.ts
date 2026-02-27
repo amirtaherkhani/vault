@@ -700,10 +700,18 @@ export class StrigaUserService extends StrigaBaseService {
       providerUser.email,
     );
     if (existingByEmail) {
+      const previousTierStatuses = this.extractTierStatuses(
+        existingByEmail.kyc,
+      );
       const updateDto = Object.assign(new UpdateStrigaUserDto(), providerUser);
       const updated = await this.strigaUsersService.update(
         existingByEmail.id,
         updateDto,
+      );
+      const effectiveUpdated =
+        (updated as StrigaUser | null) ?? existingByEmail;
+      const currentTierStatuses = this.extractTierStatuses(
+        effectiveUpdated.kyc,
       );
 
       const eventPayload: StrigaUserEventPayload = {
@@ -711,42 +719,145 @@ export class StrigaUserService extends StrigaBaseService {
         trigger: context.trigger ?? 'webhook',
         email,
         userId: context.userId ?? externalId,
-        localId: updated?.id ?? null,
-        externalId: updated?.externalId ?? externalId,
+        localId: effectiveUpdated.id ?? null,
+        externalId: effectiveUpdated.externalId ?? externalId,
       };
       await this.internalEventsService.emit(
         this.dataSource.manager,
         StrigaUserEvent.userSynced(eventPayload).getEvent(),
       );
-
-      this.logger.debug(
-        `upsertStrigaUserFromProvider: updated localId=${updated?.id ?? 'n/a'} externalId=${updated?.externalId ?? externalId}`,
+      await this.emitKycTierUpdatedEvents(
+        {
+          source: eventPayload.source,
+          trigger: eventPayload.trigger,
+          email: eventPayload.email,
+          userId: eventPayload.userId,
+          localId: eventPayload.localId,
+          externalId: eventPayload.externalId,
+        },
+        previousTierStatuses,
+        currentTierStatuses,
       );
 
-      return updated as StrigaUser;
+      this.logger.debug(
+        `upsertStrigaUserFromProvider: updated localId=${effectiveUpdated.id ?? 'n/a'} externalId=${effectiveUpdated.externalId ?? externalId}`,
+      );
+
+      return effectiveUpdated;
     }
 
     const createDto = Object.assign(new CreateStrigaUserDto(), providerUser);
     const created = await this.strigaUsersService.create(createDto);
+    const effectiveCreated = created as StrigaUser;
+    const currentTierStatuses = this.extractTierStatuses(effectiveCreated.kyc);
 
     const eventPayload: StrigaUserEventPayload = {
       source: context.source ?? 'workflow',
       trigger: context.trigger ?? 'webhook',
       email,
       userId: context.userId ?? externalId,
-      localId: created?.id ?? null,
-      externalId: created?.externalId ?? externalId,
+      localId: effectiveCreated?.id ?? null,
+      externalId: effectiveCreated?.externalId ?? externalId,
     };
     await this.internalEventsService.emit(
       this.dataSource.manager,
       StrigaUserEvent.userCreated(eventPayload).getEvent(),
     );
-
-    this.logger.debug(
-      `upsertStrigaUserFromProvider: created localId=${created?.id ?? 'n/a'} externalId=${created?.externalId ?? externalId}`,
+    await this.emitKycTierUpdatedEvents(
+      {
+        source: eventPayload.source,
+        trigger: eventPayload.trigger,
+        email: eventPayload.email,
+        userId: eventPayload.userId,
+        localId: eventPayload.localId,
+        externalId: eventPayload.externalId,
+      },
+      {},
+      currentTierStatuses,
     );
 
-    return created as StrigaUser;
+    this.logger.debug(
+      `upsertStrigaUserFromProvider: created localId=${effectiveCreated?.id ?? 'n/a'} externalId=${effectiveCreated?.externalId ?? externalId}`,
+    );
+
+    return effectiveCreated;
+  }
+
+  private extractTierStatuses(
+    kyc: StrigaUser['kyc'] | null | undefined,
+  ): Record<string, string | null> {
+    if (!kyc || typeof kyc !== 'object' || Array.isArray(kyc)) {
+      return {};
+    }
+
+    const statuses: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(kyc)) {
+      if (!/^tier\d+$/i.test(key)) {
+        continue;
+      }
+
+      const rawStatus =
+        value && typeof value === 'object' && !Array.isArray(value)
+          ? (value as Record<string, unknown>).status
+          : null;
+      statuses[key] = this.normalizeTierStatus(rawStatus);
+    }
+
+    return statuses;
+  }
+
+  private normalizeTierStatus(value: unknown): string | null {
+    const normalized = String(value ?? '')
+      .trim()
+      .toUpperCase();
+    return normalized.length ? normalized : null;
+  }
+
+  private async emitKycTierUpdatedEvents(
+    eventPayload: StrigaUserEventPayload,
+    previousTierStatuses: Record<string, string | null>,
+    currentTierStatuses: Record<string, string | null>,
+  ): Promise<void> {
+    const tierKeys = Array.from(
+      new Set([
+        ...Object.keys(previousTierStatuses),
+        ...Object.keys(currentTierStatuses),
+      ]),
+    );
+
+    this.logger.debug(
+      `upsertStrigaUserFromProvider: evaluating kyc:tier:update emission source=${eventPayload.source} trigger=${eventPayload.trigger} localId=${String(eventPayload.localId ?? 'n/a')} externalId=${String(eventPayload.externalId ?? 'n/a')} tiers=${tierKeys.join(',') || 'none'}`,
+    );
+
+    let emittedCount = 0;
+    for (const tier of tierKeys) {
+      const previousStatus = previousTierStatuses[tier] ?? null;
+      const currentStatus = currentTierStatuses[tier] ?? null;
+      if (previousStatus === currentStatus) {
+        continue;
+      }
+
+      await this.internalEventsService.emit(
+        this.dataSource.manager,
+        StrigaUserEvent.userKycTierUpdated({
+          ...eventPayload,
+          tier,
+          previousStatus,
+          currentStatus,
+        }).getEvent(),
+      );
+
+      this.logger.debug(
+        `upsertStrigaUserFromProvider: emitted kyc:tier:update source=${eventPayload.source} trigger=${eventPayload.trigger} localId=${String(eventPayload.localId ?? 'n/a')} externalId=${String(eventPayload.externalId ?? 'n/a')} tier=${tier} previous=${previousStatus ?? 'null'} current=${currentStatus ?? 'null'}`,
+      );
+      emittedCount += 1;
+    }
+
+    if (!emittedCount) {
+      this.logger.debug(
+        `upsertStrigaUserFromProvider: no KYC tier status change detected, kyc:tier:update was not emitted localId=${String(eventPayload.localId ?? 'n/a')} externalId=${String(eventPayload.externalId ?? 'n/a')}`,
+      );
+    }
   }
 
   private validateStartKycPrerequisites(strigaUser: StrigaUser): void {
