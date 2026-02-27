@@ -27,6 +27,7 @@ import {
 } from '../helpers/striga-wallet.helper';
 import { StrigaUsersService } from '../striga-users/striga-users.service';
 import { StrigaUser } from '../striga-users/domain/striga-user';
+import { StrigaCardWorkflowService } from './striga-card-workflow.service';
 
 @Injectable()
 export class StrigaUserWorkflowService {
@@ -35,6 +36,7 @@ export class StrigaUserWorkflowService {
   constructor(
     private readonly strigaUserService: StrigaUserService,
     private readonly strigaWalletService: StrigaWalletService,
+    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
     private readonly usersService: UsersService,
     private readonly accountsService: AccountsService,
     private readonly strigaUsersService: StrigaUsersService,
@@ -98,6 +100,12 @@ export class StrigaUserWorkflowService {
         traceId,
         `vero-${trigger}`,
       );
+      await this.runCardWorkflowForVeroEvent(
+        effectiveUser,
+        traceId,
+        `vero-${trigger}`,
+        payload.userId,
+      );
       return;
     }
 
@@ -134,6 +142,12 @@ export class StrigaUserWorkflowService {
           synced,
           traceId,
           `vero-${trigger}`,
+        );
+        await this.runCardWorkflowForVeroEvent(
+          synced,
+          traceId,
+          `vero-${trigger}`,
+          payload.userId,
         );
       } else {
         this.logger.error(
@@ -226,6 +240,12 @@ export class StrigaUserWorkflowService {
           traceId,
           `vero-${trigger}`,
         );
+        await this.runCardWorkflowForVeroEvent(
+          synced,
+          traceId,
+          `vero-${trigger}`,
+          payload.userId,
+        );
       } else {
         this.logger.error(
           `[trace=${traceId}] Striga user create succeeded for email=${email} but local sync failed after retry.`,
@@ -290,6 +310,12 @@ export class StrigaUserWorkflowService {
           synced,
           traceId,
           `vero-${trigger}`,
+        );
+        await this.runCardWorkflowForVeroEvent(
+          synced,
+          traceId,
+          `vero-${trigger}`,
+          payload.userId,
         );
       } else {
         this.logger.error(
@@ -809,6 +835,58 @@ export class StrigaUserWorkflowService {
 
     this.logger.log(
       `[trace=${traceId}] ${source}: local Striga account recovered walletId=${upsertedAccount.accountId} userId=${appUser.id} kycStatus=${upsertedAccount.kycStatus}.`,
+    );
+  }
+
+  /**
+   * Isolated post-login/create card flow:
+   * - Run only for vero user flows.
+   * - Use local KYC snapshot and require tier1=APPROVED.
+   * - Trigger card recovery/create workflow independently from account recovery.
+   */
+  private async runCardWorkflowForVeroEvent(
+    strigaUser: StrigaUser,
+    traceId: string,
+    source: string,
+    appUserIdHint?: string | number,
+  ): Promise<void> {
+    const tier1Status = this.normalizeTierStatus(strigaUser.kyc?.tier1?.status);
+    if (tier1Status !== 'APPROVED') {
+      this.logger.debug(
+        `[trace=${traceId}] ${source}: card flow skipped because local tier1 is ${tier1Status ?? 'null'} (required: APPROVED).`,
+      );
+      return;
+    }
+
+    const normalizedHint = Number(appUserIdHint);
+    let appUserId = Number.isNaN(normalizedHint) ? null : normalizedHint;
+
+    if (!appUserId) {
+      const appUser = await this.usersService.findByEmail(
+        this.normalizeEmail(strigaUser.email),
+      );
+      const resolved = Number(appUser?.id);
+      appUserId = Number.isNaN(resolved) ? null : resolved;
+    }
+
+    if (!appUserId) {
+      this.logger.warn(
+        `[trace=${traceId}] ${source}: card flow skipped because app user id could not be resolved for strigaExternalId=${strigaUser.externalId}.`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `[trace=${traceId}] ${source}: running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${strigaUser.externalId}.`,
+    );
+    await this.strigaCardWorkflowService.processUserCards({
+      strigaUser,
+      appUserId,
+      traceId,
+      source,
+    });
+    this.logger.log(
+      `[trace=${traceId}] ${source}: isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${strigaUser.externalId}.`,
     );
   }
 

@@ -11,9 +11,6 @@ import {
   VERO_LOGIN_USER_DELETED_EVENT,
   VERO_LOGIN_USER_LOGGED_IN_EVENT,
 } from '../../../users/types/user-event.type';
-import { UsersService } from '../../../users/users.service';
-import { StrigaUsersService } from '../striga-users/striga-users.service';
-import { StrigaCardWorkflowService } from '../services/striga-card-workflow.service';
 import { StrigaUserWorkflowService } from '../services/striga-user-workflow.service';
 import {
   STRIGA_USER_KYC_TIER_UPDATED_EVENT,
@@ -152,11 +149,7 @@ export class StrigaKycWebhookEventHandler extends InternalEventHandlerBase {
 @Injectable()
 @InternalEventHandler(STRIGA_USER_KYC_TIER_UPDATED_EVENT)
 export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBase {
-  constructor(
-    private readonly usersService: UsersService,
-    private readonly strigaUsersService: StrigaUsersService,
-    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
-  ) {
+  constructor() {
     super(StrigaUserKycTierUpdatedEventHandler.name);
   }
 
@@ -195,71 +188,15 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
     const currentStatus = String(payload.currentStatus ?? '')
       .trim()
       .toUpperCase();
-    const isTier1ApprovedTransition =
-      tier === 'tier1' &&
-      currentStatus === 'APPROVED' &&
-      previousStatus !== 'APPROVED';
 
     this.logger.debug(
       `[trace=${traceId}] Handling internal event kyc:tier:update source=${String(payload.source ?? 'n/a')} trigger=${String(payload.trigger ?? 'n/a')} localId=${String(payload.localId ?? 'n/a')} externalId=${String(payload.externalId ?? payload.userId ?? 'n/a')} tier=${tier} previous=${previousStatus || 'null'} current=${currentStatus || 'null'}.`,
     );
 
-    if (!isTier1ApprovedTransition) {
-      this.logger.debug(
-        `[trace=${traceId}] kyc:tier:update does not match card-trigger condition (tier1 transition to APPROVED); card workflow skipped.`,
-      );
-      return;
-    }
-
-    const externalId = String(
-      payload.externalId ?? payload.userId ?? '',
-    ).trim();
-    if (!externalId) {
-      this.logger.warn(
-        `[trace=${traceId}] Missing Striga externalId in kyc:tier:update payload; card workflow skipped.`,
-      );
-      return;
-    }
-
-    const strigaUser =
-      await this.strigaUsersService.findByExternalId(externalId);
-    if (!strigaUser) {
-      this.logger.warn(
-        `[trace=${traceId}] Striga user not found for externalId=${externalId}; card workflow skipped.`,
-      );
-      return;
-    }
-
-    const email = String(strigaUser.email ?? '')
-      .trim()
-      .toLowerCase();
-    if (!email) {
-      this.logger.warn(
-        `[trace=${traceId}] Striga user email is empty for externalId=${externalId}; card workflow skipped.`,
-      );
-      return;
-    }
-
-    const appUser = await this.usersService.findByEmail(email);
-    const appUserId = Number(appUser?.id);
-    if (!appUser || Number.isNaN(appUserId)) {
-      this.logger.warn(
-        `[trace=${traceId}] App user not found by email=${email}; card workflow skipped for externalId=${externalId}.`,
-      );
-      return;
-    }
-
-    this.logger.log(
-      `[trace=${traceId}] kyc:tier:update matched tier1->APPROVED; starting card workflow externalId=${externalId} appUserId=${String(appUserId)}.`,
+    this.logger.debug(
+      `[trace=${traceId}] kyc:tier:update handled without card workflow; card flow is executed in login/create isolated flow.`,
     );
-    await this.strigaCardWorkflowService.processUserCards({
-      strigaUser,
-      appUserId,
-      traceId,
-      source: 'kyc:tier:update',
-    });
-    this.logger.log(
-      `[trace=${traceId}] Card workflow completed from kyc:tier:update externalId=${externalId} appUserId=${String(appUserId)}.`,
-    );
+
+    await Promise.resolve();
   }
 }
