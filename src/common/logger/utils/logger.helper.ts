@@ -26,6 +26,51 @@ export function stringifyJson(data: any): string {
   return colorizeJsonString(JSON.stringify(data, null, 2));
 }
 
+/**
+ * Normalizes log sentence casing for human-readable string messages.
+ *
+ * Rules:
+ * - Keeps leading metadata prefixes like `[trace=...]`.
+ * - Uppercases the first alphabetical character in the message body.
+ * - Skips structured payload lines that start with `{` or `[` after prefix.
+ */
+export function normalizeLogSentenceCase(message: string): string {
+  if (!message) {
+    return message;
+  }
+
+  const lines = message.split('\n');
+  if (!lines.length) {
+    return message;
+  }
+
+  const firstLine = lines[0];
+  const prefixMatch = firstLine.match(/^(\s*(?:\[[^\]]*]\s*)*)/);
+  const prefix = prefixMatch?.[0] ?? '';
+  const rawBody = firstLine.slice(prefix.length);
+  const trimmedBody = rawBody.trimStart();
+
+  if (!trimmedBody) {
+    return message;
+  }
+
+  // Keep structured payloads untouched.
+  if (trimmedBody.startsWith('{') || trimmedBody.startsWith('[')) {
+    return message;
+  }
+
+  const bodyLeading = rawBody.slice(0, rawBody.length - trimmedBody.length);
+  const chars = [...trimmedBody];
+  const alphaIndex = chars.findIndex((char) => /[A-Za-z]/.test(char));
+  if (alphaIndex < 0) {
+    return message;
+  }
+
+  chars[alphaIndex] = chars[alphaIndex].toUpperCase();
+  lines[0] = `${prefix}${bodyLeading}${chars.join('')}`;
+  return lines.join('\n');
+}
+
 export function formatTimestamp(date: Date = new Date()): string {
   const pad = (n: number) => `${n}`.padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;

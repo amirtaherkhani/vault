@@ -11,6 +11,10 @@ import {
   StrigaKycWebhookEventHandler,
   StrigaUserKycTierUpdatedEventHandler,
 } from './events/striga-user.event.handler';
+import {
+  StrigaCardAddedEventHandler,
+  StrigaCardCreatedEventHandler,
+} from './events/striga-card.event.handler';
 import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
 import { StrigaCardService } from './services/striga-card.service';
@@ -52,6 +56,8 @@ import { StrigaService } from './striga.service';
     StrigaUserDeletedEventHandler,
     StrigaKycWebhookEventHandler,
     StrigaUserKycTierUpdatedEventHandler,
+    StrigaCardCreatedEventHandler,
+    StrigaCardAddedEventHandler,
     StrigaUserExistsGuard,
     StrigaKycApprovedGuard,
     EnableGuard,

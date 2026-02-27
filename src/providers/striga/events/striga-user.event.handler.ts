@@ -62,7 +62,7 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
     const appUserId = normalizeAppUserId(payload.userId);
     if (!appUserId) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: card flow skipped because app user id is missing in event payload.`,
+        `[trace=${traceId}] Card flow skipped because app user id is missing in event payload. Source=${source}.`,
       );
       return;
     }
@@ -70,20 +70,20 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
     const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
     if (!strigaUser) {
       this.logger.debug(
-        `[trace=${traceId}] ${source}: card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}.`,
+        `[trace=${traceId}] Card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}. Source=${source}.`,
       );
       return;
     }
 
     if (!isTier1Approved(strigaUser)) {
       this.logger.debug(
-        `[trace=${traceId}] ${source}: card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+        `[trace=${traceId}] Card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED). Source=${source}.`,
       );
       return;
     }
 
     this.logger.log(
-      `[trace=${traceId}] ${source}: running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+      `[trace=${traceId}] Running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')} source=${source}.`,
     );
     await this.strigaCardWorkflowService.processUserCards({
       strigaUser,
@@ -92,7 +92,7 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
       source,
     });
     this.logger.log(
-      `[trace=${traceId}] ${source}: isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+      `[trace=${traceId}] Card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')} source=${source}.`,
     );
   }
 }
@@ -135,7 +135,7 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
     const appUserId = normalizeAppUserId(payload.userId);
     if (!appUserId) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: card flow skipped because app user id is missing in event payload.`,
+        `[trace=${traceId}] Card flow skipped because app user id is missing in event payload. Source=${source}.`,
       );
       return;
     }
@@ -143,20 +143,20 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
     const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
     if (!strigaUser) {
       this.logger.debug(
-        `[trace=${traceId}] ${source}: card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}.`,
+        `[trace=${traceId}] Card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}. Source=${source}.`,
       );
       return;
     }
 
     if (!isTier1Approved(strigaUser)) {
       this.logger.debug(
-        `[trace=${traceId}] ${source}: card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+        `[trace=${traceId}] Card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED). Source=${source}.`,
       );
       return;
     }
 
     this.logger.log(
-      `[trace=${traceId}] ${source}: running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+      `[trace=${traceId}] Running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')} source=${source}.`,
     );
     await this.strigaCardWorkflowService.processUserCards({
       strigaUser,
@@ -165,7 +165,7 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
       source,
     });
     this.logger.log(
-      `[trace=${traceId}] ${source}: isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+      `[trace=${traceId}] Card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')} source=${source}.`,
     );
   }
 }
@@ -297,7 +297,7 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
 
     if (tier !== 'tier1' || currentStatus !== 'APPROVED') {
       this.logger.debug(
-        `[trace=${traceId}] kyc:tier:update card flow skipped tier=${tier} current=${currentStatus || 'null'} (required: tier1 + APPROVED).`,
+        `[trace=${traceId}] KYC tier update card flow skipped tier=${tier} current=${currentStatus || 'null'} (required: tier1 + APPROVED).`,
       );
       return;
     }
@@ -307,7 +307,7 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
     ).trim();
     if (!externalId) {
       this.logger.warn(
-        `[trace=${traceId}] kyc:tier:update card flow skipped because externalId is missing.`,
+        `[trace=${traceId}] KYC tier update card flow skipped because externalId is missing.`,
       );
       return;
     }
@@ -316,14 +316,14 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
       await this.strigaUsersService.findByExternalId(externalId);
     if (!strigaUser) {
       this.logger.warn(
-        `[trace=${traceId}] kyc:tier:update card flow skipped because local Striga user was not found for externalId=${externalId}.`,
+        `[trace=${traceId}] KYC tier update card flow skipped because local Striga user was not found for externalId=${externalId}.`,
       );
       return;
     }
 
     if (!isTier1Approved(strigaUser)) {
       this.logger.debug(
-        `[trace=${traceId}] kyc:tier:update card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+        `[trace=${traceId}] KYC tier update card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
       );
       return;
     }
@@ -333,7 +333,7 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
       .toLowerCase();
     if (!normalizedEmail) {
       this.logger.warn(
-        `[trace=${traceId}] kyc:tier:update card flow skipped because local Striga user email is empty for externalId=${externalId}.`,
+        `[trace=${traceId}] KYC tier update card flow skipped because local Striga user email is empty for externalId=${externalId}.`,
       );
       return;
     }
@@ -342,13 +342,13 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
     const appUserId = normalizeAppUserId(appUser?.id);
     if (!appUserId) {
       this.logger.warn(
-        `[trace=${traceId}] kyc:tier:update card flow skipped because app user was not found by email=${normalizedEmail}.`,
+        `[trace=${traceId}] KYC tier update card flow skipped because app user was not found by email=${normalizedEmail}.`,
       );
       return;
     }
 
     this.logger.log(
-      `[trace=${traceId}] kyc:tier:update running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
+      `[trace=${traceId}] KYC tier update running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
     );
     await this.strigaCardWorkflowService.processUserCards({
       strigaUser,
@@ -357,7 +357,7 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
       source: 'kyc:tier:update',
     });
     this.logger.log(
-      `[trace=${traceId}] kyc:tier:update isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
+      `[trace=${traceId}] KYC tier update isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
     );
   }
 }

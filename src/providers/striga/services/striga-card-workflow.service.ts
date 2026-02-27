@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { AccountsService } from '../../../accounts/accounts.service';
 import { AccountProviderName } from '../../../accounts/types/account-enum.type';
+import { InternalEventsService } from '../../../common/internal-events/internal-events.service';
 import {
   StrigaCreateCardRequestDto,
   StrigaCreateCardType,
@@ -22,6 +24,7 @@ import { CreateStrigaCardDto } from '../striga-cards/dto/create-striga-card.dto'
 import { UpdateStrigaCardDto } from '../striga-cards/dto/update-striga-card.dto';
 import { StrigaCardsService } from '../striga-cards/striga-cards.service';
 import { StrigaUser } from '../striga-users/domain/striga-user';
+import { StrigaCardEvent } from '../events/striga-card.event';
 import { StrigaCardService } from './striga-card.service';
 
 const STRIGA_CARD_NAME_ON_CARD = 'Vero Vault';
@@ -35,6 +38,8 @@ export class StrigaCardWorkflowService {
     private readonly accountsService: AccountsService,
     private readonly strigaCardService: StrigaCardService,
     private readonly strigaCardsService: StrigaCardsService,
+    private readonly internalEventsService: InternalEventsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -47,7 +52,7 @@ export class StrigaCardWorkflowService {
 
     if (!this.strigaCardService.getEnabled()) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: Striga service is disabled; card workflow skipped.`,
+        `[trace=${traceId}] Card workflow skipped because Striga service is disabled. Source=${source}.`,
       );
       return;
     }
@@ -56,7 +61,7 @@ export class StrigaCardWorkflowService {
     const externalId = String(strigaUser.externalId ?? '').trim();
     if (!localStrigaUserId || !externalId) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: missing local/external Striga user id; card workflow skipped.`,
+        `[trace=${traceId}] Card workflow skipped because local/external Striga user id is missing. Source=${source}.`,
       );
       return;
     }
@@ -88,13 +93,13 @@ export class StrigaCardWorkflowService {
         );
       if (walletAccounts.length === 0) {
         this.logger.warn(
-          `[trace=${traceId}] ${source}: no wallet accounts matched configured assets=${assetNames.join(',')} walletId=${walletId}; card creation skipped.`,
+          `[trace=${traceId}] No wallet accounts matched configured assets=${assetNames.join(',')} walletId=${walletId}; card creation skipped. Source=${source}.`,
         );
         return;
       }
     } catch (error) {
       this.logger.error(
-        `[trace=${traceId}] ${source}: wallets/get failed while resolving wallet accounts walletId=${walletId} reason=${this.formatError(error)}.`,
+        `[trace=${traceId}] Wallets/get failed while resolving wallet accounts walletId=${walletId} reason=${this.formatError(error)} source=${source}.`,
       );
       return;
     }
@@ -102,7 +107,7 @@ export class StrigaCardWorkflowService {
     const defaultPassword = this.strigaCardService.getCardDefaultPassword();
     if (!defaultPassword) {
       this.logger.error(
-        `[trace=${traceId}] ${source}: STRIGA card default password is empty; card creation skipped.`,
+        `[trace=${traceId}] Card creation skipped because STRIGA card default password is empty. Source=${source}.`,
       );
       return;
     }
@@ -112,6 +117,7 @@ export class StrigaCardWorkflowService {
       try {
         const syncResult = await this.syncCardForWalletAccount({
           strigaUser,
+          appUserId,
           externalId,
           walletId,
           walletAccount,
@@ -133,13 +139,13 @@ export class StrigaCardWorkflowService {
       } catch (error) {
         counters.skipped += 1;
         this.logger.error(
-          `[trace=${traceId}] ${source}: card sync failed walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} reason=${this.formatError(error)}.`,
+          `[trace=${traceId}] Card sync failed walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} reason=${this.formatError(error)} source=${source}.`,
         );
       }
     }
 
     this.logger.log(
-      `[trace=${traceId}] ${source}: card workflow completed walletId=${walletId} updated=${counters.updated} recovered=${counters.recovered} created=${counters.created} skipped=${counters.skipped} cloudCards=${providerWalletCards.length} walletAccounts=${walletAccounts.length}.`,
+      `[trace=${traceId}] Card workflow completed walletId=${walletId} updated=${counters.updated} recovered=${counters.recovered} created=${counters.created} skipped=${counters.skipped} cloudCards=${providerWalletCards.length} walletAccounts=${walletAccounts.length} source=${source}.`,
     );
   }
 
@@ -153,7 +159,7 @@ export class StrigaCardWorkflowService {
       .catch(() => null);
     if (!localStrigaAccount) {
       this.logger.debug(
-        `[trace=${traceId}] ${source}: local STRIGA account not found for userId=${String(appUserId)}; card workflow skipped.`,
+        `[trace=${traceId}] Card workflow skipped because local STRIGA account was not found for userId=${String(appUserId)}. Source=${source}.`,
       );
       return null;
     }
@@ -161,7 +167,7 @@ export class StrigaCardWorkflowService {
     const walletId = String(localStrigaAccount.accountId ?? '').trim();
     if (!walletId) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: local STRIGA account exists but wallet id is empty; card workflow skipped.`,
+        `[trace=${traceId}] Card workflow skipped because local STRIGA account exists but wallet id is empty. Source=${source}.`,
       );
       return null;
     }
@@ -174,6 +180,7 @@ export class StrigaCardWorkflowService {
   ): Promise<StrigaCardSyncResultDto> {
     const {
       strigaUser,
+      appUserId,
       externalId,
       walletId,
       walletAccount,
@@ -196,7 +203,7 @@ export class StrigaCardWorkflowService {
     if (localCard) {
       if (!cloudCard) {
         this.logger.debug(
-          `[trace=${traceId}] ${source}: local card exists and cloud card not found walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${localCard.type}.`,
+          `[trace=${traceId}] Local card exists and cloud card was not found walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${localCard.type} source=${source}.`,
         );
         return {
           operation: 'updated',
@@ -212,7 +219,7 @@ export class StrigaCardWorkflowService {
       );
       const type = this.toCardType(cloudCard.type);
       this.logger.debug(
-        `[trace=${traceId}] ${source}: local card updated from cloud walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted}.`,
+        `[trace=${traceId}] Local card updated from cloud walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted.operation} source=${source}.`,
       );
       return { operation: 'updated', type };
     }
@@ -226,8 +233,30 @@ export class StrigaCardWorkflowService {
         `${source}:recover`,
       );
       const type = this.toCardType(cloudCard.type);
+      if (upserted.operation === 'created') {
+        await this.internalEventsService.emit(
+          this.dataSource.manager,
+          StrigaCardEvent.cardAdded({
+            source,
+            appUserId,
+            localStrigaUserId: this.toNullableString(strigaUser.id),
+            externalId: this.toNullableString(strigaUser.externalId),
+            localCardId: upserted.localCardId,
+            cardId: this.toNullableString(cloudCard.id),
+            parentWalletId:
+              this.toNullableString(cloudCard.parentWalletId) ?? walletId,
+            linkedAccountId:
+              this.toNullableString(cloudCard.linkedAccountId) ??
+              walletAccount.accountId,
+            linkedAccountCurrency:
+              this.toNullableString(cloudCard.linkedAccountCurrency) ??
+              walletAccount.currency,
+            type,
+          }).getEvent(),
+        );
+      }
       this.logger.debug(
-        `[trace=${traceId}] ${source}: recovered cloud card into local walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted}.`,
+        `[trace=${traceId}] Recovered cloud card into local walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted.operation} source=${source}.`,
       );
       return { operation: 'recovered', type };
     }
@@ -241,7 +270,7 @@ export class StrigaCardWorkflowService {
       accountIdToLink: walletAccount.accountId,
     };
     this.logger.debug(
-      `[trace=${traceId}] ${source}: creating virtual card externalId=${externalId} walletId=${walletAccount.walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency}.`,
+      `[trace=${traceId}] Creating virtual card externalId=${externalId} walletId=${walletAccount.walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} source=${source}.`,
     );
 
     const createResponse =
@@ -249,7 +278,7 @@ export class StrigaCardWorkflowService {
     const createdCard = this.toCardDto(createResponse?.data);
     if (!createdCard) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: create card returned empty payload accountId=${walletAccount.accountId} currency=${walletAccount.currency}.`,
+        `[trace=${traceId}] Create card returned empty payload accountId=${walletAccount.accountId} currency=${walletAccount.currency} source=${source}.`,
       );
       return { operation: 'skipped', type: null };
     }
@@ -271,8 +300,30 @@ export class StrigaCardWorkflowService {
       `${source}:create`,
     );
     const type = this.toCardType(createdCard.type);
+    if (upserted.operation === 'created') {
+      await this.internalEventsService.emit(
+        this.dataSource.manager,
+        StrigaCardEvent.cardCreated({
+          source,
+          appUserId,
+          localStrigaUserId: this.toNullableString(strigaUser.id),
+          externalId: this.toNullableString(strigaUser.externalId),
+          localCardId: upserted.localCardId,
+          cardId: this.toNullableString(createdCard.id),
+          parentWalletId:
+            this.toNullableString(createdCard.parentWalletId) ?? walletId,
+          linkedAccountId:
+            this.toNullableString(createdCard.linkedAccountId) ??
+            walletAccount.accountId,
+          linkedAccountCurrency:
+            this.toNullableString(createdCard.linkedAccountCurrency) ??
+            walletAccount.currency,
+          type,
+        }).getEvent(),
+      );
+    }
     this.logger.debug(
-      `[trace=${traceId}] ${source}: created and saved card walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted}.`,
+      `[trace=${traceId}] Created and saved card walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted.operation} source=${source}.`,
     );
 
     return { operation: 'created', type };
@@ -373,7 +424,10 @@ export class StrigaCardWorkflowService {
     providerCard: StrigaCreateCardResponseDto,
     traceId: string,
     source: string,
-  ): Promise<'created' | 'updated' | 'skipped'> {
+  ): Promise<{
+    operation: 'created' | 'updated' | 'skipped';
+    localCardId: string | null;
+  }> {
     const payload = this.toCardWritePayload(providerCard);
     if (
       !payload.linkedAccountId &&
@@ -381,35 +435,43 @@ export class StrigaCardWorkflowService {
       !payload.parentWalletId
     ) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: provider card payload missing matching keys (linkedAccountId/linkedAccountCurrency/parentWalletId); local sync skipped.`,
+        `[trace=${traceId}] Local sync skipped because provider card payload is missing matching keys (linkedAccountId/linkedAccountCurrency/parentWalletId). Source=${source}.`,
       );
-      return 'skipped';
+      return { operation: 'skipped', localCardId: null };
     }
 
     const existing = await this.findExistingLocalCard(strigaUser, payload);
     if (existing) {
-      await this.strigaCardsService.update(
+      const updated = await this.strigaCardsService.update(
         existing.id,
         Object.assign(new UpdateStrigaCardDto(), payload),
       );
-      return 'updated';
+      return {
+        operation: 'updated',
+        localCardId:
+          this.toNullableString(updated?.id) ??
+          this.toNullableString(existing.id),
+      };
     }
 
     const localStrigaUserId = String(strigaUser.id ?? '').trim();
     if (!localStrigaUserId) {
       this.logger.warn(
-        `[trace=${traceId}] ${source}: local Striga user id missing; local card create skipped.`,
+        `[trace=${traceId}] Local card create skipped because local Striga user id is missing. Source=${source}.`,
       );
-      return 'skipped';
+      return { operation: 'skipped', localCardId: null };
     }
 
-    await this.strigaCardsService.create(
+    const created = await this.strigaCardsService.create(
       Object.assign(new CreateStrigaCardDto(), payload, {
         user: { id: localStrigaUserId },
       }),
     );
 
-    return 'created';
+    return {
+      operation: 'created',
+      localCardId: this.toNullableString(created?.id),
+    };
   }
 
   private async findExistingLocalCard(

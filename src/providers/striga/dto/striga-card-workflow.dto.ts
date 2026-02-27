@@ -12,6 +12,7 @@ export class StrigaProcessUserCardsWorkflowDto {
 
 export class StrigaSyncCardForWalletAccountWorkflowDto {
   strigaUser!: StrigaUser;
+  appUserId!: number;
   externalId!: string;
   walletId!: string;
   walletAccount!: StrigaWalletAccountSummary;
