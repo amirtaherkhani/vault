@@ -83,7 +83,7 @@ export class StrigaCardWorkflowService {
     try {
       walletAccounts =
         await this.strigaCardService.findWalletAccountsByCurrenciesFromProvider(
-          { walletId },
+          { walletId, userId: externalId },
           assetNames,
         );
       if (walletAccounts.length === 0) {

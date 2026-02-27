@@ -27,7 +27,9 @@ import {
 } from '../dto/striga-base.request.dto';
 import { StrigaBaseResponseDto } from '../dto/striga-base.response.dto';
 import {
+  buildFindAllWalletsPayload,
   extractWalletAccountsByCurrenciesFromPayload,
+  resolveWalletsDateRangeFromProviderUser,
   StrigaWalletAccountSummary,
 } from '../helpers/striga-wallet.helper';
 import { StrigaStartKycProviderRequestDto } from '../dto/striga-start-kyc.dto';
@@ -198,10 +200,58 @@ export abstract class StrigaBaseService {
     payload: StrigaGetWalletRequestDto,
     currencyNames: string[],
   ): Promise<StrigaWalletAccountSummary[]> {
-    const response = await this.findWalletFromProvider(payload);
+    const payloadRecord =
+      payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : {};
+    const walletId = String(payloadRecord.walletId ?? '').trim();
+    const userId = String(payloadRecord.userId ?? '').trim();
+
+    try {
+      const response = await this.findWalletFromProvider(payload);
+      const accounts = extractWalletAccountsByCurrenciesFromPayload(
+        response?.data,
+        currencyNames,
+        walletId || null,
+      );
+      if (accounts.length > 0) {
+        return accounts;
+      }
+    } catch {
+      // Fallback to /wallets/get/all below.
+    }
+
+    if (!userId) {
+      return [];
+    }
+
+    let providerUser: Record<string, unknown> | null = null;
+    try {
+      const providerUserResponse = await this.findUserByIdFromProvider(userId);
+      const data = providerUserResponse?.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        providerUser = data as Record<string, unknown>;
+      }
+    } catch {
+      // Keep fallback date range based on request time.
+    }
+
+    const requestTs = Date.now();
+    const dateRange = resolveWalletsDateRangeFromProviderUser(
+      providerUser,
+      requestTs,
+    );
+    const allWalletsPayload = buildFindAllWalletsPayload({
+      userId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+    const allWalletsResponse =
+      await this.findAllWalletsFromProvider(allWalletsPayload);
     return extractWalletAccountsByCurrenciesFromPayload(
-      response?.data,
+      allWalletsResponse?.data,
       currencyNames,
+      walletId || null,
     );
   }
 

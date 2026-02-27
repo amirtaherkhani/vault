@@ -241,6 +241,7 @@ export function buildFindAllWalletsPayload(params: {
 export function extractWalletAccountsByCurrenciesFromPayload(
   data: unknown,
   currencyNames: string[],
+  targetWalletId?: string | null,
 ): StrigaWalletAccountSummary[] {
   const normalizedCurrencies = Array.from(
     new Set(
@@ -263,8 +264,19 @@ export function extractWalletAccountsByCurrenciesFromPayload(
     return [];
   }
 
-  // IMPORTANT: pick first wallet in provider list order.
-  const primaryWallet = walletRecords[0];
+  const normalizedTargetWalletId = String(targetWalletId ?? '').trim();
+  const matchedWallet =
+    normalizedTargetWalletId.length > 0
+      ? (walletRecords.find((walletRecord) => {
+          const candidateWalletId = String(
+            walletRecord.walletId ?? walletRecord.parentWalletId ?? '',
+          ).trim();
+          return candidateWalletId === normalizedTargetWalletId;
+        }) ?? null)
+      : null;
+
+  // IMPORTANT: pick first wallet in provider list order when no target walletId is provided or matched.
+  const primaryWallet = matchedWallet ?? walletRecords[0];
   const walletId = String(
     primaryWallet.walletId ?? primaryWallet.parentWalletId ?? '',
   ).trim();

@@ -3,6 +3,7 @@ import { InternalEventHandlerBase } from '../../../common/internal-events/base/i
 import { InternalEventHandler } from '../../../common/internal-events/helper/internal-event-handler.decorator';
 import { InternalEvent } from '../../../internal-events/domain/internal-event';
 import { UserEventDto } from '../../../users/dto/user.dto';
+import { UsersService } from '../../../users/users.service';
 import { GroupPlainToInstance } from '../../../utils/transformers/class.transformer';
 import { StrigaKycWebhookEventDto } from '../dto/striga.webhook.dto';
 import { StrigaUserKycTierUpdatedEventPayload } from './striga-user.event';
@@ -12,6 +13,9 @@ import {
   VERO_LOGIN_USER_LOGGED_IN_EVENT,
 } from '../../../users/types/user-event.type';
 import { StrigaUserWorkflowService } from '../services/striga-user-workflow.service';
+import { StrigaCardWorkflowService } from '../services/striga-card-workflow.service';
+import { StrigaUsersService } from '../striga-users/striga-users.service';
+import { StrigaUser } from '../striga-users/domain/striga-user';
 import {
   STRIGA_USER_KYC_TIER_UPDATED_EVENT,
   STRIGA_WEBHOOK_KYC_EVENT,
@@ -20,7 +24,11 @@ import {
 @Injectable()
 @InternalEventHandler(VERO_LOGIN_USER_LOGGED_IN_EVENT)
 export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
-  constructor(private readonly workflow: StrigaUserWorkflowService) {
+  constructor(
+    private readonly workflow: StrigaUserWorkflowService,
+    private readonly strigaUsersService: StrigaUsersService,
+    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
+  ) {
     super(StrigaUserLoggedInEventHandler.name);
   }
 
@@ -43,13 +51,60 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
     traceId: string,
   ): Promise<void> {
     await this.workflow.processVeroUserEvent(payload, traceId, 'login');
+    await this.runCardWorkflowForUserEvent(payload, traceId, 'vero-login');
+  }
+
+  private async runCardWorkflowForUserEvent(
+    payload: UserEventDto,
+    traceId: string,
+    source: string,
+  ): Promise<void> {
+    const appUserId = normalizeAppUserId(payload.userId);
+    if (!appUserId) {
+      this.logger.warn(
+        `[trace=${traceId}] ${source}: card flow skipped because app user id is missing in event payload.`,
+      );
+      return;
+    }
+
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
+    if (!strigaUser) {
+      this.logger.debug(
+        `[trace=${traceId}] ${source}: card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}.`,
+      );
+      return;
+    }
+
+    if (!isTier1Approved(strigaUser)) {
+      this.logger.debug(
+        `[trace=${traceId}] ${source}: card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `[trace=${traceId}] ${source}: running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+    );
+    await this.strigaCardWorkflowService.processUserCards({
+      strigaUser,
+      appUserId,
+      traceId,
+      source,
+    });
+    this.logger.log(
+      `[trace=${traceId}] ${source}: isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+    );
   }
 }
 
 @Injectable()
 @InternalEventHandler(VERO_LOGIN_USER_ADDED_EVENT)
 export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
-  constructor(private readonly workflow: StrigaUserWorkflowService) {
+  constructor(
+    private readonly workflow: StrigaUserWorkflowService,
+    private readonly strigaUsersService: StrigaUsersService,
+    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
+  ) {
     super(StrigaUserAddedEventHandler.name);
   }
 
@@ -69,6 +124,49 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
 
   private async onAdded(payload: UserEventDto, traceId: string): Promise<void> {
     await this.workflow.processVeroUserEvent(payload, traceId, 'created');
+    await this.runCardWorkflowForUserEvent(payload, traceId, 'vero-created');
+  }
+
+  private async runCardWorkflowForUserEvent(
+    payload: UserEventDto,
+    traceId: string,
+    source: string,
+  ): Promise<void> {
+    const appUserId = normalizeAppUserId(payload.userId);
+    if (!appUserId) {
+      this.logger.warn(
+        `[trace=${traceId}] ${source}: card flow skipped because app user id is missing in event payload.`,
+      );
+      return;
+    }
+
+    const strigaUser = await this.strigaUsersService.findByUserId(appUserId);
+    if (!strigaUser) {
+      this.logger.debug(
+        `[trace=${traceId}] ${source}: card flow skipped because local Striga user was not found for appUserId=${String(appUserId)}.`,
+      );
+      return;
+    }
+
+    if (!isTier1Approved(strigaUser)) {
+      this.logger.debug(
+        `[trace=${traceId}] ${source}: card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `[trace=${traceId}] ${source}: running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+    );
+    await this.strigaCardWorkflowService.processUserCards({
+      strigaUser,
+      appUserId,
+      traceId,
+      source,
+    });
+    this.logger.log(
+      `[trace=${traceId}] ${source}: isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+    );
   }
 }
 
@@ -149,7 +247,11 @@ export class StrigaKycWebhookEventHandler extends InternalEventHandlerBase {
 @Injectable()
 @InternalEventHandler(STRIGA_USER_KYC_TIER_UPDATED_EVENT)
 export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBase {
-  constructor() {
+  constructor(
+    private readonly strigaUsersService: StrigaUsersService,
+    private readonly usersService: UsersService,
+    private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
+  ) {
     super(StrigaUserKycTierUpdatedEventHandler.name);
   }
 
@@ -193,10 +295,85 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
       `[trace=${traceId}] Handling internal event kyc:tier:update source=${String(payload.source ?? 'n/a')} trigger=${String(payload.trigger ?? 'n/a')} localId=${String(payload.localId ?? 'n/a')} externalId=${String(payload.externalId ?? payload.userId ?? 'n/a')} tier=${tier} previous=${previousStatus || 'null'} current=${currentStatus || 'null'}.`,
     );
 
-    this.logger.debug(
-      `[trace=${traceId}] kyc:tier:update handled without card workflow; card flow is executed in login/create isolated flow.`,
-    );
+    if (tier !== 'tier1' || currentStatus !== 'APPROVED') {
+      this.logger.debug(
+        `[trace=${traceId}] kyc:tier:update card flow skipped tier=${tier} current=${currentStatus || 'null'} (required: tier1 + APPROVED).`,
+      );
+      return;
+    }
 
-    await Promise.resolve();
+    const externalId = String(
+      payload.externalId ?? payload.userId ?? '',
+    ).trim();
+    if (!externalId) {
+      this.logger.warn(
+        `[trace=${traceId}] kyc:tier:update card flow skipped because externalId is missing.`,
+      );
+      return;
+    }
+
+    const strigaUser =
+      await this.strigaUsersService.findByExternalId(externalId);
+    if (!strigaUser) {
+      this.logger.warn(
+        `[trace=${traceId}] kyc:tier:update card flow skipped because local Striga user was not found for externalId=${externalId}.`,
+      );
+      return;
+    }
+
+    if (!isTier1Approved(strigaUser)) {
+      this.logger.debug(
+        `[trace=${traceId}] kyc:tier:update card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED).`,
+      );
+      return;
+    }
+
+    const normalizedEmail = String(strigaUser.email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!normalizedEmail) {
+      this.logger.warn(
+        `[trace=${traceId}] kyc:tier:update card flow skipped because local Striga user email is empty for externalId=${externalId}.`,
+      );
+      return;
+    }
+
+    const appUser = await this.usersService.findByEmail(normalizedEmail);
+    const appUserId = normalizeAppUserId(appUser?.id);
+    if (!appUserId) {
+      this.logger.warn(
+        `[trace=${traceId}] kyc:tier:update card flow skipped because app user was not found by email=${normalizedEmail}.`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `[trace=${traceId}] kyc:tier:update running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
+    );
+    await this.strigaCardWorkflowService.processUserCards({
+      strigaUser,
+      appUserId,
+      traceId,
+      source: 'kyc:tier:update',
+    });
+    this.logger.log(
+      `[trace=${traceId}] kyc:tier:update isolated card flow completed appUserId=${String(appUserId)} strigaExternalId=${externalId}.`,
+    );
   }
+}
+
+function normalizeAppUserId(value: unknown): number | null {
+  const resolved = Number(value);
+  if (Number.isNaN(resolved) || resolved <= 0) {
+    return null;
+  }
+
+  return resolved;
+}
+
+function isTier1Approved(strigaUser: StrigaUser | null): boolean {
+  const status = String(strigaUser?.kyc?.tier1?.status ?? '')
+    .trim()
+    .toUpperCase();
+  return status === 'APPROVED';
 }
