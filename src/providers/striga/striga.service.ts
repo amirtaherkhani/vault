@@ -28,6 +28,7 @@ import {
   StrigaPathParams,
 } from './types/striga-base.type';
 import {
+  STRIGA_CARD_CREATE_ASSET_NAMES,
   STRIGA_ENABLE,
   STRIGA_SANDBOX_BASE_URL,
 } from './types/striga-const.type';
@@ -52,6 +53,12 @@ export class StrigaService
 
   @ConfigGetOrThrow('striga.apiSecret', { inferEnvVar: true })
   private readonly apiSecret!: StrigaConfig['apiSecret'];
+
+  @ConfigGet('striga.cardCreateAssetNames', {
+    inferEnvVar: true,
+    defaultValue: STRIGA_CARD_CREATE_ASSET_NAMES,
+  })
+  private readonly cardCreateAssetNames!: StrigaConfig['cardCreateAssetNames'];
 
   constructor(
     private readonly apiSdkService: ApiGatewayService,
@@ -121,6 +128,12 @@ export class StrigaService
       !!this.apiClient &&
       Object.keys(this.apiClient).length > 0
     );
+  }
+
+  getCardCreateAssetNames(): string[] {
+    return Array.isArray(this.cardCreateAssetNames)
+      ? [...this.cardCreateAssetNames]
+      : [];
   }
 
   async pingFromProvider(

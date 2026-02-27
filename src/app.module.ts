@@ -71,8 +71,11 @@ import { CacheModule } from './common/cache/cache.module';
 
 import { StrigaUsersModule } from './providers/striga/striga-users/striga-users.module';
 
+import { StrigaCardsModule } from './providers/striga/striga-cards/striga-cards.module';
+
 @Module({
   imports: [
+    StrigaCardsModule,
     StrigaUsersModule,
     AssetRegistriesModule,
     AssetRegistriesModule,

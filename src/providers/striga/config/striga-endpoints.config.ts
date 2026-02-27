@@ -45,6 +45,54 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.POST,
     path: '/wallets/create',
   },
+  createCard: {
+    method: HttpMethod.POST,
+    path: '/card/create',
+  },
+  getCardById: {
+    method: HttpMethod.GET,
+    path: '/card/{cardId}',
+  },
+  linkCardAccount: {
+    method: HttpMethod.PATCH,
+    path: '/card/link-account',
+  },
+  burnCard: {
+    method: HttpMethod.POST,
+    path: '/card/burn',
+  },
+  blockCard: {
+    method: HttpMethod.POST,
+    path: '/card/block',
+  },
+  unblockCard: {
+    method: HttpMethod.POST,
+    path: '/card/unblock',
+  },
+  updateCard3ds: {
+    method: HttpMethod.PATCH,
+    path: '/card/3ds',
+  },
+  updateCardSecurity: {
+    method: HttpMethod.PATCH,
+    path: '/card/security',
+  },
+  setCardPin: {
+    method: HttpMethod.PATCH,
+    path: '/card/set-pin',
+  },
+  getCardsByUser: {
+    method: HttpMethod.POST,
+    path: '/card/get-all',
+  },
+  getCardStatement: {
+    method: HttpMethod.POST,
+    path: '/card/statement',
+  },
+  updateCardLimits: {
+    method: HttpMethod.PATCH,
+    path: '/card/limits',
+  },
   updateUser: {
     method: HttpMethod.PATCH,
     path: '/user/update',

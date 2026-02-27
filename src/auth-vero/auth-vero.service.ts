@@ -290,9 +290,7 @@ export class AuthVeroService {
     return { profile, exp, rawProfile: decodedToken };
   }
 
-  async loginWithExternalToken(
-    loginDto: AuthVeroLoginDto,
-  ): Promise<{
+  async loginWithExternalToken(loginDto: AuthVeroLoginDto): Promise<{
     token: string;
     refreshToken: string;
     tokenExpires: number;
@@ -354,9 +352,7 @@ export class AuthVeroService {
     }
   }
 
-  async resolveUserFromExternalToken(
-    token: string,
-  ): Promise<User> {
+  async resolveUserFromExternalToken(token: string): Promise<User> {
     if (!this.isExternalTokenMode()) {
       throw new UnauthorizedException('Vero external token auth is disabled.');
     }

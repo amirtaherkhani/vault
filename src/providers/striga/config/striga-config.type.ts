@@ -22,4 +22,10 @@ export interface StrigaConfig {
 
   /** Number of retries for idempotent failures */
   maxRetries: number;
+
+  /**
+   * Comma-separated asset symbols used for virtual card creation workflows.
+   * Example env value: `BTC,USDC,ETH`
+   */
+  cardCreateAssetNames: string[];
 }

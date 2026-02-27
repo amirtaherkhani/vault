@@ -646,8 +646,9 @@ export class StrigaUserWorkflowService {
       .findByMeAndProviderName(appUser.id, AccountProviderName.STRIGA)
       .catch(() => null);
     // IMPORTANT: for Striga rows, local `account.accountId` stores walletId (not currency sub-account id).
-    const currentLocalWalletId = String(existingStrigaAccount?.accountId ?? '')
-      .trim();
+    const currentLocalWalletId = String(
+      existingStrigaAccount?.accountId ?? '',
+    ).trim();
     const providerWallet = await this.resolveStrigaWalletForUser(
       externalId,
       traceId,

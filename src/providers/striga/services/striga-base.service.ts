@@ -1,13 +1,24 @@
 import { RequestInput } from 'src/common/api-gateway/types/api-gateway.type';
 import {
+  StrigaBlockCardRequestDto,
+  StrigaBurnCardRequestDto,
+  StrigaCardIdRequestDto,
+  StrigaCreateCardRequestDto,
   StrigaCreateUserRequestDto,
   StrigaCreateWalletRequestDto,
+  StrigaGetCardsByUserRequestDto,
+  StrigaGetCardStatementRequestDto,
   StrigaGetAllWalletsRequestDto,
   StrigaGetWalletAccountRequestDto,
   StrigaGetWalletAccountStatementRequestDto,
   StrigaGetWalletRequestDto,
+  StrigaLinkCardAccountRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
+  StrigaSetCardPinRequestDto,
+  StrigaUpdateCard3dsRequestDto,
+  StrigaUpdateCardLimitsRequestDto,
+  StrigaUpdateCardSecurityRequestDto,
   StrigaUpdateUserRequestDto,
   StrigaUpdateVerifiedCredentialsRequestDto,
   StrigaUserByEmailRequestDto,
@@ -31,6 +42,10 @@ export abstract class StrigaBaseService {
 
   isReady(): boolean {
     return this.strigaService.isReady();
+  }
+
+  getCardCreateAssetNames(): string[] {
+    return this.strigaService.getCardCreateAssetNames();
   }
 
   protected signedRequest<T = unknown>(
@@ -175,6 +190,102 @@ export abstract class StrigaBaseService {
     payload: StrigaCreateWalletRequestDto,
   ): Promise<StrigaBaseResponseDto> {
     return this.signedRequest(STRIGA_ENDPOINT_NAME.createWallet, {
+      body: payload,
+    });
+  }
+
+  async createCardInProvider(
+    payload: StrigaCreateCardRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.createCard, {
+      body: payload,
+    });
+  }
+
+  async findCardByIdFromProvider(
+    payload: StrigaCardIdRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.getCardById, {
+      param: { cardId: payload.cardId },
+    });
+  }
+
+  async linkCardAccountInProvider(
+    payload: StrigaLinkCardAccountRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.linkCardAccount, {
+      body: payload,
+    });
+  }
+
+  async burnCardInProvider(
+    payload: StrigaBurnCardRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.burnCard, {
+      body: payload,
+    });
+  }
+
+  async blockCardInProvider(
+    payload: StrigaBlockCardRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.blockCard, {
+      body: payload,
+    });
+  }
+
+  async unblockCardInProvider(
+    payload: StrigaCardIdRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.unblockCard, {
+      body: payload,
+    });
+  }
+
+  async updateCard3dsInProvider(
+    payload: StrigaUpdateCard3dsRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.updateCard3ds, {
+      body: payload,
+    });
+  }
+
+  async updateCardSecurityInProvider(
+    payload: StrigaUpdateCardSecurityRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.updateCardSecurity, {
+      body: payload,
+    });
+  }
+
+  async setCardPinInProvider(
+    payload: StrigaSetCardPinRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.setCardPin, {
+      body: payload,
+    });
+  }
+
+  async updateCardLimitsInProvider(
+    payload: StrigaUpdateCardLimitsRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.updateCardLimits, {
+      body: payload,
+    });
+  }
+
+  async findCardStatementFromProvider(
+    payload: StrigaGetCardStatementRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.getCardStatement, {
+      body: payload,
+    });
+  }
+
+  async findCardsByUserFromProvider(
+    payload: StrigaGetCardsByUserRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.getCardsByUser, {
       body: payload,
     });
   }

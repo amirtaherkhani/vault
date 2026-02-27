@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -9,36 +9,28 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { RoleEnum } from '../../../roles/roles.enum';
-import { RoleGroups } from '../../../utils/transformers/enum.transformer';
 import {
   StrigaAddressDto,
+  StrigaCardLimitsRequestDto,
   StrigaDateOfBirthDto,
   StrigaMobileDto,
 } from './striga-base.request.dto';
 
-const STRIGA_RESPONSE_ROLES = [RoleEnum.admin, RoleEnum.user] as const;
-
-@Exclude()
 export class StrigaBaseResponseDto<T = unknown> {
   @ApiProperty({ example: 200 })
   @IsInt()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   status!: number;
 
   @ApiProperty({ example: true })
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   success!: boolean;
 
   @ApiProperty({ example: 'success' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   message!: string;
 
   @ApiProperty({ example: null, nullable: true, type: Object })
   @IsOptional()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   error!: unknown | null;
 
   @ApiProperty({
@@ -48,24 +40,19 @@ export class StrigaBaseResponseDto<T = unknown> {
     description: 'Provider payload',
   })
   @IsOptional()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   data!: Record<string, unknown> | T | null;
 
   @ApiProperty({ example: false })
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   hasNextPage!: boolean;
 }
 
-@Exclude()
 export class StrigaPingResponseDto {
   @ApiProperty({ example: 'pong' })
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   result!: string;
 }
 
-@Exclude()
 export class StrigaProviderPayloadResponseDto {
   @ApiPropertyOptional({
     type: Object,
@@ -74,75 +61,62 @@ export class StrigaProviderPayloadResponseDto {
   })
   @IsOptional()
   @IsObject()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   payload!: Record<string, unknown> | null;
 }
 
-@Exclude()
 export class StrigaUserKycTierSummaryResponseDto {
   @ApiPropertyOptional({ example: 'APPROVED' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   status?: string;
 }
 
-@Exclude()
 export class StrigaUserKycSummaryResponseDto {
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   emailVerified?: boolean;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   mobileVerified?: boolean;
 
   @ApiPropertyOptional({ example: 'NOT_STARTED' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   status?: string;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   currentTier?: number;
 
   @ApiPropertyOptional({ type: () => StrigaUserKycTierSummaryResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierSummaryResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   tier0?: StrigaUserKycTierSummaryResponseDto;
 
   @ApiPropertyOptional({ type: () => StrigaUserKycTierSummaryResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierSummaryResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   tier1?: StrigaUserKycTierSummaryResponseDto;
 
   @ApiPropertyOptional({ type: () => StrigaUserKycTierSummaryResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierSummaryResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   tier2?: StrigaUserKycTierSummaryResponseDto;
 
   @ApiPropertyOptional({ type: () => StrigaUserKycTierSummaryResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycTierSummaryResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   tier3?: StrigaUserKycTierSummaryResponseDto;
 }
 
-@Exclude()
 export class StrigaVerificationInfoResponseDto {
   @ApiPropertyOptional({
     example: '2024-01-25T04:56:39.745Z',
@@ -150,118 +124,95 @@ export class StrigaVerificationInfoResponseDto {
   })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   dateExpires?: string;
 }
 
-@Exclude()
 export class StrigaCloudUserResponseDto {
   @ApiProperty()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   firstName!: string;
 
   @ApiProperty()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   lastName!: string;
 
   @ApiProperty()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   email!: string;
 
   @ApiPropertyOptional({ type: () => StrigaMobileDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaMobileDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   mobile?: StrigaMobileDto;
 
   @ApiPropertyOptional({ type: () => StrigaDateOfBirthDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaDateOfBirthDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   dateOfBirth?: StrigaDateOfBirthDto;
 
   @ApiPropertyOptional({ type: () => StrigaAddressDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaAddressDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   address?: StrigaAddressDto;
 
   @ApiPropertyOptional({ type: () => StrigaUserKycSummaryResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycSummaryResponseDto)
-  @Expose({
-    ...RoleGroups([...STRIGA_RESPONSE_ROLES]),
-    name: 'KYC',
-  })
   kyc?: StrigaUserKycSummaryResponseDto;
 
   @ApiProperty()
   @IsString()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   userId!: string;
 
   @ApiPropertyOptional({ example: 1706158299688 })
   @IsOptional()
   @IsInt()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   createdAt?: number;
 
   @ApiPropertyOptional({ type: () => StrigaVerificationInfoResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaVerificationInfoResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   emailVerification?: StrigaVerificationInfoResponseDto;
 
   @ApiPropertyOptional({ type: () => StrigaVerificationInfoResponseDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaVerificationInfoResponseDto)
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   mobileVerification?: StrigaVerificationInfoResponseDto;
 
   @ApiPropertyOptional({ type: () => [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   missingFields?: string[];
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([...STRIGA_RESPONSE_ROLES]))
   tinCollected?: boolean;
 }
 
-@Exclude()
 export class StrigaKycLimitSplitDto {
   @ApiProperty({ example: '0' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   all!: string;
 
   @ApiProperty({ example: '0' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   va!: string;
 }
 
-@Exclude()
 export class StrigaKycRejectionCommentsDto {
   @ApiPropertyOptional({
     example: 'We could not verify your profile. Your region is not supported.',
   })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   autoComment?: string;
 
   @ApiPropertyOptional({
@@ -269,13 +220,11 @@ export class StrigaKycRejectionCommentsDto {
   })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   userComment?: string;
 
   @ApiPropertyOptional({ example: 'Incorrect company name.' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   clientComment?: string;
 
   @ApiPropertyOptional({
@@ -284,46 +233,38 @@ export class StrigaKycRejectionCommentsDto {
   })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   moderationComment?: string;
 }
 
-@Exclude()
 export class StrigaKycTierDto {
   @ApiProperty({ example: true })
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   eligible!: boolean;
 
   @ApiProperty({ example: 'NOT_STARTED' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   status!: string;
 
   @ApiPropertyOptional({ example: '0' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   outboundLimitConsumed?: string;
 
   @ApiPropertyOptional({ example: '1500000' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   outboundLimitAllowed?: string;
 
   @ApiPropertyOptional({ type: () => StrigaKycLimitSplitDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycLimitSplitDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   inboundLimitConsumed?: StrigaKycLimitSplitDto;
 
   @ApiPropertyOptional({ type: () => StrigaKycLimitSplitDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycLimitSplitDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   inboundLimitAllowed?: StrigaKycLimitSplitDto;
 
   @ApiPropertyOptional({
@@ -332,20 +273,16 @@ export class StrigaKycTierDto {
   })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   verificationExpiryDate?: string;
 }
 
-@Exclude()
 export class StrigaUserKycStatusDto {
   @ApiProperty({ example: '20ee2b7f-fd9b-4cc1-8dfe-695be722dd45' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   userId!: string;
 
   @ApiProperty({ example: 'REJECTED_FINAL' })
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   status!: string;
 
   @ApiPropertyOptional({
@@ -355,82 +292,69 @@ export class StrigaUserKycStatusDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   details?: string[];
 
   @ApiPropertyOptional({ type: () => StrigaKycRejectionCommentsDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycRejectionCommentsDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   rejectionComments?: StrigaKycRejectionCommentsDto;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   emailVerified?: boolean;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   mobileVerified?: boolean;
 
   @ApiPropertyOptional({ example: 2 })
   @IsOptional()
   @IsInt()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   currentTier?: number;
 
   @ApiPropertyOptional({ type: () => StrigaKycTierDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycTierDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   tier0?: StrigaKycTierDto;
 
   @ApiPropertyOptional({ type: () => StrigaKycTierDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycTierDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   tier1?: StrigaKycTierDto;
 
   @ApiPropertyOptional({ type: () => StrigaKycTierDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycTierDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   tier2?: StrigaKycTierDto;
 
   @ApiPropertyOptional({ type: () => StrigaKycTierDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaKycTierDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   tier3?: StrigaKycTierDto;
 
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   tinCollected?: boolean;
 
   @ApiPropertyOptional({ example: 'TIN_INFORMATION_MISSING_DAC8' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   reason?: string;
 
   @ApiPropertyOptional({ example: 'USER_ACCOUNT_ACTION_NEEDED' })
   @IsOptional()
   @IsString()
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   type?: string;
 }
 
-@Exclude()
 export class StrigaUserKycStatusResponseDto extends StrigaBaseResponseDto<StrigaUserKycStatusDto> {
   @ApiPropertyOptional({
     type: () => StrigaUserKycStatusDto,
@@ -439,6 +363,601 @@ export class StrigaUserKycStatusResponseDto extends StrigaBaseResponseDto<Striga
   @IsOptional()
   @ValidateNested()
   @Type(() => StrigaUserKycStatusDto)
-  @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   data!: StrigaUserKycStatusDto | null;
+}
+
+export class StrigaCardAddressResponseDto {
+  @ApiPropertyOptional({ example: '53338 Aurelie Mount' })
+  @IsOptional()
+  @IsString()
+  addressLine1?: string;
+
+  @ApiPropertyOptional({ example: '59880 Coy Club' })
+  @IsOptional()
+  @IsString()
+  addressLine2?: string;
+
+  @ApiPropertyOptional({ example: '11030' })
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+
+  @ApiPropertyOptional({ example: 'Medhurstfort' })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({ example: 'EE' })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional({ example: 'DHLExpress' })
+  @IsOptional()
+  @IsString()
+  dispatchMethod?: string;
+}
+
+export class StrigaCardSecurityResponseDto {
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  contactlessEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  withdrawalEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  internetPurchaseEnabled?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  overallLimitsEnabled?: boolean;
+}
+
+export class StrigaCardFeeValueResponseDto {
+  @ApiPropertyOptional({ example: '0' })
+  @IsOptional()
+  @IsString()
+  amount?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+}
+
+export class StrigaCardFeeResponseDto {
+  @ApiPropertyOptional({ example: '0' })
+  @IsOptional()
+  @IsString()
+  ourFee?: string;
+
+  @ApiPropertyOptional({ example: '0' })
+  @IsOptional()
+  @IsString()
+  theirFee?: string;
+
+  @ApiPropertyOptional({ example: '0' })
+  @IsOptional()
+  @IsString()
+  amount?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  feeCurrency?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional({ type: () => StrigaCardFeeValueResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardFeeValueResponseDto)
+  cardCreationFee?: StrigaCardFeeValueResponseDto;
+
+  @ApiPropertyOptional({ type: () => StrigaCardFeeValueResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardFeeValueResponseDto)
+  cardDeliveryFee?: StrigaCardFeeValueResponseDto;
+
+  @ApiPropertyOptional({ example: '1' })
+  @IsOptional()
+  @IsString()
+  exchangeRate?: string;
+}
+
+export class StrigaCardLimitsResponseDto extends StrigaCardLimitsRequestDto {
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyContactlessPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyContactlessPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyInternetPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyInternetPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyOverallPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyOverallPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 350 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyWithdrawalAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  dailyWithdrawalUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyContactlessPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyContactlessPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyInternetPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyInternetPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyOverallPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyOverallPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 3000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyWithdrawalAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  monthlyWithdrawalUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyContactlessPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyContactlessPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyInternetPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyInternetPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyOverallPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyOverallPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 15000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyPurchaseAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyPurchaseUsed?: number;
+
+  @ApiPropertyOptional({ example: 3000 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyWithdrawalAvailable?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  weeklyWithdrawalUsed?: number;
+}
+
+export class StrigaCreateCardResponseDto {
+  @ApiPropertyOptional({ example: 'CARD 1' })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiPropertyOptional({ example: '1d7377f8-eb20-42d5-9979-feb7ab9498bf' })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiPropertyOptional({ example: 'VIRTUAL' })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiPropertyOptional({ example: 'c1d2340e-89ef-4385-9104-e24363058ad6' })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiPropertyOptional({ example: '**** **** **** 1234' })
+  @IsOptional()
+  @IsString()
+  maskedCardNumber?: string;
+
+  @ApiPropertyOptional({ example: '10/29' })
+  @IsOptional()
+  @IsString()
+  expiryData?: string;
+
+  @ApiPropertyOptional({ example: 'ACTIVE' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ type: () => StrigaCardAddressResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardAddressResponseDto)
+  address?: StrigaCardAddressResponseDto;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isEnrolledFor3dSecure?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isCard3dSecureActivated?: boolean;
+
+  @ApiPropertyOptional({ type: () => StrigaCardSecurityResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardSecurityResponseDto)
+  security?: StrigaCardSecurityResponseDto;
+
+  @ApiPropertyOptional({ example: '2025-03-13T10:45:00.124Z' })
+  @IsOptional()
+  @IsString()
+  activatedAt?: string;
+
+  @ApiPropertyOptional({ example: '9ac77e120ef8c9dcd92abedbfe994bc5' })
+  @IsOptional()
+  @IsString()
+  linkedAccountId?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  linkedAccountCurrency?: string;
+
+  @ApiPropertyOptional({ example: '4ea59c14765e3816f91909fe2299ea38' })
+  @IsOptional()
+  @IsString()
+  lastLinkedAccountId?: string;
+
+  @ApiPropertyOptional({ example: 'e3c9e087-2a31-403d-a438-47bde03b95d2' })
+  @IsOptional()
+  @IsString()
+  parentWalletId?: string;
+
+  @ApiPropertyOptional({ example: '2025-03-13T10:45:00.124Z' })
+  @IsOptional()
+  @IsString()
+  createdAt?: string;
+
+  @ApiPropertyOptional({ type: () => StrigaCardFeeResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardFeeResponseDto)
+  fee?: StrigaCardFeeResponseDto;
+
+  @ApiPropertyOptional({ type: () => StrigaCardLimitsResponseDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardLimitsResponseDto)
+  limits?: StrigaCardLimitsResponseDto;
+
+  @ApiPropertyOptional({ example: 'BLOCKEDBYCLIENT' })
+  @IsOptional()
+  @IsString()
+  blockType?: string;
+}
+
+export class StrigaLinkCardAccountResponseDto {
+  @ApiPropertyOptional({ example: '481f53afd5e311c1b4fb72a6046a5a9b' })
+  @IsOptional()
+  @IsString()
+  linkedAccountId?: string;
+
+  @ApiPropertyOptional({ example: '355c429d-272c-4e4c-a863-2c6f45d28ca9' })
+  @IsOptional()
+  @IsString()
+  parentWalletId?: string;
+}
+
+export class StrigaCardStatementOrderAmountDto {
+  @ApiPropertyOptional({ example: 'BTC' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional({ example: '0.00030718' })
+  @IsOptional()
+  @IsString()
+  amountFloat?: string;
+
+  @ApiPropertyOptional({ example: '30718' })
+  @IsOptional()
+  @IsString()
+  amount?: string;
+}
+
+export class StrigaCardStatementOrderDto {
+  @ApiPropertyOptional({ example: '1' })
+  @IsOptional()
+  @IsString()
+  price?: string;
+
+  @ApiPropertyOptional({ type: () => StrigaCardStatementOrderAmountDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardStatementOrderAmountDto)
+  debit?: StrigaCardStatementOrderAmountDto;
+
+  @ApiPropertyOptional({ type: () => StrigaCardStatementOrderAmountDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardStatementOrderAmountDto)
+  credit?: StrigaCardStatementOrderAmountDto;
+}
+
+export class StrigaCardStatementTransactionDto {
+  @ApiPropertyOptional({ example: 'f334b23d-a35d-4a7e-a47e-440fafc1924f' })
+  @IsOptional()
+  @IsString()
+  relatedCardTransactionId?: string;
+
+  @ApiPropertyOptional({ example: 'CARD_AUTHORIZATION' })
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiPropertyOptional({ example: 10.5 })
+  @IsOptional()
+  @Type(() => Number)
+  originalAmount?: number;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  originalCurrency?: string;
+
+  @ApiPropertyOptional({ example: 10.5 })
+  @IsOptional()
+  @Type(() => Number)
+  transactionAmount?: number;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  transactionCurrency?: string;
+
+  @ApiPropertyOptional({ example: 'Striga Simulator' })
+  @IsOptional()
+  @IsString()
+  merchantId?: string;
+
+  @ApiPropertyOptional({ example: 'Striga Simulator' })
+  @IsOptional()
+  @IsString()
+  merchantName?: string;
+
+  @ApiPropertyOptional({ example: 'Tallinn' })
+  @IsOptional()
+  @IsString()
+  merchantCity?: string;
+
+  @ApiPropertyOptional({ example: 'EST' })
+  @IsOptional()
+  @IsString()
+  merchantCountryCode?: string;
+
+  @ApiPropertyOptional({ example: '5812' })
+  @IsOptional()
+  @IsString()
+  merchantCategoryCode?: string;
+
+  @ApiPropertyOptional({ example: 'f334b23d-a35d-4a7e-a47e-440fafc1924f' })
+  @IsOptional()
+  @IsString()
+  accountTransactionId?: string;
+
+  @ApiPropertyOptional({ type: () => StrigaCardStatementOrderDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StrigaCardStatementOrderDto)
+  order?: StrigaCardStatementOrderDto;
+
+  @ApiPropertyOptional({ example: 'd8a8c7c7ceeec2c221971febd00d5685' })
+  @IsOptional()
+  @IsString()
+  linkedAccountId?: string;
+
+  @ApiPropertyOptional({ example: 'BTC' })
+  @IsOptional()
+  @IsString()
+  linkedAccountCurrency?: string;
+
+  @ApiPropertyOptional({ example: '0cb9da83-1252-4add-9290-e9458baf2892' })
+  @IsOptional()
+  @IsString()
+  parentWalletId?: string;
+
+  @ApiPropertyOptional({ example: '2023-11-09T11:38:50.877Z' })
+  @IsOptional()
+  @IsString()
+  createdAt?: string;
+
+  @ApiPropertyOptional({ example: '10.5' })
+  @IsOptional()
+  @IsString()
+  merchantTransactionAmount?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  merchantTransactionCurrency?: string;
+
+  @ApiPropertyOptional({ example: '10.5' })
+  @IsOptional()
+  @IsString()
+  accountTransactionAmount?: string;
+
+  @ApiPropertyOptional({ example: 'EUR' })
+  @IsOptional()
+  @IsString()
+  accountTransactionCurrency?: string;
+}
+
+export class StrigaCardStatementResponseDto {
+  @ApiPropertyOptional({ type: () => [StrigaCardStatementTransactionDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StrigaCardStatementTransactionDto)
+  transactions?: StrigaCardStatementTransactionDto[];
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  count?: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  total?: number;
+}
+
+export class StrigaCardsByUserResponseDto {
+  @ApiPropertyOptional({ type: () => [StrigaCreateCardResponseDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StrigaCreateCardResponseDto)
+  cards?: StrigaCreateCardResponseDto[];
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  count?: number;
+
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  total?: number;
 }

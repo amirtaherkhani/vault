@@ -146,6 +146,8 @@ Purpose: webhook payload contracts parsed from provider callbacks.
 Usage rule:
 
 - these DTOs are mainly for provider services/workflows/internal events.
+- if a DTO is only used internally (not returned by controller endpoints), do not use `@Expose()` / `@Exclude()` and do not use role-group serialization decorators.
+- internal provider/base services (for example `src/providers/striga/services/striga-base.service.ts`) should keep transport DTOs as plain validation/swagger contracts.
 - do not create many small duplicate DTOs when one base DTO can be reused.
 
 ### 2) Controller-facing DTOs (app API contracts)
@@ -157,7 +159,7 @@ Location:
 Usage rule:
 
 - methods used directly by controllers should return explicit DTO/domain instances.
-- apply `@Exclude()` + `@Expose(...)` and role groups where required.
+- apply `@Exclude()` + `@Expose(...)` and role groups only when response serialization/group filtering is required for client-facing endpoints.
 - use `GroupPlainToInstance` / `GroupPlainToInstances` in service methods used directly by controllers.
 
 ### 3) DTO inheritance

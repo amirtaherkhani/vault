@@ -36,7 +36,10 @@ import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
-import { SessionMetadata, SessionUser } from '../session/types/session-base.type';
+import {
+  SessionMetadata,
+  SessionUser,
+} from '../session/types/session-base.type';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
 import { UNKNOWN_USER_NAME_PLACEHOLDER } from '../users/constants/user.constants';

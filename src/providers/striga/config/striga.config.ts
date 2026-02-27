@@ -2,11 +2,28 @@ import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { createToggleableConfig } from '../../../config/config.helper';
 import { StrigaConfig } from './striga-config.type';
 import {
+  STRIGA_CARD_CREATE_ASSET_NAMES,
   STRIGA_ENABLE,
   STRIGA_MAX_RETRIES,
   STRIGA_REQUEST_TIMEOUT_MS,
   STRIGA_SANDBOX_BASE_URL,
 } from '../types/striga-const.type';
+
+function parseCsvToUppercaseList(
+  value: string | undefined,
+  fallback: string[],
+): string[] {
+  if (!value || value.trim().length === 0) {
+    return [...fallback];
+  }
+
+  const normalized = value
+    .split(',')
+    .map((item) => item.trim().toUpperCase())
+    .filter((item) => item.length > 0);
+
+  return Array.from(new Set(normalized));
+}
 
 class StrigaEnvironmentVariablesValidator {
   @IsString()
@@ -38,6 +55,10 @@ class StrigaEnvironmentVariablesValidator {
   @Min(0)
   @IsOptional()
   STRIGA_MAX_RETRIES?: number;
+
+  @IsString()
+  @IsOptional()
+  STRIGA_CARD_CREATE_ASSET_NAMES?: string;
 }
 
 const defaults: StrigaConfig = {
@@ -49,6 +70,7 @@ const defaults: StrigaConfig = {
   baseUrl: STRIGA_SANDBOX_BASE_URL,
   requestTimeoutMs: STRIGA_REQUEST_TIMEOUT_MS,
   maxRetries: STRIGA_MAX_RETRIES,
+  cardCreateAssetNames: STRIGA_CARD_CREATE_ASSET_NAMES,
 };
 
 export default createToggleableConfig<
@@ -66,5 +88,9 @@ export default createToggleableConfig<
     requestTimeoutMs:
       env.STRIGA_REQUEST_TIMEOUT_MS ?? defaults.requestTimeoutMs,
     maxRetries: env.STRIGA_MAX_RETRIES ?? defaults.maxRetries,
+    cardCreateAssetNames: parseCsvToUppercaseList(
+      env.STRIGA_CARD_CREATE_ASSET_NAMES,
+      defaults.cardCreateAssetNames,
+    ),
   }),
 });

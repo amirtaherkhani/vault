@@ -476,11 +476,10 @@ export class StrigaUserService extends StrigaBaseService {
       `startKycForMe: done externalId=${strigaUser.externalId} tier=${payload.tier}`,
     );
 
-    return GroupPlainToInstance(
-      StrigaStartKycResponseDto,
-      responsePayload,
-      [RoleEnum.admin, RoleEnum.user],
-    );
+    return GroupPlainToInstance(StrigaStartKycResponseDto, responsePayload, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   async startKycForAdmin(
@@ -521,11 +520,10 @@ export class StrigaUserService extends StrigaBaseService {
       `startKycForAdmin: done appUserId=${String(appUserId)} externalId=${strigaUser.externalId} tier=${payload.tier}`,
     );
 
-    return GroupPlainToInstance(
-      StrigaStartKycResponseDto,
-      responsePayload,
-      [RoleEnum.admin, RoleEnum.user],
-    );
+    return GroupPlainToInstance(StrigaStartKycResponseDto, responsePayload, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   async findKycTotalStatusForMe(
@@ -566,11 +564,10 @@ export class StrigaUserService extends StrigaBaseService {
       `findKycTotalStatusForMe: done appUserId=${String(appUserId)} approved=${String(approved)}`,
     );
 
-    return GroupPlainToInstance(
-      StrigaKycTotalStatusDto,
-      { approved },
-      [RoleEnum.admin, RoleEnum.user],
-    );
+    return GroupPlainToInstance(StrigaKycTotalStatusDto, { approved }, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
   /**
