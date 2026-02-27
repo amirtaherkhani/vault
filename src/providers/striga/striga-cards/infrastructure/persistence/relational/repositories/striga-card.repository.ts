@@ -45,6 +45,17 @@ export class StrigaCardRelationalRepository implements StrigaCardRepository {
     return entity ? StrigaCardMapper.toDomain(entity) : null;
   }
 
+  async findByExternalId(
+    externalId: NonNullable<StrigaCard['externalId']>,
+  ): Promise<NullableType<StrigaCard>> {
+    const entity = await this.strigaCardRepository.findOne({
+      where: { externalId },
+      order: { createdAt: 'ASC' },
+    });
+
+    return entity ? StrigaCardMapper.toDomain(entity) : null;
+  }
+
   async findByIds(ids: StrigaCard['id'][]): Promise<StrigaCard[]> {
     const entities = await this.strigaCardRepository.find({
       where: { id: In(ids) },

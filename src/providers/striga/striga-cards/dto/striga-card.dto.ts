@@ -28,6 +28,16 @@ export class StrigaCardDto {
   id!: string;
 
   @ApiPropertyOptional({
+    example: '1d7377f8-eb20-42d5-9979-feb7ab9498bf',
+    nullable: true,
+    description: 'Provider card ID in Striga cloud',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  externalId?: string | null;
+
+  @ApiPropertyOptional({
     example: 'ACTIVE',
     nullable: true,
   })

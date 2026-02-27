@@ -4,6 +4,7 @@ import { AccountsService } from '../../../accounts/accounts.service';
 import { AccountProviderName } from '../../../accounts/types/account-enum.type';
 import { InternalEventsService } from '../../../common/internal-events/internal-events.service';
 import {
+  StrigaCardIdRequestDto,
   StrigaCreateCardRequestDto,
   StrigaCreateCardType,
   StrigaGetCardsByUserRequestDto,
@@ -191,6 +192,7 @@ export class StrigaCardWorkflowService {
     } = params;
 
     const localCard = await this.findExistingLocalCard(strigaUser, {
+      externalId: null,
       parentWalletId: walletId,
       linkedAccountId: walletAccount.accountId,
       linkedAccountCurrency: walletAccount.currency,
@@ -199,9 +201,29 @@ export class StrigaCardWorkflowService {
       this.matchesProviderCardToWalletAccount(card, walletAccount),
     );
 
-    // DB first: local exists -> update local only.
+    // DB first: local exists -> refresh from provider by externalId.
     if (localCard) {
-      if (!cloudCard) {
+      let providerCardByExternalId: StrigaCreateCardResponseDto | null = null;
+      const localExternalId = this.toNullableString(localCard.externalId);
+      if (localExternalId) {
+        try {
+          const getCardByIdPayload: StrigaCardIdRequestDto = {
+            cardId: localExternalId,
+          };
+          const getCardByIdResponse =
+            await this.strigaCardService.findCardByIdFromProvider(
+              getCardByIdPayload,
+            );
+          providerCardByExternalId = this.toCardDto(getCardByIdResponse?.data);
+        } catch (error) {
+          this.logger.warn(
+            `[trace=${traceId}] Could not refresh card by externalId=${localExternalId}; falling back to list payload. reason=${this.formatError(error)} source=${source}.`,
+          );
+        }
+      }
+
+      const effectiveCloudCard = providerCardByExternalId ?? cloudCard;
+      if (!effectiveCloudCard) {
         this.logger.debug(
           `[trace=${traceId}] Local card exists and cloud card was not found walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${localCard.type} source=${source}.`,
         );
@@ -213,13 +235,13 @@ export class StrigaCardWorkflowService {
 
       const upserted = await this.upsertLocalCardFromProviderCard(
         strigaUser,
-        cloudCard,
+        effectiveCloudCard,
         traceId,
         `${source}:update-local`,
       );
-      const type = this.toCardType(cloudCard.type);
+      const type = this.toCardType(effectiveCloudCard.type);
       this.logger.debug(
-        `[trace=${traceId}] Local card updated from cloud walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted.operation} source=${source}.`,
+        `[trace=${traceId}] Local card updated from cloud walletId=${walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} type=${type} result=${upserted.operation} source=${source} refreshByExternalId=${providerCardByExternalId ? 'yes' : 'no'}.`,
       );
       return { operation: 'updated', type };
     }
@@ -430,6 +452,7 @@ export class StrigaCardWorkflowService {
   }> {
     const payload = this.toCardWritePayload(providerCard);
     if (
+      !payload.externalId &&
       !payload.linkedAccountId &&
       !payload.linkedAccountCurrency &&
       !payload.parentWalletId
@@ -477,16 +500,26 @@ export class StrigaCardWorkflowService {
   private async findExistingLocalCard(
     strigaUser: StrigaUser,
     payload: {
+      externalId?: string | null;
       parentWalletId?: string | null;
       linkedAccountId?: string | null;
       linkedAccountCurrency?: string | null;
     },
   ): Promise<StrigaCard | null> {
+    const externalId = String(payload.externalId ?? '').trim();
     const parentWalletId = String(payload.parentWalletId ?? '').trim();
     const linkedAccountId = String(payload.linkedAccountId ?? '').trim();
     const linkedAccountCurrency = String(
       payload.linkedAccountCurrency ?? '',
     ).trim();
+
+    if (externalId) {
+      const byExternalId =
+        await this.strigaCardsService.findByExternalId(externalId);
+      if (byExternalId) {
+        return byExternalId;
+      }
+    }
 
     if (parentWalletId && linkedAccountId) {
       const byWalletAndAccount =
@@ -546,6 +579,7 @@ export class StrigaCardWorkflowService {
   }
 
   private toCardWritePayload(providerCard: StrigaCreateCardResponseDto): {
+    externalId: string | null;
     status: string | null;
     type: StrigaCardType;
     maskedCardNumber: string | null;
@@ -560,6 +594,7 @@ export class StrigaCardWorkflowService {
     blockType: string | null;
   } {
     return {
+      externalId: this.toNullableString(providerCard.id),
       status: this.toNullableString(providerCard.status),
       type: this.toCardType(providerCard.type),
       maskedCardNumber: this.toNullableString(providerCard.maskedCardNumber),

@@ -396,6 +396,16 @@ export class StrigaCardLimitsDto {
 @Exclude()
 export class CreateStrigaCardDto {
   @ApiPropertyOptional({
+    example: '1d7377f8-eb20-42d5-9979-feb7ab9498bf',
+    description: 'Provider card ID in Striga cloud',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  externalId?: string | null;
+
+  @ApiPropertyOptional({
     example: 'ACTIVE',
     description: 'Card status snapshot',
     nullable: true,

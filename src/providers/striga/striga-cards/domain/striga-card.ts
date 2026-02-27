@@ -183,6 +183,13 @@ export class StrigaCardLimits {
 }
 
 export class StrigaCard {
+  @ApiPropertyOptional({
+    type: () => String,
+    nullable: true,
+    description: 'Provider card ID in Striga cloud',
+  })
+  externalId?: string | null;
+
   @ApiProperty({
     type: () => String,
     nullable: true,

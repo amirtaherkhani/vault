@@ -42,6 +42,7 @@ export class StrigaCardsService {
     return this.strigaCardRepository.create({
       // Do not remove comment below.
       // <creating-property-payload />
+      externalId: createStrigaCardDto.externalId,
       status: createStrigaCardDto.status,
       type: createStrigaCardDto.type ?? StrigaCardType.VIRTUAL,
       maskedCardNumber: createStrigaCardDto.maskedCardNumber,
@@ -74,6 +75,10 @@ export class StrigaCardsService {
 
   findById(id: StrigaCard['id']) {
     return this.strigaCardRepository.findById(id);
+  }
+
+  findByExternalId(externalId: NonNullable<StrigaCard['externalId']>) {
+    return this.strigaCardRepository.findByExternalId(externalId);
   }
 
   findByIds(ids: StrigaCard['id'][]) {
@@ -152,6 +157,7 @@ export class StrigaCardsService {
     return this.strigaCardRepository.update(id, {
       // Do not remove comment below.
       // <updating-property-payload />
+      externalId: updateStrigaCardDto.externalId,
       status: updateStrigaCardDto.status,
       type: updateStrigaCardDto.type,
       maskedCardNumber: updateStrigaCardDto.maskedCardNumber,

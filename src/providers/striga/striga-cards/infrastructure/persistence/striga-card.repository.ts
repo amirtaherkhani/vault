@@ -17,6 +17,10 @@ export abstract class StrigaCardRepository {
 
   abstract findById(id: StrigaCard['id']): Promise<NullableType<StrigaCard>>;
 
+  abstract findByExternalId(
+    externalId: NonNullable<StrigaCard['externalId']>,
+  ): Promise<NullableType<StrigaCard>>;
+
   abstract findByIds(ids: StrigaCard['id'][]): Promise<StrigaCard[]>;
 
   abstract findByStrigaUserIdOrExternalId(

@@ -22,6 +22,13 @@ export class StrigaCardEntity extends EntityRelationalHelper {
   @Column({
     nullable: true,
     type: String,
+    unique: true,
+  })
+  externalId?: string | null;
+
+  @Column({
+    nullable: true,
+    type: String,
   })
   status?: string | null;
 

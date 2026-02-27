@@ -14,6 +14,7 @@ import {
 } from '../../../users/types/user-event.type';
 import { StrigaUserWorkflowService } from '../services/striga-user-workflow.service';
 import { StrigaCardWorkflowService } from '../services/striga-card-workflow.service';
+import { StrigaCardsService } from '../striga-cards/striga-cards.service';
 import { StrigaUsersService } from '../striga-users/striga-users.service';
 import { StrigaUser } from '../striga-users/domain/striga-user';
 import {
@@ -27,6 +28,7 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
   constructor(
     private readonly workflow: StrigaUserWorkflowService,
     private readonly strigaUsersService: StrigaUsersService,
+    private readonly strigaCardsService: StrigaCardsService,
     private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
   ) {
     super(StrigaUserLoggedInEventHandler.name);
@@ -82,6 +84,18 @@ export class StrigaUserLoggedInEventHandler extends InternalEventHandlerBase {
       return;
     }
 
+    const localCards =
+      await this.strigaCardsService.findByStrigaUserIdOrExternalId(
+        strigaUser.id,
+        strigaUser.externalId,
+      );
+    if (localCards.length > 0) {
+      this.logger.debug(
+        `[trace=${traceId}] Card flow skipped because local cards already exist count=${localCards.length}. Source=${source} appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
+      );
+      return;
+    }
+
     this.logger.log(
       `[trace=${traceId}] Running isolated card flow appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')} source=${source}.`,
     );
@@ -103,6 +117,7 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
   constructor(
     private readonly workflow: StrigaUserWorkflowService,
     private readonly strigaUsersService: StrigaUsersService,
+    private readonly strigaCardsService: StrigaCardsService,
     private readonly strigaCardWorkflowService: StrigaCardWorkflowService,
   ) {
     super(StrigaUserAddedEventHandler.name);
@@ -151,6 +166,18 @@ export class StrigaUserAddedEventHandler extends InternalEventHandlerBase {
     if (!isTier1Approved(strigaUser)) {
       this.logger.debug(
         `[trace=${traceId}] Card flow skipped because local tier1 is ${String(strigaUser.kyc?.tier1?.status ?? 'null')} (required: APPROVED). Source=${source}.`,
+      );
+      return;
+    }
+
+    const localCards =
+      await this.strigaCardsService.findByStrigaUserIdOrExternalId(
+        strigaUser.id,
+        strigaUser.externalId,
+      );
+    if (localCards.length > 0) {
+      this.logger.debug(
+        `[trace=${traceId}] Card flow skipped because local cards already exist count=${localCards.length}. Source=${source} appUserId=${String(appUserId)} strigaExternalId=${String(strigaUser.externalId ?? 'n/a')}.`,
       );
       return;
     }

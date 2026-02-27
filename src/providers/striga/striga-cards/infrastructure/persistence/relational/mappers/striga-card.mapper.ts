@@ -7,6 +7,7 @@ import { StrigaCardEntity } from '../entities/striga-card.entity';
 export class StrigaCardMapper {
   static toDomain(raw: StrigaCardEntity): StrigaCard {
     const domainEntity = new StrigaCard();
+    domainEntity.externalId = raw.externalId;
     domainEntity.status = raw.status;
     domainEntity.type = raw.type;
     domainEntity.maskedCardNumber = raw.maskedCardNumber;
@@ -33,6 +34,7 @@ export class StrigaCardMapper {
 
   static toPersistence(domainEntity: StrigaCard): StrigaCardEntity {
     const persistenceEntity = new StrigaCardEntity();
+    persistenceEntity.externalId = domainEntity.externalId;
     persistenceEntity.status = domainEntity.status;
     persistenceEntity.type = domainEntity.type;
     persistenceEntity.maskedCardNumber = domainEntity.maskedCardNumber;
