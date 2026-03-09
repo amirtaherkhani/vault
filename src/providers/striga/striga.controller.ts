@@ -52,6 +52,15 @@ import { UserKycService } from './services/striga-kyc.service';
 import { StrigaUser } from './striga-users/domain/striga-user';
 import { StrigaService } from './striga.service';
 import { StrigaTransactionService } from './services/striga-transaction.service';
+import {
+  StrigaAccountStatementByAssetForAdminDto,
+  StrigaAccountStatementByAssetForMeDto,
+  StrigaAccountStatementByIdForAdminDto,
+  StrigaAccountStatementByIdForMeDto,
+  StrigaCardStatementForAdminDto,
+  StrigaCardStatementForMeDto,
+} from './striga-cards/dto/striga-card-transaction.dto';
+import { StrigaBaseResponseDto } from './dto/striga-base.response.dto';
 
 @ResponseModel('STRIGA')
 @UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
@@ -223,5 +232,112 @@ export class StrigaController {
     @Body() body: StrigaStartKycForAdminDto,
   ): Promise<StrigaStartKycResponseDto> {
     return this.userKycService.startKycForAdmin(body);
+  }
+
+  // Transactions - account by id (current user)
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get account statement by accountId for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @RequireStrigaUser()
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('transactions/accounts/me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findAccountStatementForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaAccountStatementByIdForMeDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findAccountStatementForMe(
+      req,
+      body,
+    );
+  }
+
+  // Transactions - account by id (admin)
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get account statement by accountId (admin)', [
+    RoleEnum.admin,
+  ])
+  @Post('transactions/accounts')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findAccountStatementForAdmin(
+    @Body() body: StrigaAccountStatementByIdForAdminDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findAccountStatementForAdmin(
+      body,
+    );
+  }
+
+  // Transactions - account by currency (current user)
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get account statement by currency for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @RequireStrigaUser()
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('transactions/accounts/me/asset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findAccountStatementByAssetForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaAccountStatementByAssetForMeDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findAccountStatementByAssetForMe(
+      req,
+      body,
+    );
+  }
+
+  // Transactions - account by currency (admin)
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get account statement by currency (admin)', [
+    RoleEnum.admin,
+  ])
+  @Post('transactions/accounts/asset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findAccountStatementByAssetForAdmin(
+    @Body() body: StrigaAccountStatementByAssetForAdminDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findAccountStatementByAssetForAdmin(
+      body,
+    );
+  }
+
+  // Transactions - card statement (current user)
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get card statement for current user', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @RequireStrigaUser()
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('transactions/cards/me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findCardStatementForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaCardStatementForMeDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findCardStatementForMe(
+      req,
+      body,
+    );
+  }
+
+  // Transactions - card statement (admin)
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get card statement (admin)', [RoleEnum.admin])
+  @Post('transactions/cards')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: StrigaBaseResponseDto })
+  async findCardStatementForAdmin(
+    @Body() body: StrigaCardStatementForAdminDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return await this.strigaTransactionService.findCardStatementForAdmin(body);
   }
 }

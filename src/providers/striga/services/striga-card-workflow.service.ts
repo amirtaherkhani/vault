@@ -29,21 +29,24 @@ import { StrigaCardEvent } from '../events/striga-card.event';
 import { StrigaSupportedCardAssetName } from '../types/striga-const.type';
 import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
 import { StrigaBaseService } from './striga-base.service';
+import { StrigaService } from '../striga.service';
 
 const STRIGA_CARD_NAME_ON_CARD = 'Vero Vault';
 const STRIGA_CARDS_PAGE_LIMIT = 100;
 
 @Injectable()
-export class StrigaCardWorkflowService {
+export class StrigaCardWorkflowService extends StrigaBaseService {
   private readonly logger = new Logger(StrigaCardWorkflowService.name);
 
   constructor(
+    strigaService: StrigaService,
     private readonly accountsService: AccountsService,
-    private readonly StrigaBaseService : StrigaBaseService,
     private readonly strigaCardsService: StrigaCardsService,
     private readonly internalEventsService: InternalEventsService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    super(strigaService);
+  }
 
   /**
    * Sync cards for user's primary Striga wallet with DB-first strategy.
@@ -82,11 +85,10 @@ export class StrigaCardWorkflowService {
     const assetNames = this.resolveCardAssetNames();
     let walletAccounts: StrigaWalletAccountSummary[] = [];
     try {
-      walletAccounts =
-        await this.StrigaBaseService.findWalletAccountsByCurrenciesFromProvider(
-          { walletId, userId: externalId },
-          assetNames,
-        );
+      walletAccounts = await this.findWalletAccountsByCurrenciesFromProvider(
+        { walletId, userId: externalId },
+        assetNames,
+      );
       if (walletAccounts.length === 0) {
         this.logger.warn(
           `[trace=${traceId}] No wallet accounts matched configured assets=${assetNames.join(',')} walletId=${walletId}; card creation skipped. Source=${source}.`,
@@ -100,7 +102,7 @@ export class StrigaCardWorkflowService {
       return;
     }
 
-    const defaultPassword = this.StrigaBaseService.getCardDefaultPassword();
+    const defaultPassword = this.getCardDefaultPassword();
     if (!defaultPassword) {
       this.logger.error(
         `[trace=${traceId}] Card creation skipped because STRIGA card default password is empty. Source=${source}.`,
@@ -212,10 +214,9 @@ export class StrigaCardWorkflowService {
           const getCardByIdPayload: StrigaCardIdRequestDto = {
             cardId: localExternalId,
           };
-          const getCardByIdResponse =
-            await this.StrigaBaseService.findCardByIdFromProvider(
-              getCardByIdPayload,
-            );
+          const getCardByIdResponse = await this.findCardByIdFromProvider(
+            getCardByIdPayload,
+          );
           providerCardByExternalId = this.toCardDto(getCardByIdResponse?.data);
         } catch (error) {
           this.logger.warn(
@@ -297,8 +298,7 @@ export class StrigaCardWorkflowService {
       `[trace=${traceId}] Creating virtual card externalId=${externalId} walletId=${walletAccount.walletId} accountId=${walletAccount.accountId} currency=${walletAccount.currency} source=${source}.`,
     );
 
-    const createResponse =
-      await this.StrigaBaseService.createCardInProvider(createPayload);
+    const createResponse = await this.createCardInProvider(createPayload);
     const createdCard = this.toCardDto(createResponse?.data);
     if (!createdCard) {
       this.logger.warn(
@@ -366,10 +366,7 @@ export class StrigaCardWorkflowService {
         limit: STRIGA_CARDS_PAGE_LIMIT,
         offset,
       };
-      const response =
-        await this.StrigaBaseService.findCardsByUserFromProvider(
-          requestPayload,
-        );
+      const response = await this.findCardsByUserFromProvider(requestPayload);
 
       const page = this.extractCardsByUserData(response?.data);
       const pageCards = page.cards ?? [];
@@ -622,7 +619,7 @@ export class StrigaCardWorkflowService {
   }
 
   private resolveCardAssetNames(): string[] {
-    const configured = this.StrigaBaseService.getCardCreateAssetNames();
+    const configured = this.getCardCreateAssetNames();
     if (configured.length > 0) {
       return configured;
     }

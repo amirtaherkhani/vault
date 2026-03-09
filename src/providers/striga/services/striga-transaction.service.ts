@@ -21,6 +21,13 @@ import {
 } from '../striga-cards/dto/striga-card-transaction.dto';
 import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
 import { StrigaBaseResponseDto } from '../dto/striga-base.response.dto';
+import { AccountsService } from '../../../accounts/accounts.service';
+import { AccountProviderName } from '../../../accounts/types/account-enum.type';
+import { RoleEnum } from '../../../roles/roles.enum';
+import {
+  isAccountOwnedByAppUser,
+  isAccountOwnedByStrigaUser,
+} from '../helpers/striga-account.helper';
 
 @Injectable()
 export class StrigaTransactionService extends StrigaBaseService {
@@ -30,6 +37,7 @@ export class StrigaTransactionService extends StrigaBaseService {
     strigaService: StrigaService,
     private readonly strigaUsersService: StrigaUsersService,
     private readonly strigaCardsService: StrigaCardsService,
+    private readonly accountsService: AccountsService,
   ) {
     super(strigaService);
   }
@@ -118,9 +126,13 @@ export class StrigaTransactionService extends StrigaBaseService {
   ): Promise<StrigaBaseResponseDto> {
     const strigaUser = await this.resolveStrigaUserForAppUser(req.user?.id);
     const card = await this.resolveCardForUser(payload.cardId, strigaUser);
+    const externalCardId = String(card.externalId ?? '').trim();
+    if (!externalCardId) {
+      throw new BadRequestException('Card is missing provider identifier.');
+    }
 
     return this.findCardStatementFromProvider({
-      cardId: card.externalId,
+      cardId: externalCardId,
       startDate: payload.startDate,
       endDate: payload.endDate,
       page: payload.page,
@@ -133,9 +145,13 @@ export class StrigaTransactionService extends StrigaBaseService {
   ): Promise<StrigaBaseResponseDto> {
     const strigaUser = await this.resolveStrigaUserForAppUser(payload.userId);
     const card = await this.resolveCardForUser(payload.cardId, strigaUser);
+    const externalCardId = String(card.externalId ?? '').trim();
+    if (!externalCardId) {
+      throw new BadRequestException('Card is missing provider identifier.');
+    }
 
     return this.findCardStatementFromProvider({
-      cardId: card.externalId,
+      cardId: externalCardId,
       startDate: payload.startDate,
       endDate: payload.endDate,
       page: payload.page,
@@ -185,15 +201,16 @@ export class StrigaTransactionService extends StrigaBaseService {
     accountId: string,
     strigaUser: StrigaUser,
   ): Promise<string> {
-    const cards = await this.strigaCardsService.findByStrigaUserIdOrExternalId(
-      strigaUser.id,
-      strigaUser.externalId,
-    );
-    const ownsAccount = cards.some(
-      (card) => card.linkedAccountId === accountId,
-    );
+    const account = await this.accountsService.findDomainByAccountId(accountId);
 
-    if (!ownsAccount) {
+    if (!account || account.providerName !== AccountProviderName.STRIGA) {
+      throw new NotFoundException('Account not found for user.');
+    }
+
+    const ownedByAppUser = isAccountOwnedByAppUser(account, strigaUser);
+    const ownedByStrigaUser = isAccountOwnedByStrigaUser(account, strigaUser);
+
+    if (!ownedByAppUser && !ownedByStrigaUser) {
       throw new NotFoundException('Account not found for user.');
     }
 

@@ -324,6 +324,12 @@ export class AccountsService {
     return account ? GroupPlainToInstance(AccountDto, account, roles) : null;
   }
 
+  async findDomainByAccountId(
+    accountId: Account['accountId'],
+  ): Promise<NullableType<Account>> {
+    return this.accountRepository.findByAccountId(accountId);
+  }
+
   async findByUserSocialId(
     socialId: User['socialId'],
     roles: RoleEnum[] = [RoleEnum.admin],
