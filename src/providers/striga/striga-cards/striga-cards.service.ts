@@ -6,6 +6,7 @@ import {
   Injectable,
   HttpStatus,
   UnprocessableEntityException,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreateStrigaCardDto } from './dto/create-striga-card.dto';
 import { UpdateStrigaCardDto } from './dto/update-striga-card.dto';
@@ -18,16 +19,27 @@ import { AccountsService } from '../../../accounts/accounts.service';
 import { AccountProviderName } from '../../../accounts/types/account-enum.type';
 import { RequestWithUser } from '../../../utils/types/object.type';
 import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
+import { StrigaService } from '../striga.service';
+import { StrigaBaseService } from '../services/striga-base.service';
+import { StrigaSetCardPinRequestDto } from '../dto/striga-base.request.dto';
+import {
+  StrigaCardPinResultDto,
+  StrigaSetCardPinForAdminDto,
+  StrigaSetCardPinForMeDto,
+} from './dto/striga-card-pin.dto';
 
 @Injectable()
-export class StrigaCardsService {
+export class StrigaCardsService extends StrigaBaseService {
   constructor(
+    strigaService: StrigaService,
     private readonly strigaUserService: StrigaUsersService,
 
     // Dependencies here
     private readonly accountsService: AccountsService,
     private readonly strigaCardRepository: StrigaCardRepository,
-  ) {}
+  ) {
+    super(strigaService);
+  }
 
   async create(createStrigaCardDto: CreateStrigaCardDto) {
     // Do not remove comment below.
@@ -111,6 +123,68 @@ export class StrigaCardsService {
       userId,
       externalId,
     );
+  }
+
+  async setCardPinForMe(
+    req: RequestWithUser,
+    payload: StrigaSetCardPinForMeDto,
+  ): Promise<StrigaCardPinResultDto> {
+    const appUserId = req.user?.id;
+    const strigaUser = await this.strigaUserService.findByUserId(appUserId);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+
+    const card = await this.findUserCardOrFail(payload.cardId, strigaUser);
+    const providerPayload: StrigaSetCardPinRequestDto = {
+      cardId: card.externalId!,
+      pin: payload.pin,
+    };
+
+    const response = await this.setCardPinInProvider(providerPayload);
+    return { updated: response?.success === true };
+  }
+
+  async setCardPinForAdmin(
+    payload: StrigaSetCardPinForAdminDto,
+  ): Promise<StrigaCardPinResultDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(
+      payload.userId,
+    );
+    if (!strigaUser?.externalId) {
+      throw new BadRequestException('Striga user not found.');
+    }
+
+    const card = await this.findUserCardOrFail(payload.cardId, strigaUser);
+    const providerPayload: StrigaSetCardPinRequestDto = {
+      cardId: card.externalId!,
+      pin: payload.pin,
+    };
+
+    const response = await this.setCardPinInProvider(providerPayload);
+    return { updated: response?.success === true };
+  }
+
+  private async findUserCardOrFail(
+    cardId: string,
+    strigaUser: StrigaUser,
+  ): Promise<StrigaCard> {
+    const cards =
+      await this.strigaCardRepository.findByStrigaUserIdOrExternalId(
+        strigaUser.id,
+        strigaUser.externalId,
+      );
+    const card = cards.find((item) => item.id === cardId);
+    if (!card) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: { card: 'notExists' },
+      });
+    }
+    if (!card.externalId) {
+      throw new BadRequestException('Card externalId is required.');
+    }
+    return card;
   }
 
   async findByParentWalletId(

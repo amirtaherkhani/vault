@@ -29,6 +29,13 @@ import {
   StrigaCardCurrencyParamDto,
   StrigaCardIdParamDto,
 } from './dto/query-striga-card.dto';
+import {
+  StrigaCardPinResultDto,
+  StrigaSetCardPinForAdminDto,
+  StrigaSetCardPinForMeDto,
+} from './dto/striga-card-pin.dto';
+import { Body, Post } from '@nestjs/common';
+import { StrigaUserExistsGuard } from '../guards/striga-user-exists.guard';
 
 @RequireEnabled('striga.enable')
 @ApiTags('Striga')
@@ -75,6 +82,21 @@ export class StrigaCardsController {
       req,
       params.currency,
     );
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Set PIN for current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('me/settings/pin')
+  @ApiOkResponse({ type: StrigaCardPinResultDto })
+  async setCardPinForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaSetCardPinForMeDto,
+  ): Promise<StrigaCardPinResultDto> {
+    return await this.strigaCardsService.setCardPinForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -144,5 +166,15 @@ export class StrigaCardsController {
   })
   async findById(@Param('id') id: string) {
     return await this.strigaCardsService.findById(id);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Set PIN for user Striga card', [RoleEnum.admin])
+  @Post('settings/pin')
+  @ApiOkResponse({ type: StrigaCardPinResultDto })
+  async setCardPinForAdmin(
+    @Body() body: StrigaSetCardPinForAdminDto,
+  ): Promise<StrigaCardPinResultDto> {
+    return await this.strigaCardsService.setCardPinForAdmin(body);
   }
 }

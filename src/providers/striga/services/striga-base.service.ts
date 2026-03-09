@@ -288,13 +288,6 @@ export abstract class StrigaBaseService {
     });
   }
 
-  async linkCardAccountInProvider(
-    payload: StrigaLinkCardAccountRequestDto,
-  ): Promise<StrigaBaseResponseDto> {
-    return this.signedRequest(STRIGA_ENDPOINT_NAME.linkCardAccount, {
-      body: payload,
-    });
-  }
 
   async burnCardInProvider(
     payload: StrigaBurnCardRequestDto,
@@ -343,6 +336,7 @@ export abstract class StrigaBaseService {
       body: payload,
     });
   }
+
 
   async updateCardLimitsInProvider(
     payload: StrigaUpdateCardLimitsRequestDto,

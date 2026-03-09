@@ -57,10 +57,6 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.GET,
     path: '/card/{cardId}',
   },
-  linkCardAccount: {
-    method: HttpMethod.PATCH,
-    path: '/card/link-account',
-  },
   burnCard: {
     method: HttpMethod.POST,
     path: '/card/burn',
@@ -81,10 +77,6 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.PATCH,
     path: '/card/security',
   },
-  setCardPin: {
-    method: HttpMethod.PATCH,
-    path: '/card/set-pin',
-  },
   getCardsByUser: {
     method: HttpMethod.POST,
     path: '/card/get-all',
@@ -96,6 +88,10 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
   updateCardLimits: {
     method: HttpMethod.PATCH,
     path: '/card/limits',
+  },
+  setCardPin: {
+    method: HttpMethod.PATCH,
+    path: '/card/set-pin',
   },
   updateUser: {
     method: HttpMethod.PATCH,

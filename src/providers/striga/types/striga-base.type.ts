@@ -17,7 +17,6 @@ const STRIGA_ENDPOINT_NAMES = [
   'createWallet',
   'createCard',
   'getCardById',
-  'linkCardAccount',
   'burnCard',
   'blockCard',
   'unblockCard',
