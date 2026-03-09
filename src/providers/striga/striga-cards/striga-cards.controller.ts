@@ -1,75 +1,138 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
-  UseGuards,
   Query,
+  Request,
+  SerializeOptions,
+  UseGuards,
 } from '@nestjs/common';
-import { StrigaCardsService } from './striga-cards.service';
-import { CreateStrigaCardDto } from './dto/create-striga-card.dto';
-import { UpdateStrigaCardDto } from './dto/update-striga-card.dto';
 import {
   ApiBearerAuth,
-  ApiCreatedResponse,
   ApiOkResponse,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { DynamicAuthGuard } from '../../../auth/guards/dynamic-auth.guard';
+import { EnableGuard } from '../../../common/guards/service-enabled.guard';
+import { Roles } from '../../../roles/roles.decorator';
+import { RoleEnum } from '../../../roles/roles.enum';
+import { RolesGuard } from '../../../roles/roles.guard';
+import { ApiOperationRoles } from '../../../utils/decorators/swagger.decorator';
+import { RequireEnabled } from '../../../utils/decorators/service-toggleable.decorators';
+import { SerializeGroups } from '../../../utils/transformers/enum.transformer';
+import { RequestWithUser } from '../../../utils/types/object.type';
+import { StrigaCardsService } from './striga-cards.service';
 import { StrigaCard } from './domain/striga-card';
-import { AuthGuard } from '@nestjs/passport';
 import {
-  InfinityPaginationResponse,
-  InfinityPaginationResponseDto,
-} from '../../../utils/dto/infinity-pagination-response.dto';
-import { infinityPagination } from '../../../utils/infinity-pagination';
-import { FindAllStrigaCardsDto } from './dto/find-all-striga-cards.dto';
+  FilterStrigaCardsDto,
+  StrigaCardCurrencyParamDto,
+  StrigaCardIdParamDto,
+} from './dto/query-striga-card.dto';
 
-@ApiTags('Strigacards')
+@RequireEnabled('striga.enable')
+@ApiTags('Striga')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
+@SerializeOptions(SerializeGroups([RoleEnum.admin, RoleEnum.user]))
 @Controller({
-  path: 'striga-cards',
+  path: 'striga/cards',
   version: '1',
 })
 export class StrigaCardsController {
   constructor(private readonly strigaCardsService: StrigaCardsService) {}
 
-  @Post()
-  @ApiCreatedResponse({
-    type: StrigaCard,
-  })
-  create(@Body() createStrigaCardDto: CreateStrigaCardDto) {
-    return this.strigaCardsService.create(createStrigaCardDto);
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current user Striga cards', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @Get('me')
+  @ApiOkResponse({ type: StrigaCard, isArray: true })
+  async findCardsForMe(
+    @Request() req: RequestWithUser,
+    @Query() query: FilterStrigaCardsDto,
+  ): Promise<StrigaCard[]> {
+    return await this.strigaCardsService.findCardsForMe(req, {
+      status: query.status,
+      linkedAccountCurrency: query.linkedAccountCurrency as any,
+      parentWalletId: query.parentWalletId,
+    });
   }
 
-  @Get()
-  @ApiOkResponse({
-    type: InfinityPaginationResponse(StrigaCard),
-  })
-  async findAll(
-    @Query() query: FindAllStrigaCardsDto,
-  ): Promise<InfinityPaginationResponseDto<StrigaCard>> {
-    const page = query?.page ?? 1;
-    let limit = query?.limit ?? 10;
-    if (limit > 50) {
-      limit = 50;
-    }
-
-    return infinityPagination(
-      await this.strigaCardsService.findAllWithPagination({
-        paginationOptions: {
-          page,
-          limit,
-        },
-      }),
-      { page, limit },
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current user Striga card by currency', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @Get('me/currency/:currency')
+  @ApiOkResponse({ type: StrigaCard })
+  async findCardByCurrencyForMe(
+    @Request() req: RequestWithUser,
+    @Param() params: StrigaCardCurrencyParamDto,
+  ): Promise<StrigaCard | null> {
+    return await this.strigaCardsService.findCardByCurrencyForMe(
+      req,
+      params.currency,
     );
   }
 
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current user Striga card account by card id', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @Get('me/:id/account')
+  @ApiParam({ name: 'id', type: String, required: true })
+  @ApiOkResponse({
+    description: 'Striga account (wallet) record',
+    type: Object,
+  })
+  async findCardAccountForMe(
+    @Request() req: RequestWithUser,
+    @Param() params: StrigaCardIdParamDto,
+  ) {
+    return await this.strigaCardsService.findCardAccountForMe(req, params.id);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current user Striga card by id', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @Get('me/:id')
+  @ApiParam({ name: 'id', type: String, required: true })
+  @ApiOkResponse({ type: StrigaCard })
+  async findCardForMe(
+    @Request() req: RequestWithUser,
+    @Param() params: StrigaCardIdParamDto,
+  ): Promise<StrigaCard | null> {
+    return await this.strigaCardsService.findCardForMe(req, params.id);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get Striga cards for app user', [RoleEnum.admin])
+  @Get('user/:userId')
+  @ApiParam({
+    name: 'userId',
+    type: Number,
+    required: true,
+    description: 'Application user ID',
+  })
+  @ApiOkResponse({ type: StrigaCard, isArray: true })
+  async findCardsForUser(
+    @Param('userId') userId: number,
+    @Query() query: FilterStrigaCardsDto,
+  ): Promise<StrigaCard[]> {
+    return await this.strigaCardsService.findCardsForUserId(userId, {
+      status: query.status,
+      linkedAccountCurrency: query.linkedAccountCurrency as any,
+      parentWalletId: query.parentWalletId,
+    });
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get Striga card by local ID', [RoleEnum.admin])
   @Get(':id')
   @ApiParam({
     name: 'id',
@@ -79,33 +142,7 @@ export class StrigaCardsController {
   @ApiOkResponse({
     type: StrigaCard,
   })
-  findById(@Param('id') id: string) {
-    return this.strigaCardsService.findById(id);
-  }
-
-  @Patch(':id')
-  @ApiParam({
-    name: 'id',
-    type: String,
-    required: true,
-  })
-  @ApiOkResponse({
-    type: StrigaCard,
-  })
-  update(
-    @Param('id') id: string,
-    @Body() updateStrigaCardDto: UpdateStrigaCardDto,
-  ) {
-    return this.strigaCardsService.update(id, updateStrigaCardDto);
-  }
-
-  @Delete(':id')
-  @ApiParam({
-    name: 'id',
-    type: String,
-    required: true,
-  })
-  remove(@Param('id') id: string) {
-    return this.strigaCardsService.remove(id);
+  async findById(@Param('id') id: string) {
+    return await this.strigaCardsService.findById(id);
   }
 }

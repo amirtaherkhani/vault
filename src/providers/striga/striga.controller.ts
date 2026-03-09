@@ -48,9 +48,10 @@ import {
   StrigaStartKycResponseDto,
 } from './dto/striga-start-kyc.dto';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
-import { StrigaUserService } from './services/striga-kyc.service';
+import { UserKycService } from './services/striga-kyc.service';
 import { StrigaUser } from './striga-users/domain/striga-user';
 import { StrigaService } from './striga.service';
+import { StrigaTransactionService } from './services/striga-transaction.service';
 
 @ResponseModel('STRIGA')
 @UseGuards(DynamicAuthGuard, RolesGuard, EnableGuard)
@@ -61,7 +62,10 @@ import { StrigaService } from './striga.service';
 @SerializeOptions(SerializeGroups([RoleEnum.admin, RoleEnum.user]))
 @Controller({ path: '', version: '1' })
 export class StrigaController {
-  constructor(private readonly strigaUserService: StrigaUserService) {}
+  constructor(
+    private readonly userKycService: UserKycService,
+    private readonly strigaTransactionService: StrigaTransactionService,
+  ) {}
 
   @Roles(RoleEnum.admin, RoleEnum.user)
   @ApiOperationRoles('Verify current user email', [
@@ -77,7 +81,7 @@ export class StrigaController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaVerifyEmailForMeDto,
   ): Promise<StrigaVerificationAcceptedDto> {
-    return this.strigaUserService.verifyEmailForMe(req, body);
+    return this.userKycService.verifyEmailForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -93,7 +97,7 @@ export class StrigaController {
   async resendEmailForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaVerificationAcceptedDto> {
-    return this.strigaUserService.resendEmailForMe(req);
+    return this.userKycService.resendEmailForMe(req);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -110,7 +114,7 @@ export class StrigaController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaVerifyMobileForMeDto,
   ): Promise<StrigaVerificationActionDto> {
-    return this.strigaUserService.verifyMobileForMe(req, body);
+    return this.userKycService.verifyMobileForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -126,7 +130,7 @@ export class StrigaController {
   async resendMobileForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaVerificationActionDto> {
-    return this.strigaUserService.resendMobileForMe(req);
+    return this.userKycService.resendMobileForMe(req);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -144,7 +148,7 @@ export class StrigaController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaUpdateUserForMeDto,
   ): Promise<StrigaUser> {
-    return this.strigaUserService.updateUserForMe(req, body);
+    return this.userKycService.updateUserForMe(req, body);
   }
 
   @Roles(RoleEnum.admin)
@@ -158,7 +162,7 @@ export class StrigaController {
   async updateUserForAdmin(
     @Body() body: StrigaUpdateUserForAdminDto,
   ): Promise<StrigaUser> {
-    return this.strigaUserService.updateUserForAdmin(body);
+    return this.userKycService.updateUserForAdmin(body);
   }
 
   @Roles(RoleEnum.admin)
@@ -172,7 +176,7 @@ export class StrigaController {
   async updateVerifiedCredentialsForAdmin(
     @Body() body: StrigaUpdateCredentialsForAdminDto,
   ): Promise<StrigaUser> {
-    return this.strigaUserService.updateVerifiedCredentialsForAdmin(body);
+    return this.userKycService.updateVerifiedCredentialsForAdmin(body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -188,7 +192,7 @@ export class StrigaController {
   async findKycTotalStatusForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaKycTotalStatusDto> {
-    return this.strigaUserService.findKycTotalStatusForMe(req);
+    return this.userKycService.findKycTotalStatusForMe(req);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -206,7 +210,7 @@ export class StrigaController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaStartKycForMeDto,
   ): Promise<StrigaStartKycResponseDto> {
-    return this.strigaUserService.startKycForMe(req, body);
+    return this.userKycService.startKycForMe(req, body);
   }
 
   @Roles(RoleEnum.admin)
@@ -218,6 +222,6 @@ export class StrigaController {
   async startKycForAdmin(
     @Body() body: StrigaStartKycForAdminDto,
   ): Promise<StrigaStartKycResponseDto> {
-    return this.strigaUserService.startKycForAdmin(body);
+    return this.userKycService.startKycForAdmin(body);
   }
 }

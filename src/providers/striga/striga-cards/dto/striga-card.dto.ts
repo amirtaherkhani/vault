@@ -3,6 +3,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -15,6 +16,10 @@ import {
   StrigaCardSecurityDto,
 } from './create-striga-card.dto';
 import { StrigaUserDto } from '../../striga-users/dto/striga-user.dto';
+import {
+  STRIGA_SUPPORTED_CARD_ASSET_NAMES,
+  StrigaSupportedCardAssetName,
+} from '../../types/striga-const.type';
 
 @Exclude()
 export class StrigaCardDto {
@@ -123,7 +128,8 @@ export class StrigaCardDto {
   @IsOptional()
   @IsString()
   @Expose()
-  linkedAccountCurrency?: string | null;
+  @IsIn(STRIGA_SUPPORTED_CARD_ASSET_NAMES)
+  linkedAccountCurrency?: StrigaSupportedCardAssetName | null;
 
   @ApiPropertyOptional({
     type: () => StrigaCardLimitsDto,

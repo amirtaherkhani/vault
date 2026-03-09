@@ -86,6 +86,48 @@ export class StrigaCardRelationalRepository implements StrigaCardRepository {
     return entities.map((entity) => StrigaCardMapper.toDomain(entity));
   }
 
+  async findByStrigaUserWithFilters(
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+    filters?: {
+      status?: StrigaCard['status'];
+      linkedAccountCurrency?: StrigaCard['linkedAccountCurrency'];
+      parentWalletId?: StrigaCard['parentWalletId'];
+    },
+  ): Promise<StrigaCard[]> {
+    if (!userId && !externalId) {
+      return [];
+    }
+
+    const qb = this.strigaCardRepository
+      .createQueryBuilder('strigaCard')
+      .leftJoinAndSelect('strigaCard.user', 'strigaUser')
+      .orderBy('strigaCard.createdAt', 'ASC');
+
+    if (userId) {
+      qb.where('strigaUser.id = :userId', { userId });
+    } else {
+      qb.where('strigaUser.externalId = :externalId', { externalId });
+    }
+
+    if (filters?.status) {
+      qb.andWhere('strigaCard.status = :status', { status: filters.status });
+    }
+    if (filters?.linkedAccountCurrency) {
+      qb.andWhere('strigaCard.linkedAccountCurrency = :currency', {
+        currency: filters.linkedAccountCurrency,
+      });
+    }
+    if (filters?.parentWalletId) {
+      qb.andWhere('strigaCard.parentWalletId = :parentWalletId', {
+        parentWalletId: filters.parentWalletId,
+      });
+    }
+
+    const entities = await qb.getMany();
+    return entities.map((entity) => StrigaCardMapper.toDomain(entity));
+  }
+
   async findByParentWalletId(
     parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
   ): Promise<StrigaCard[]> {

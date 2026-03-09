@@ -103,10 +103,58 @@ export class StrigaCreateUserRequestDto {
 }
 
 export type StrigaGetWalletAccountRequestDto = Record<string, unknown>;
-export type StrigaGetWalletAccountStatementRequestDto = Record<string, unknown>;
+export class StrigaGetWalletAccountStatementRequestDto {
+  @ApiProperty({ example: '65fbc66a-1898-4df7-82bc-f9ec464585fd' })
+  @IsString()
+  userId!: string;
+
+  @ApiProperty({ example: '244337fcf5b13ff40f7780bdd3e66d30' })
+  @IsString()
+  accountId!: string;
+
+  @ApiProperty({ example: 1732703202876, description: 'UNIX epoch ms' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  startDate!: number;
+
+  @ApiProperty({ example: 1735305202876, description: 'UNIX epoch ms' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  endDate!: number;
+
+  @ApiProperty({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page!: number;
+
+  @ApiPropertyOptional({ example: 10, description: 'Max 100; default 10' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
 export type StrigaGetAllWalletsRequestDto = Record<string, unknown>;
 export type StrigaGetWalletRequestDto = Record<string, unknown>;
 export type StrigaCreateWalletRequestDto = Record<string, unknown>;
+
+export class StrigaGetAccountTransactionsByIdRequestDto {
+  @ApiProperty({ description: 'Striga user id', example: '65fbc66a-1898-4df7-82bc-f9ec464585fd' })
+  @IsString()
+  userId!: string;
+
+  @ApiProperty({ description: 'Striga account id (wallet sub-account)', example: 'd8a8c7c7ceeec2c221971febd00d5685' })
+  @IsString()
+  accountId!: string;
+
+  @ApiProperty({ description: 'Transaction UUID', example: '5f6b6711-fdb0-4aee-bc60-ed49bd74b575' })
+  @IsString()
+  txId!: string;
+}
 
 export enum StrigaCreateCardType {
   VIRTUAL = 'VIRTUAL',

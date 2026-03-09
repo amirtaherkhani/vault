@@ -41,8 +41,8 @@ import {
 } from '../dto/striga-start-kyc.dto';
 
 @Injectable()
-export class StrigaUserService extends StrigaBaseService {
-  private readonly logger = new Logger(StrigaUserService.name);
+export class UserKycService extends StrigaBaseService {
+  private readonly logger = new Logger(UserKycService.name);
 
   constructor(
     strigaService: StrigaService,

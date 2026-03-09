@@ -26,7 +26,9 @@ import { UpdateStrigaCardDto } from '../striga-cards/dto/update-striga-card.dto'
 import { StrigaCardsService } from '../striga-cards/striga-cards.service';
 import { StrigaUser } from '../striga-users/domain/striga-user';
 import { StrigaCardEvent } from '../events/striga-card.event';
-import { StrigaCardService } from './striga-card.service';
+import { StrigaSupportedCardAssetName } from '../types/striga-const.type';
+import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
+import { StrigaBaseService } from './striga-base.service';
 
 const STRIGA_CARD_NAME_ON_CARD = 'Vero Vault';
 const STRIGA_CARDS_PAGE_LIMIT = 100;
@@ -37,7 +39,7 @@ export class StrigaCardWorkflowService {
 
   constructor(
     private readonly accountsService: AccountsService,
-    private readonly strigaCardService: StrigaCardService,
+    private readonly StrigaBaseService : StrigaBaseService,
     private readonly strigaCardsService: StrigaCardsService,
     private readonly internalEventsService: InternalEventsService,
     private readonly dataSource: DataSource,
@@ -50,13 +52,6 @@ export class StrigaCardWorkflowService {
     params: StrigaProcessUserCardsWorkflowDto,
   ): Promise<void> {
     const { strigaUser, appUserId, traceId, source } = params;
-
-    if (!this.strigaCardService.getEnabled()) {
-      this.logger.warn(
-        `[trace=${traceId}] Card workflow skipped because Striga service is disabled. Source=${source}.`,
-      );
-      return;
-    }
 
     const localStrigaUserId = String(strigaUser.id ?? '').trim();
     const externalId = String(strigaUser.externalId ?? '').trim();
@@ -88,7 +83,7 @@ export class StrigaCardWorkflowService {
     let walletAccounts: StrigaWalletAccountSummary[] = [];
     try {
       walletAccounts =
-        await this.strigaCardService.findWalletAccountsByCurrenciesFromProvider(
+        await this.StrigaBaseService.findWalletAccountsByCurrenciesFromProvider(
           { walletId, userId: externalId },
           assetNames,
         );
@@ -105,7 +100,7 @@ export class StrigaCardWorkflowService {
       return;
     }
 
-    const defaultPassword = this.strigaCardService.getCardDefaultPassword();
+    const defaultPassword = this.StrigaBaseService.getCardDefaultPassword();
     if (!defaultPassword) {
       this.logger.error(
         `[trace=${traceId}] Card creation skipped because STRIGA card default password is empty. Source=${source}.`,
@@ -115,13 +110,16 @@ export class StrigaCardWorkflowService {
 
     const counters = new StrigaCardSyncCountersDto();
     for (const walletAccount of walletAccounts) {
+      const walletCurrency =
+        (walletAccount.currency as StrigaSupportedCardAssetName) ??
+        walletAccount.currency;
       try {
         const syncResult = await this.syncCardForWalletAccount({
           strigaUser,
           appUserId,
           externalId,
           walletId,
-          walletAccount,
+          walletAccount: { ...walletAccount, currency: walletCurrency },
           providerWalletCards,
           defaultPassword,
           traceId,
@@ -191,11 +189,15 @@ export class StrigaCardWorkflowService {
       source,
     } = params;
 
+    const normalizedCurrency = normalizeSupportedCurrency(
+      walletAccount.currency,
+    );
+
     const localCard = await this.findExistingLocalCard(strigaUser, {
       externalId: null,
       parentWalletId: walletId,
       linkedAccountId: walletAccount.accountId,
-      linkedAccountCurrency: walletAccount.currency,
+      linkedAccountCurrency: normalizedCurrency ?? walletAccount.currency,
     });
     const cloudCard = providerWalletCards.find((card) =>
       this.matchesProviderCardToWalletAccount(card, walletAccount),
@@ -211,7 +213,7 @@ export class StrigaCardWorkflowService {
             cardId: localExternalId,
           };
           const getCardByIdResponse =
-            await this.strigaCardService.findCardByIdFromProvider(
+            await this.StrigaBaseService.findCardByIdFromProvider(
               getCardByIdPayload,
             );
           providerCardByExternalId = this.toCardDto(getCardByIdResponse?.data);
@@ -296,7 +298,7 @@ export class StrigaCardWorkflowService {
     );
 
     const createResponse =
-      await this.strigaCardService.createCardInProvider(createPayload);
+      await this.StrigaBaseService.createCardInProvider(createPayload);
     const createdCard = this.toCardDto(createResponse?.data);
     if (!createdCard) {
       this.logger.warn(
@@ -365,7 +367,7 @@ export class StrigaCardWorkflowService {
         offset,
       };
       const response =
-        await this.strigaCardService.findCardsByUserFromProvider(
+        await this.StrigaBaseService.findCardsByUserFromProvider(
           requestPayload,
         );
 
@@ -509,9 +511,12 @@ export class StrigaCardWorkflowService {
     const externalId = String(payload.externalId ?? '').trim();
     const parentWalletId = String(payload.parentWalletId ?? '').trim();
     const linkedAccountId = String(payload.linkedAccountId ?? '').trim();
-    const linkedAccountCurrency = String(
+    const linkedAccountCurrencyRaw = String(
       payload.linkedAccountCurrency ?? '',
     ).trim();
+    const linkedAccountCurrency = normalizeSupportedCurrency(
+      linkedAccountCurrencyRaw,
+    );
 
     if (externalId) {
       const byExternalId =
@@ -617,7 +622,7 @@ export class StrigaCardWorkflowService {
   }
 
   private resolveCardAssetNames(): string[] {
-    const configured = this.strigaCardService.getCardCreateAssetNames();
+    const configured = this.StrigaBaseService.getCardCreateAssetNames();
     if (configured.length > 0) {
       return configured;
     }

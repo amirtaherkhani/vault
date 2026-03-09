@@ -12,6 +12,12 @@ import { UpdateStrigaCardDto } from './dto/update-striga-card.dto';
 import { StrigaCardRepository } from './infrastructure/persistence/striga-card.repository';
 import { IPaginationOptions } from '../../../utils/types/pagination-options.type';
 import { StrigaCard, StrigaCardType } from './domain/striga-card';
+import { GroupPlainToInstances } from '../../../utils/transformers/class.transformer';
+import { RoleEnum } from '../../../roles/roles.enum';
+import { AccountsService } from '../../../accounts/accounts.service';
+import { AccountProviderName } from '../../../accounts/types/account-enum.type';
+import { RequestWithUser } from '../../../utils/types/object.type';
+import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
 
 @Injectable()
 export class StrigaCardsService {
@@ -19,6 +25,7 @@ export class StrigaCardsService {
     private readonly strigaUserService: StrigaUsersService,
 
     // Dependencies here
+    private readonly accountsService: AccountsService,
     private readonly strigaCardRepository: StrigaCardRepository,
   ) {}
 
@@ -60,32 +67,43 @@ export class StrigaCardsService {
     });
   }
 
-  findAllWithPagination({
+  async findAllWithPagination({
     paginationOptions,
   }: {
     paginationOptions: IPaginationOptions;
   }) {
-    return this.strigaCardRepository.findAllWithPagination({
+    const rows = await this.strigaCardRepository.findAllWithPagination({
       paginationOptions: {
         page: paginationOptions.page,
         limit: paginationOptions.limit,
       },
     });
+    return GroupPlainToInstances(StrigaCard, rows, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
   }
 
-  findById(id: StrigaCard['id']) {
-    return this.strigaCardRepository.findById(id);
+  async findById(id: StrigaCard['id']) {
+    const card = await this.strigaCardRepository.findById(id);
+    if (!card) return null;
+    const [result] = GroupPlainToInstances(
+      StrigaCard,
+      [card],
+      [RoleEnum.admin, RoleEnum.user],
+    );
+    return result ?? null;
   }
 
-  findByExternalId(externalId: NonNullable<StrigaCard['externalId']>) {
+  async findByExternalId(externalId: NonNullable<StrigaCard['externalId']>) {
     return this.strigaCardRepository.findByExternalId(externalId);
   }
 
-  findByIds(ids: StrigaCard['id'][]) {
+  async findByIds(ids: StrigaCard['id'][]) {
     return this.strigaCardRepository.findByIds(ids);
   }
 
-  findByStrigaUserIdOrExternalId(
+  async findByStrigaUserIdOrExternalId(
     userId?: StrigaUser['id'],
     externalId?: StrigaUser['externalId'],
   ) {
@@ -95,19 +113,19 @@ export class StrigaCardsService {
     );
   }
 
-  findByParentWalletId(
+  async findByParentWalletId(
     parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
   ) {
     return this.strigaCardRepository.findByParentWalletId(parentWalletId);
   }
 
-  findByLinkedAccountId(
+  async findByLinkedAccountId(
     linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
   ) {
     return this.strigaCardRepository.findByLinkedAccountId(linkedAccountId);
   }
 
-  findByParentWalletIdAndLinkedAccountId(
+  async findByParentWalletIdAndLinkedAccountId(
     parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
     linkedAccountId: NonNullable<StrigaCard['linkedAccountId']>,
   ) {
@@ -117,16 +135,24 @@ export class StrigaCardsService {
     );
   }
 
-  findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
+  async findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
     linkedAccountCurrency: NonNullable<StrigaCard['linkedAccountCurrency']>,
     userId?: StrigaUser['id'],
     externalId?: StrigaUser['externalId'],
   ) {
-    return this.strigaCardRepository.findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
-      linkedAccountCurrency,
-      userId,
-      externalId,
+    const card =
+      await this.strigaCardRepository.findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
+        linkedAccountCurrency,
+        userId,
+        externalId,
+      );
+    if (!card) return null;
+    const [result] = GroupPlainToInstances(
+      StrigaCard,
+      [card],
+      [RoleEnum.admin, RoleEnum.user],
     );
+    return result ?? null;
   }
 
   async update(
@@ -177,5 +203,152 @@ export class StrigaCardsService {
 
   remove(id: StrigaCard['id']) {
     return this.strigaCardRepository.remove(id);
+  }
+
+  async findForStrigaUserWithFilters(
+    strigaUserId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+    filters?: {
+      status?: StrigaCard['status'];
+      linkedAccountCurrency?: StrigaCard['linkedAccountCurrency'];
+      parentWalletId?: StrigaCard['parentWalletId'];
+    },
+  ) {
+    const cards = await this.strigaCardRepository.findByStrigaUserWithFilters(
+      strigaUserId,
+      externalId,
+      filters,
+    );
+    return GroupPlainToInstances(StrigaCard, cards, [
+      RoleEnum.admin,
+      RoleEnum.user,
+    ]);
+  }
+
+  async findCardsForUserId(
+    appUserId: number | undefined,
+    filters?: {
+      status?: StrigaCard['status'];
+      linkedAccountCurrency?: StrigaCard['linkedAccountCurrency'];
+      parentWalletId?: StrigaCard['parentWalletId'];
+    },
+  ) {
+    if (typeof appUserId === 'undefined' || appUserId === null) {
+      return [];
+    }
+    const strigaUser =
+      await this.strigaUserService.resolveStrigaUserForMe(appUserId);
+    if (!strigaUser) {
+      return [];
+    }
+    return this.findForStrigaUserWithFilters(
+      strigaUser.id,
+      strigaUser.externalId,
+      filters,
+    );
+  }
+
+  async findCardsForMe(
+    req: RequestWithUser,
+    filters?: {
+      status?: StrigaCard['status'];
+      linkedAccountCurrency?: StrigaCard['linkedAccountCurrency'];
+      parentWalletId?: StrigaCard['parentWalletId'];
+    },
+  ) {
+    const appUserId = req?.user?.id as number | undefined;
+    const normalizedFilters = {
+      ...filters,
+      linkedAccountCurrency: normalizeSupportedCurrency(
+        filters?.linkedAccountCurrency as string | null | undefined,
+      ) as StrigaCard['linkedAccountCurrency'],
+    };
+    return this.findCardsForUserId(appUserId, normalizedFilters);
+  }
+
+  async findCardByCurrencyForUserId(
+    appUserId: number | undefined,
+    currency: string,
+  ) {
+    const normalized = normalizeSupportedCurrency(currency);
+    if (!normalized) return null;
+    const strigaUser =
+      await this.strigaUserService.resolveStrigaUserForMe(appUserId);
+    if (!strigaUser?.externalId) {
+      return null;
+    }
+    const card =
+      await this.findByStrigaUserIdOrExternalIdAndLinkedAccountCurrency(
+        normalized,
+        strigaUser.id,
+        strigaUser.externalId,
+      );
+    return card;
+  }
+
+  async findCardByCurrencyForMe(req: RequestWithUser, currency: string) {
+    const appUserId = req?.user?.id as number | undefined;
+    return this.findCardByCurrencyForUserId(appUserId, currency);
+  }
+
+  async findCardAccountForUserId(
+    appUserId: number | undefined,
+    cardId: string,
+  ) {
+    const card = await this.findCardForUserId(appUserId, cardId);
+    if (!card) return null;
+
+    if (typeof appUserId === 'undefined') {
+      return null;
+    }
+
+    const account = await this.accountsService
+      .findByMeAndProviderName(appUserId, AccountProviderName.STRIGA)
+      .catch(() => null);
+
+    if (!account || account.accountId !== card.parentWalletId) {
+      return null;
+    }
+
+    return account;
+  }
+
+  async findCardAccountForMe(req: RequestWithUser, cardId: string) {
+    const appUserId = req?.user?.id as number | undefined;
+    return this.findCardAccountForUserId(appUserId, cardId);
+  }
+
+  async findCardForUserId(
+    appUserId: number | undefined,
+    cardId: string,
+  ): Promise<StrigaCard | null> {
+    if (!appUserId || !cardId) return null;
+    const strigaUser =
+      await this.strigaUserService.resolveStrigaUserForMe(appUserId);
+    if (!strigaUser) return null;
+
+    const card = await this.strigaCardRepository.findById(cardId);
+    if (!card) return null;
+    if (
+      card.user?.id !== strigaUser.id &&
+      card.user?.externalId !== strigaUser.externalId
+    ) {
+      return null;
+    }
+
+    const [result] = GroupPlainToInstances(
+      StrigaCard,
+      [card],
+      [RoleEnum.admin, RoleEnum.user],
+    );
+    return result ?? null;
+  }
+
+  async findCardForMe(
+    req: RequestWithUser,
+    cardId: string,
+  ): Promise<StrigaCard | null> {
+    const appUserId = req?.user?.id as number | undefined;
+    return this.findCardForUserId(appUserId, cardId);
   }
 }

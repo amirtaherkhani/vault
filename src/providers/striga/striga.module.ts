@@ -17,12 +17,10 @@ import {
 } from './events/striga-card.event.handler';
 import { StrigaKycApprovedGuard } from './guards/striga-kyc-approved.guard';
 import { StrigaUserExistsGuard } from './guards/striga-user-exists.guard';
-import { StrigaCardService } from './services/striga-card.service';
 import { StrigaCardWorkflowService } from './services/striga-card-workflow.service';
 import { StrigaTransactionService } from './services/striga-transaction.service';
-import { StrigaUserService } from './services/striga-kyc.service';
+import { UserKycService } from './services/striga-kyc.service';
 import { StrigaUserWorkflowService } from './services/striga-user-workflow.service';
-import { StrigaWalletService } from './services/striga-wallet.service';
 import { StrigaCardsModule } from './striga-cards/striga-cards.module';
 import { StrigaUsersController } from './striga-users/striga-users.controller';
 import { StrigaUsersModule } from './striga-users/striga-users.module';
@@ -47,9 +45,7 @@ import { StrigaService } from './striga.service';
     StrigaUserWorkflowService,
     StrigaCardWorkflowService,
     StrigaService,
-    StrigaUserService,
-    StrigaWalletService,
-    StrigaCardService,
+    UserKycService,
     StrigaTransactionService,
     StrigaUserLoggedInEventHandler,
     StrigaUserAddedEventHandler,
@@ -63,12 +59,6 @@ import { StrigaService } from './striga.service';
     EnableGuard,
   ],
   controllers: [StrigaController, StrigaUsersController],
-  exports: [
-    StrigaService,
-    StrigaUserService,
-    StrigaWalletService,
-    StrigaCardService,
-    StrigaTransactionService,
-  ],
+  exports: [StrigaService, UserKycService, StrigaTransactionService],
 })
 export class StrigaModule {}

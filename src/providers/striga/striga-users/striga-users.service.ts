@@ -15,6 +15,7 @@ import {
 import { UsersService } from '../../../users/users.service';
 import { GroupPlainToInstances } from '../../../utils/transformers/class.transformer';
 import { RoleEnum } from '../../../roles/roles.enum';
+import { RequestWithUser } from '../../../utils/types/object.type';
 
 export type StrigaUserUpsertOperation =
   | 'created'
@@ -174,6 +175,21 @@ export class StrigaUsersService {
       [RoleEnum.admin, RoleEnum.user],
     );
     return result ?? null;
+  }
+
+  async resolveStrigaUserForRequest(
+    req: RequestWithUser,
+  ): Promise<StrigaUser | null> {
+    const appUserId = this.extractUserId(req);
+    return this.resolveStrigaUserForMe(appUserId);
+  }
+
+  private extractUserId(req: RequestWithUser): number | string | undefined {
+    const raw = req?.user?.id;
+    if (typeof raw === 'number' || typeof raw === 'string') {
+      return raw;
+    }
+    return undefined;
   }
 
   async findKyc(id?: StrigaUser['id'], externalId?: StrigaUser['externalId']) {

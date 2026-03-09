@@ -28,6 +28,16 @@ export abstract class StrigaCardRepository {
     externalId?: StrigaUser['externalId'],
   ): Promise<StrigaCard[]>;
 
+  abstract findByStrigaUserWithFilters(
+    userId?: StrigaUser['id'],
+    externalId?: StrigaUser['externalId'],
+    filters?: {
+      status?: StrigaCard['status'];
+      linkedAccountCurrency?: StrigaCard['linkedAccountCurrency'];
+      parentWalletId?: StrigaCard['parentWalletId'];
+    },
+  ): Promise<StrigaCard[]>;
+
   abstract findByParentWalletId(
     parentWalletId: NonNullable<StrigaCard['parentWalletId']>,
   ): Promise<StrigaCard[]>;

@@ -33,6 +33,10 @@ export const STRIGA_ENDPOINTS: StrigaEndpoints = {
     method: HttpMethod.POST,
     path: '/wallets/get/account/statement',
   },
+  getTransactionsById: {
+    method: HttpMethod.POST,
+    path: '/wallets/account/get-transactions-by-id',
+  },
   getAllWallets: {
     method: HttpMethod.POST,
     path: '/wallets/get/all',

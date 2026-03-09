@@ -8,6 +8,7 @@ import {
   StrigaCreateWalletRequestDto,
   StrigaGetCardsByUserRequestDto,
   StrigaGetCardStatementRequestDto,
+  StrigaGetAccountTransactionsByIdRequestDto,
   StrigaGetAllWalletsRequestDto,
   StrigaGetWalletAccountRequestDto,
   StrigaGetWalletAccountStatementRequestDto,
@@ -176,6 +177,14 @@ export abstract class StrigaBaseService {
     payload: StrigaGetWalletAccountStatementRequestDto,
   ): Promise<StrigaBaseResponseDto> {
     return this.signedRequest(STRIGA_ENDPOINT_NAME.getWalletAccountStatement, {
+      body: payload,
+    });
+  }
+
+  async findAccountTransactionsByIdFromProvider(
+    payload: StrigaGetAccountTransactionsByIdRequestDto,
+  ): Promise<StrigaBaseResponseDto> {
+    return this.signedRequest(STRIGA_ENDPOINT_NAME.getTransactionsById, {
       body: payload,
     });
   }

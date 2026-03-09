@@ -66,7 +66,7 @@ export class StrigaUsersController {
   async findUserForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaUser | null> {
-    return this.strigaUsersService.resolveStrigaUserForMe(req.user?.id);
+    return this.strigaUsersService.resolveStrigaUserForRequest(req);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -80,9 +80,8 @@ export class StrigaUsersController {
   async findPhoneForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaUserMobile | null> {
-    const strigaUser = await this.strigaUsersService.resolveStrigaUserForMe(
-      req.user?.id,
-    );
+    const strigaUser =
+      await this.strigaUsersService.resolveStrigaUserForRequest(req);
     if (!strigaUser?.externalId) {
       return null;
     }
@@ -101,9 +100,8 @@ export class StrigaUsersController {
   async findAddressForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaUserAddress | null> {
-    const strigaUser = await this.strigaUsersService.resolveStrigaUserForMe(
-      req.user?.id,
-    );
+    const strigaUser =
+      await this.strigaUsersService.resolveStrigaUserForRequest(req);
     if (!strigaUser?.externalId) {
       return null;
     }
@@ -125,9 +123,8 @@ export class StrigaUsersController {
   async findKycForMe(
     @Request() req: RequestWithUser,
   ): Promise<StrigaUserKyc | null> {
-    const strigaUser = await this.strigaUsersService.resolveStrigaUserForMe(
-      req.user?.id,
-    );
+    const strigaUser =
+      await this.strigaUsersService.resolveStrigaUserForRequest(req);
     if (!strigaUser?.externalId) {
       return null;
     }

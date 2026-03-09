@@ -13,8 +13,8 @@ import { StrigaKycWebhookEventDto } from '../dto/striga.webhook.dto';
 import { StrigaCreateUserRequestDto } from '../dto/striga-base.request.dto';
 import { StrigaCloudUserResponseDto } from '../dto/striga-base.response.dto';
 import { StrigaUserEvent } from '../events/striga-user.event';
-import { StrigaUserService } from './striga-kyc.service';
-import { StrigaWalletService } from './striga-wallet.service';
+import { UserKycService } from './striga-kyc.service';
+
 import {
   buildStrigaKycSnapshotFromWebhook,
   getStrigaPlaceholderMobile,
@@ -33,8 +33,7 @@ export class StrigaUserWorkflowService {
   private readonly logger = new Logger(StrigaUserWorkflowService.name);
 
   constructor(
-    private readonly strigaUserService: StrigaUserService,
-    private readonly strigaWalletService: StrigaWalletService,
+    private readonly userKycService: UserKycService,
     private readonly usersService: UsersService,
     private readonly accountsService: AccountsService,
     private readonly strigaUsersService: StrigaUsersService,
@@ -60,7 +59,7 @@ export class StrigaUserWorkflowService {
       `[trace=${traceId}] Starting vero-user-${trigger} flow userId=${payload.userId ?? 'n/a'} email=${payload.email ?? 'n/a'}.`,
     );
 
-    if (!this.strigaUserService.getEnabled()) {
+    if (!this.userKycService.getEnabled()) {
       this.logger.warn(
         `[trace=${traceId}] Striga service is disabled; skipping vero-user-${trigger} flow.`,
       );
@@ -169,7 +168,7 @@ export class StrigaUserWorkflowService {
         `[trace=${traceId}] Calling Striga createUser email=${email}.`,
       );
       const createdResponse =
-        await this.strigaUserService.createUserInProvider(createPayload);
+        await this.userKycService.createUserInProvider(createPayload);
       const createdObject = this.extractObjectData(createdResponse?.data);
       const createdExternalId = this.resolveExternalId(
         (createdObject ?? {}) as Record<string, unknown>,
@@ -310,7 +309,7 @@ export class StrigaUserWorkflowService {
     this.logger.debug(
       `[trace=${traceId}] Starting provider-user sync flow source=webhook rawUserId=${String(payload.userId ?? payload.externalId ?? payload.id ?? 'n/a')}.`,
     );
-    if (!this.strigaUserService.getEnabled()) {
+    if (!this.userKycService.getEnabled()) {
       this.logger.warn(
         `[trace=${traceId}] Striga service is disabled; skipping provider user sync flow.`,
       );
@@ -329,7 +328,7 @@ export class StrigaUserWorkflowService {
     payload: UserEventDto,
     traceId: string,
   ): Promise<void> {
-    if (!this.strigaUserService.getEnabled()) {
+    if (!this.userKycService.getEnabled()) {
       this.logger.warn(
         `[trace=${traceId}] Striga service is disabled; skipping user-deleted flow.`,
       );
@@ -352,7 +351,7 @@ export class StrigaUserWorkflowService {
     payload: StrigaKycWebhookEventDto,
     traceId: string,
   ): Promise<void> {
-    if (!this.strigaUserService.getEnabled()) {
+    if (!this.userKycService.getEnabled()) {
       this.logger.warn(
         `[trace=${traceId}] Striga service is disabled; skipping KYC webhook flow.`,
       );
@@ -575,7 +574,7 @@ export class StrigaUserWorkflowService {
         // IMPORTANT: local `account.accountId` is Striga `walletId`.
         // Primary lookup for existing local wallet reference uses /wallets/get/account.
         const walletResponse =
-          await this.strigaWalletService.findWalletAccountFromProvider({
+          await this.userKycService.findWalletAccountFromProvider({
             accountId: normalizedLocalWalletId,
           });
         const wallet = extractPrimaryWalletSummaryFromPayload(
@@ -612,7 +611,7 @@ export class StrigaUserWorkflowService {
         `[trace=${traceId}] Resolving Striga wallet via wallets/get/all userId=${externalUserId} page=${String(payload.page)} startDate=${String(payload.startDate)} endDate=${String(payload.endDate)}.`,
       );
       const allWalletsResponse =
-        await this.strigaWalletService.findAllWalletsFromProvider(payload);
+        await this.userKycService.findAllWalletsFromProvider(payload);
       const wallet = extractPrimaryWalletSummaryFromPayload(
         allWalletsResponse?.data,
       );
@@ -852,7 +851,7 @@ export class StrigaUserWorkflowService {
       this.logger.debug(
         `[trace=${traceId}] Calling Striga getUserByEmail email=${email}.`,
       );
-      const response = await this.strigaUserService.findUserByEmailFromProvider(
+      const response = await this.userKycService.findUserByEmailFromProvider(
         { email },
       );
       const user = this.extractObjectData(response?.data);
@@ -877,7 +876,7 @@ export class StrigaUserWorkflowService {
         `[trace=${traceId}] Calling Striga getUserById externalId=${externalId}.`,
       );
       const response =
-        await this.strigaUserService.findUserByIdFromProvider(externalId);
+        await this.userKycService.findUserByIdFromProvider(externalId);
       const user = this.extractObjectData(response?.data);
       this.logger.debug(
         `[trace=${traceId}] Striga getUserById completed externalId=${externalId} found=${user ? 'yes' : 'no'} status=${response?.status ?? 'n/a'} success=${String(response?.success ?? 'n/a')}.`,
@@ -979,7 +978,7 @@ export class StrigaUserWorkflowService {
       userId: cloudUserId,
     };
 
-    const synced = await this.strigaUserService.upsertStrigaUserFromProvider(
+    const synced = await this.userKycService.upsertStrigaUserFromProvider(
       normalizedSourceUser as unknown as StrigaCloudUserResponseDto,
       {
         source: eventMeta.source,

@@ -17,7 +17,8 @@ export class StrigaCardMapper {
     domainEntity.security = raw.security;
     domainEntity.linkedAccountId = raw.linkedAccountId;
     domainEntity.parentWalletId = raw.parentWalletId;
-    domainEntity.linkedAccountCurrency = raw.linkedAccountCurrency;
+    domainEntity.linkedAccountCurrency =
+      (raw.linkedAccountCurrency as any) ?? null;
     domainEntity.limits = raw.limits;
     domainEntity.blockType = raw.blockType;
 

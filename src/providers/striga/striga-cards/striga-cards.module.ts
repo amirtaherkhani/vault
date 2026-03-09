@@ -1,4 +1,5 @@
 import { StrigaUsersModule } from '../striga-users/striga-users.module';
+import { AccountsModule } from '../../../accounts/accounts.module';
 import {
   // do not remove this comment
   Module,
@@ -10,6 +11,7 @@ import { RelationalStrigaCardPersistenceModule } from './infrastructure/persiste
 @Module({
   imports: [
     StrigaUsersModule,
+    AccountsModule,
 
     // do not remove this comment
     RelationalStrigaCardPersistenceModule,

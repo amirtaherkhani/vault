@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsObject,
   IsOptional,
@@ -15,6 +16,7 @@ import {
   StrigaDateOfBirthDto,
   StrigaMobileDto,
 } from './striga-base.request.dto';
+import { STRIGA_SUPPORTED_CARD_ASSET_NAMES } from '../types/striga-const.type';
 
 export class StrigaBaseResponseDto<T = unknown> {
   @ApiProperty({ example: 200 })
@@ -729,6 +731,7 @@ export class StrigaCreateCardResponseDto {
   @ApiPropertyOptional({ example: 'EUR' })
   @IsOptional()
   @IsString()
+  @IsIn(STRIGA_SUPPORTED_CARD_ASSET_NAMES)
   linkedAccountCurrency?: string;
 
   @ApiPropertyOptional({ example: '4ea59c14765e3816f91909fe2299ea38' })
@@ -887,6 +890,7 @@ export class StrigaCardStatementTransactionDto {
   @ApiPropertyOptional({ example: 'BTC' })
   @IsOptional()
   @IsString()
+  @IsIn(STRIGA_SUPPORTED_CARD_ASSET_NAMES)
   linkedAccountCurrency?: string;
 
   @ApiPropertyOptional({ example: '0cb9da83-1252-4add-9290-e9458baf2892' })
