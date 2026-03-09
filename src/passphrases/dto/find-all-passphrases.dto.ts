@@ -18,7 +18,7 @@ export class FindAllPassphrasesDto {
 
 export class FindAllPassphrasesUserDto {
   @ApiProperty({
-    description: 'Numeric ID of the user',
+    description: 'Numeric Id of the user',
     example: 1,
     type: Number,
   })

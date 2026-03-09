@@ -163,7 +163,7 @@ export class SocketIoController {
   @Get('presence/user/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: UserPresenceDto })
-  @ApiBadRequestResponse({ description: 'Invalid user ID or namespace.' })
+  @ApiBadRequestResponse({ description: 'Invalid user Id or namespace.' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })
   @ApiForbiddenResponse({ description: 'Requires admin role.' })
   userPresence(
@@ -173,13 +173,13 @@ export class SocketIoController {
     return this.socketio.userPresence(userId, query);
   }
 
-  @ApiOperationRoles('Disconnect a socket by ID (in a namespace)', [
+  @ApiOperationRoles('Disconnect a socket by Id (in a namespace)', [
     RoleEnum.admin,
   ])
   @Delete('disconnect/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'Socket disconnected.' })
-  @ApiBadRequestResponse({ description: 'Invalid socket ID or namespace.' })
+  @ApiBadRequestResponse({ description: 'Invalid socket Id or namespace.' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })
   @ApiForbiddenResponse({ description: 'Requires admin role.' })
   disconnect(@Param('id') id: string, @Query() query: QueryNamespaceDto) {
@@ -192,7 +192,7 @@ export class SocketIoController {
   @Delete('unsubscribe/user/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse({ description: 'All user sockets disconnected.' })
-  @ApiBadRequestResponse({ description: 'Invalid user ID or namespace.' })
+  @ApiBadRequestResponse({ description: 'Invalid user Id or namespace.' })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })
   @ApiForbiddenResponse({ description: 'Requires admin role.' })
   kickUser(@Param('userId') userId: string, @Query() query: QueryNamespaceDto) {

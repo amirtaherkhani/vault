@@ -151,7 +151,7 @@ export class PassphrasesController {
   @ApiParam({
     name: 'userId',
     type: Number,
-    description: 'The numeric ID of the user',
+    description: 'The numeric Id of the user',
     required: true,
     example: 1,
   })
@@ -161,7 +161,7 @@ export class PassphrasesController {
     isArray: true,
   })
   @ApiBadRequestResponse({
-    description: 'Invalid user ID format',
+    description: 'Invalid user Id format',
     schema: {
       example: {
         status: HttpStatus.BAD_REQUEST,

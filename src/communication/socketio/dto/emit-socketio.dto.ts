@@ -58,7 +58,7 @@ export class EmitBroadcastDto {
 @Exclude()
 export class EmitUserDto {
   @ApiProperty({
-    description: 'User ID (targets room: user:{id})',
+    description: 'User Id (targets room: user:{id})',
     example: '123',
   })
   @Expose()

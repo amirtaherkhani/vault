@@ -456,7 +456,7 @@ export class CmcInfoUrlsDto {
 @Exclude()
 export class CmcAssetMetaBaseDto {
   @ApiProperty({
-    description: 'CMC numeric asset ID',
+    description: 'CMC numeric asset Id',
     type: Number,
     example: 1,
   })

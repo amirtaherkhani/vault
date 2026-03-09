@@ -18,7 +18,7 @@ export class FindAllDevicesDto {
 
 export class FindAllDevicesUserDto {
   @ApiProperty({
-    description: 'Numeric ID of the user',
+    description: 'Numeric Id of the user',
     example: 1,
     type: Number,
   })

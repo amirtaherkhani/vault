@@ -23,7 +23,7 @@ export class StrigaStartKycForMeDto extends StrigaStartKycTierDto {}
 export class StrigaStartKycForAdminDto extends StrigaStartKycTierDto {
   @ApiProperty({
     example: 1,
-    description: 'Application user ID',
+    description: 'Application user Id',
   })
   @Type(() => Number)
   @IsInt()
@@ -35,7 +35,7 @@ export class StrigaStartKycForAdminDto extends StrigaStartKycTierDto {
 export class StrigaStartKycProviderRequestDto extends StrigaStartKycTierDto {
   @ApiProperty({
     example: '2f1853b2-927a-4aa9-8bb1-3e51fb119ace',
-    description: 'Striga provider user ID',
+    description: 'Striga provider user Id',
     format: 'uuid',
   })
   @IsString()
@@ -59,7 +59,7 @@ export class StrigaStartKycResponseDto {
   @ApiProperty({
     example: '2f1853b2-927a-4aa9-8bb1-3e51fb119ace',
     format: 'uuid',
-    description: 'Striga provider user ID',
+    description: 'Striga provider user Id',
   })
   @IsString()
   @IsUUID('4')

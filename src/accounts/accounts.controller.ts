@@ -171,7 +171,7 @@ export class AccountsController {
     };
   }
 
-  @ApiOperationRoles('Get account by ID for current user')
+  @ApiOperationRoles('Get account by Id for current user')
   @Get('me/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
@@ -197,7 +197,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get accounts by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get accounts by user Id', [RoleEnum.admin])
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -208,7 +208,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Filter accounts by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Filter accounts by user Id', [RoleEnum.admin])
   @Get('user/:userId/filter')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -263,7 +263,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Find accounts by user social ID', [RoleEnum.admin])
+  @ApiOperationRoles('Find accounts by user social Id', [RoleEnum.admin])
   @Get('social/:socialId')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto, isArray: true })
@@ -274,7 +274,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Find account by provider account ID', [RoleEnum.admin])
+  @ApiOperationRoles('Find account by provider account Id', [RoleEnum.admin])
   @Get('providers/:accountId')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
@@ -285,7 +285,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get account by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get account by Id', [RoleEnum.admin])
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
@@ -296,7 +296,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Update account by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Update account by Id', [RoleEnum.admin])
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AccountDto })
@@ -309,7 +309,7 @@ export class AccountsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Delete account by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Delete account by Id', [RoleEnum.admin])
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param() params: AccountIdParamDto): Promise<void> {

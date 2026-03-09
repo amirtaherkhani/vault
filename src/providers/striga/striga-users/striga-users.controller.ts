@@ -152,7 +152,7 @@ export class StrigaUsersController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get Striga users by local IDs', [RoleEnum.admin])
+  @ApiOperationRoles('Get Striga users by Ids', [RoleEnum.admin])
   @Get('ids')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: StrigaUser, isArray: true })
@@ -163,14 +163,14 @@ export class StrigaUsersController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get Striga user by app user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get Striga user by user Id', [RoleEnum.admin])
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiParam({
     name: 'userId',
     type: Number,
     required: true,
-    description: 'Application user ID',
+    description: 'Application user Id',
     example: 1,
   })
   @ApiOkResponse({ type: StrigaUser })
@@ -208,7 +208,7 @@ export class StrigaUsersController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get Striga user by local ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get Striga user by Id', [RoleEnum.admin])
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiParam({

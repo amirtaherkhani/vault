@@ -41,7 +41,7 @@ import { CmcEnvelopeDto, CmcStatusDto } from './cmc-base.response.dto';
 
 @Exclude()
 export class CmcPlatformRefDto {
-  @ApiPropertyOptional({ description: 'Parent platform CMC ID', example: 1027 })
+  @ApiPropertyOptional({ description: 'Parent platform CMC Id', example: 1027 })
   @IsOptional()
   @IsInt()
   @Expose()
@@ -584,7 +584,7 @@ export class CmcCryptoInfoV1Dto extends CmcEnvelopeDto<
   Record<string, CmcCryptoInfoItemV1Dto>
 > {
   @ApiProperty({
-    description: 'Keyed by ID or symbol',
+    description: 'Keyed by Id or symbol',
     type: Object,
   })
   @IsObject()
@@ -664,7 +664,7 @@ export class CmcCryptoQuotesLatestV1Dto extends CmcEnvelopeDto<
   Record<string, CmcCryptoQuotesLatestAssetV1Dto>
 > {
   @ApiProperty({
-    description: 'Keyed by ID or symbol',
+    description: 'Keyed by Id or symbol',
     type: Object,
   })
   @IsObject()

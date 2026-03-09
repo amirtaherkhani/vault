@@ -291,7 +291,7 @@ export class CmcPriceConversionBaseQueryDto extends CmcConvertQueryDto {
   @Expose()
   amount!: number;
 
-  @ApiPropertyOptional({ description: 'Source CMC ID(s) (CSV)', example: '1' })
+  @ApiPropertyOptional({ description: 'Source CMC Id(s) (CSV)', example: '1' })
   @IsOptional()
   @IsString()
   @Expose()
@@ -514,7 +514,7 @@ export class CmcCryptoMarketPairsLatestV1QueryDto
   implements Partial<CmcConvertQueryDto>
 {
   @ApiPropertyOptional({
-    description: 'Crypto ID(s) to fetch pairs for (CSV)',
+    description: 'Crypto Id(s) to fetch pairs for (CSV)',
     example: '1',
   })
   @IsOptional()

@@ -205,7 +205,7 @@ export class CreateStrigaUserDto {
   @ApiProperty({
     format: 'uuid',
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-    description: 'Striga user ID',
+    description: 'Striga user Id',
   })
   @IsUUID()
   @Expose()

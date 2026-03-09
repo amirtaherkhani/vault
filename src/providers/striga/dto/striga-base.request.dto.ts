@@ -221,7 +221,7 @@ export class StrigaCardOverrideFeeDto {
 export class StrigaCreateCardRequestDto {
   @ApiProperty({
     example: 'c1d2340e-89ef-4385-9104-e24363058ad6',
-    description: 'Striga user ID',
+    description: 'Striga user Id',
   })
   @IsString()
   userId!: string;
@@ -283,7 +283,7 @@ export class StrigaCreateCardRequestDto {
 export class StrigaCardIdRequestDto {
   @ApiProperty({
     example: 'eb7da407-ae11-40a4-ad22-aa74be87ecb2',
-    description: 'Striga card ID',
+    description: 'Striga card Id',
   })
   @IsString()
   cardId!: string;
@@ -292,7 +292,7 @@ export class StrigaCardIdRequestDto {
 export class StrigaLinkCardAccountRequestDto extends StrigaCardIdRequestDto {
   @ApiProperty({
     example: '22eb9caee08de8410eb0b41c5afd249e',
-    description: 'Striga account ID to link',
+    description: 'Striga account Id to link',
   })
   @IsString()
   accountId!: string;
@@ -517,7 +517,7 @@ export class StrigaPingRequestDto {}
 export class StrigaUserIdRequestDto {
   @ApiProperty({
     example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
-    description: 'User ID returned by Striga create user endpoint',
+    description: 'User Id returned by Striga create user endpoint',
   })
   @IsString()
   userId!: string;
@@ -549,7 +549,7 @@ export class StrigaUpdateUserRequestDto extends PartialType(
 ) {
   @ApiPropertyOptional({
     example: '9fd9f525-cb24-4682-8c5a-aa5c2b7e4dde',
-    description: 'User ID returned by Striga create user endpoint',
+    description: 'User Id returned by Striga create user endpoint',
   })
   @IsOptional()
   @IsString()
@@ -581,7 +581,7 @@ export class StrigaUserByEmailRequestDto extends StrigaEmailRequestDto {}
 export class StrigaExternalIdRequestDto {
   @ApiProperty({
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-    description: 'Striga user ID',
+    description: 'Striga user Id',
   })
   @IsString()
   externalId!: string;

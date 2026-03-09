@@ -13,7 +13,7 @@ import {
 @Exclude()
 export class FilterStrigaUsersDto {
   @ApiPropertyOptional({
-    description: 'Striga external user ID',
+    description: 'Striga external user Id',
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
     format: 'uuid',
   })
@@ -53,7 +53,7 @@ export class FilterStrigaUsersDto {
 @Exclude()
 export class StrigaUsersByIdsQueryDto {
   @ApiProperty({
-    description: 'Comma-separated list of local Striga user IDs',
+    description: 'Comma-separated list of local Striga user Ids',
     example:
       '8fa4f6ef-9e76-4cb2-97cb-1401e24e58f5,5db2f0cb-ef0c-4a1d-8577-6d3ebf4a8fc8',
     type: String,
@@ -75,7 +75,7 @@ export class StrigaUsersByIdsQueryDto {
 @Exclude()
 export class StrigaUserByUserIdParamDto {
   @ApiProperty({
-    description: 'Application user ID',
+    description: 'Application user Id',
     example: 1,
     minimum: 1,
     type: Number,

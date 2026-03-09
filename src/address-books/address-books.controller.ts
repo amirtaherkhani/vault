@@ -142,7 +142,7 @@ export class AddressBooksController {
     );
   }
 
-  @ApiOperationRoles('Get address book by ID for current user')
+  @ApiOperationRoles('Get address book by Id for current user')
   @Get('me/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto })
@@ -161,7 +161,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get all address books by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get all address books by user Id', [RoleEnum.admin])
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -170,7 +170,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get favorite address books by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get favorite address books by user Id', [RoleEnum.admin])
   @Get('user/:userId/favorites')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -179,7 +179,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Filter address books by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Filter address books by user Id', [RoleEnum.admin])
   @Get('user/:userId/filter')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto, isArray: true })
@@ -197,7 +197,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get address book by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get address book by Id', [RoleEnum.admin])
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto })
@@ -206,7 +206,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Update address book by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Update address book by Id', [RoleEnum.admin])
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AddressBookDto })
@@ -215,7 +215,7 @@ export class AddressBooksController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Delete address book by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Delete address book by Id', [RoleEnum.admin])
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param() params: IdParamDto) {

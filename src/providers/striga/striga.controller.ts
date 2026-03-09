@@ -161,7 +161,7 @@ export class StrigaController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Update user phone, address or birth date by Striga ID', [
+  @ApiOperationRoles('Update user phone, address or birth date by Striga Id', [
     RoleEnum.admin,
   ])
   @Patch('users')
@@ -175,7 +175,7 @@ export class StrigaController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Update user verified credentials by Striga ID', [
+  @ApiOperationRoles('Update user verified credentials by Striga Id', [
     RoleEnum.admin,
   ])
   @Patch('users/verified-credentials')
@@ -223,7 +223,7 @@ export class StrigaController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Start KYC by app user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Start KYC by app user Id', [RoleEnum.admin])
   @Post('users/kyc/start')
   @HttpCode(HttpStatus.OK)
   @ApiBody({ type: StrigaStartKycForAdminDto })
@@ -257,7 +257,7 @@ export class StrigaController {
 
   // Transactions - account by id (admin)
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get account statement by accountId (admin)', [
+  @ApiOperationRoles('Get account statement by accountId', [
     RoleEnum.admin,
   ])
   @Post('transactions/accounts')
@@ -294,7 +294,7 @@ export class StrigaController {
 
   // Transactions - account by currency (admin)
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get account statement by currency (admin)', [
+  @ApiOperationRoles('Get account statement by currency', [
     RoleEnum.admin,
   ])
   @Post('transactions/accounts/asset')
@@ -331,7 +331,7 @@ export class StrigaController {
 
   // Transactions - card statement (admin)
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get card statement (admin)', [RoleEnum.admin])
+  @ApiOperationRoles('Get card statement', [RoleEnum.admin])
   @Post('transactions/cards')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: StrigaBaseResponseDto })

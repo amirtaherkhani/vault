@@ -29,7 +29,7 @@ import { CmcEnvelopeDto, CmcStatusDto } from './cmc-base.response.dto';
 @Exclude()
 export class CmcFiatMapItemDto {
   @ApiProperty({
-    description: 'Fiat currency ID in CMC system',
+    description: 'Fiat currency Id in CMC system',
     type: Number,
     example: 2781,
   })

@@ -19,7 +19,7 @@ export class StrigaUserDto {
   @ApiProperty({
     format: 'uuid',
     example: '8fa4f6ef-9e76-4cb2-97cb-1401e24e58f5',
-    description: 'Local Striga user record ID',
+    description: 'Local Striga user record Id',
   })
   @IsUUID()
   @Expose()
@@ -28,7 +28,7 @@ export class StrigaUserDto {
   @ApiProperty({
     format: 'uuid',
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-    description: 'External Striga user ID',
+    description: 'External Striga user Id',
   })
   @IsUUID()
   @Expose()

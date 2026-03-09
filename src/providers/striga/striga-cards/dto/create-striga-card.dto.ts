@@ -402,7 +402,7 @@ export class StrigaCardLimitsDto {
 export class CreateStrigaCardDto {
   @ApiPropertyOptional({
     example: '1d7377f8-eb20-42d5-9979-feb7ab9498bf',
-    description: 'Provider card ID in Striga cloud',
+    description: 'Provider card Id in Striga cloud',
     nullable: true,
   })
   @IsOptional()

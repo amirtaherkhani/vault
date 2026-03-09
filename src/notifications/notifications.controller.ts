@@ -171,7 +171,7 @@ export class NotificationsController {
     return this.notificationsService.markDeliveredByIdForMe(id, req.user.id);
   }
   @Get(':id')
-  @ApiOperationRoles('Get notification by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get notification by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -185,7 +185,7 @@ export class NotificationsController {
   }
 
   @Patch(':id')
-  @ApiOperationRoles('Update notification by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Update notification by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -202,7 +202,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
-  @ApiOperationRoles('Delete notification by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Delete notification by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -257,7 +257,7 @@ export class NotificationsController {
     );
   }
   @Get('device/:deviceId')
-  @ApiOperationRoles('Get notifications by device ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get notifications by device Id', [RoleEnum.admin])
   @ApiParam({ name: 'deviceId', type: String, required: true })
   @ApiOkResponse({
     type: InfinityPaginationResponse(NotificationResponseDto),
@@ -281,7 +281,7 @@ export class NotificationsController {
   }
 
   @Get('device/:deviceId/unread')
-  @ApiOperationRoles('Get unread notifications by device ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get unread notifications by device Id', [RoleEnum.admin])
   @ApiParam({ name: 'deviceId', type: String, required: true })
   @ApiOkResponse({
     type: InfinityPaginationResponse(NotificationResponseDto),

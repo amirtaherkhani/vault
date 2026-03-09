@@ -74,7 +74,7 @@ export class AccountDto {
   status: AccountStatus;
 
   @ApiProperty({
-    description: 'Provider-side account ID',
+    description: 'Provider-side account Id',
     maxLength: 255,
   })
   @IsString()

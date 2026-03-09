@@ -34,7 +34,7 @@ export class FilterStrigaCardsDto {
 export class StrigaCardIdParamDto {
   @ApiPropertyOptional({
     format: 'uuid',
-    description: 'Local Striga card record ID',
+    description: 'Local Striga card record Id',
   })
   @IsUUID()
   @Expose()

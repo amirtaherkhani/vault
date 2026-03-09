@@ -117,7 +117,7 @@ export class StrigaCardsController {
     name: 'userId',
     type: Number,
     required: true,
-    description: 'Application user ID',
+    description: 'Application user Id',
   })
   @ApiOkResponse({ type: StrigaCard, isArray: true })
   async findCardsForUser(
@@ -132,7 +132,7 @@ export class StrigaCardsController {
   }
 
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get Striga card by local ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get Striga card by local Id', [RoleEnum.admin])
   @Get(':id')
   @ApiParam({
     name: 'id',

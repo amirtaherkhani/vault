@@ -26,7 +26,7 @@ export class StrigaCardDto {
   @ApiProperty({
     format: 'uuid',
     example: '8fa4f6ef-9e76-4cb2-97cb-1401e24e58f5',
-    description: 'Local Striga card record ID',
+    description: 'Local Striga card record Id',
   })
   @IsUUID()
   @Expose()
@@ -35,7 +35,7 @@ export class StrigaCardDto {
   @ApiPropertyOptional({
     example: '1d7377f8-eb20-42d5-9979-feb7ab9498bf',
     nullable: true,
-    description: 'Provider card ID in Striga cloud',
+    description: 'Provider card Id in Striga cloud',
   })
   @IsOptional()
   @IsString()

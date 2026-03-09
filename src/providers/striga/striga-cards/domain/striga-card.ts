@@ -245,7 +245,7 @@ export class StrigaCard {
   @ApiPropertyOptional({
     type: () => String,
     nullable: true,
-    description: 'Provider card ID in Striga cloud',
+    description: 'Provider card Id in Striga cloud',
   })
   @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
   externalId?: string | null;

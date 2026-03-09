@@ -69,7 +69,7 @@ export class RoomsDto {
 @Exclude()
 export class SocketUserDto {
   @ApiPropertyOptional({
-    description: 'User ID (if available)',
+    description: 'User Id (if available)',
     example: '123',
   })
   @IsOptional()

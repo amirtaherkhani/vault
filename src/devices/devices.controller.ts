@@ -94,7 +94,7 @@ export class DevicesController {
   }
 
   @Get(':id')
-  @ApiOperationRoles('Get device by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get device by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -108,7 +108,7 @@ export class DevicesController {
   }
 
   @Patch(':id')
-  @ApiOperationRoles('Update device by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Update device by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -122,7 +122,7 @@ export class DevicesController {
   }
 
   @Delete(':id')
-  @ApiOperationRoles('Delete device by ID', [RoleEnum.admin])
+  @ApiOperationRoles('Delete device by Id', [RoleEnum.admin])
   @ApiParam({
     name: 'id',
     type: String,
@@ -231,11 +231,11 @@ export class DevicesController {
   }
 
   @Get('user/:userId')
-  @ApiOperationRoles('Get devices by user ID', [RoleEnum.admin])
+  @ApiOperationRoles('Get devices by user Id', [RoleEnum.admin])
   @ApiParam({
     name: 'userId',
     type: Number,
-    description: 'The numeric ID of the user',
+    description: 'The numeric Id of the user',
     required: true,
     example: 1,
   })
@@ -245,7 +245,7 @@ export class DevicesController {
     isArray: true,
   })
   @ApiBadRequestResponse({
-    description: 'Invalid user ID format',
+    description: 'Invalid user Id format',
     schema: {
       example: {
         status: HttpStatus.BAD_REQUEST,

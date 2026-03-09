@@ -42,7 +42,7 @@ export class StrigaUpdateUserForMeDto {
 export class StrigaUpdateUserForAdminDto extends StrigaUpdateUserForMeDto {
   @ApiProperty({
     example: '474f3a7b-eaf4-45f8-b548-b784a0ba008f',
-    description: 'Striga provider user ID',
+    description: 'Striga provider user Id',
     format: 'uuid',
   })
   @IsString()

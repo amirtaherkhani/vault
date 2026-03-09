@@ -27,7 +27,7 @@ import { CmcKeyedMap } from '../helper/cmc-helper';
 @Exclude()
 export class CmcBlockchainStatisticsItemDto {
   @ApiProperty({
-    description: 'CMC numeric chain ID',
+    description: 'CMC numeric chain Id',
     type: Number,
     example: 1,
   })

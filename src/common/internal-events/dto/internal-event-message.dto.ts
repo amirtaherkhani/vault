@@ -10,7 +10,7 @@ import { InternalEventPayload } from '../types/internal-events.type';
 
 export class InternalEventMessageDto {
   @ApiProperty({
-    description: 'Identifier emitted by Redis Streams entry ID.',
+    description: 'Identifier emitted by Redis Streams entry Id.',
     example: '1718293123456-0',
   })
   @IsString()

@@ -10,7 +10,7 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 @Exclude()
 export class GoRushSystemStatsResponseDto {
-  @ApiProperty({ description: 'Process ID' })
+  @ApiProperty({ description: 'Process Id' })
   @IsInt()
   @Expose()
   pid: number;
