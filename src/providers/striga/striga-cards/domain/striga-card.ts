@@ -10,6 +10,24 @@ export enum StrigaCardType {
   PHYSICAL = 'PHYSICAL',
 }
 
+export enum StrigaCardStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  CLOSED = 'CLOSED',
+  DISPATCHED = 'DISPATCHED',
+  DISPATCH_PENDING = 'DISPATCH_PENDING',
+  PENDING = 'PENDING',
+}
+
+export enum StrigaCardBlockType {
+  BLOCKED_BY_CLIENT = 'BLOCKEDBYCLIENT',
+  BLOCKED_BY_PROVIDER = 'BLOCKEDBYPROVIDER',
+  BLOCKED_BY_BANK = 'BLOCKEDBYBANK',
+  BLOCKED_BY_MERCHANT = 'BLOCKEDBYMERCHANT',
+  BLOCKED_BY_NETWORK = 'BLOCKEDBYNETWORK',
+  BLOCKED_BY_SYSTEM = 'BLOCKEDBYSYSTEM',
+}
+
 @Exclude()
 export class StrigaCardSecurity {
   @ApiProperty({
@@ -251,11 +269,11 @@ export class StrigaCard {
   externalId?: string | null;
 
   @ApiProperty({
-    type: () => String,
+    enum: StrigaCardStatus,
     nullable: true,
   })
   @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
-  status?: string | null;
+  status?: StrigaCardStatus | null;
 
   @ApiProperty({
     type: () => String,
@@ -332,11 +350,11 @@ export class StrigaCard {
   limits?: StrigaCardLimits | null;
 
   @ApiPropertyOptional({
-    type: () => String,
+    enum: StrigaCardBlockType,
     nullable: true,
   })
   @Expose(RoleGroups([RoleEnum.admin, RoleEnum.user]))
-  blockType?: string | null;
+  blockType?: StrigaCardBlockType | null;
 
   @ApiProperty({
     type: () => StrigaUser,

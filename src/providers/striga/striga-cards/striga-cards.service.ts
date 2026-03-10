@@ -12,7 +12,12 @@ import { CreateStrigaCardDto } from './dto/create-striga-card.dto';
 import { UpdateStrigaCardDto } from './dto/update-striga-card.dto';
 import { StrigaCardRepository } from './infrastructure/persistence/striga-card.repository';
 import { IPaginationOptions } from '../../../utils/types/pagination-options.type';
-import { StrigaCard, StrigaCardType } from './domain/striga-card';
+import {
+  StrigaCard,
+  StrigaCardBlockType,
+  StrigaCardStatus,
+  StrigaCardType,
+} from './domain/striga-card';
 import { GroupPlainToInstances } from '../../../utils/transformers/class.transformer';
 import { RoleEnum } from '../../../roles/roles.enum';
 import { AccountsService } from '../../../accounts/accounts.service';
@@ -27,6 +32,12 @@ import {
   StrigaSetCardPinForAdminDto,
   StrigaSetCardPinForMeDto,
 } from './dto/striga-card-pin.dto';
+import {
+  StrigaCardFreezeStateDto,
+  StrigaCardFreezeStatusDto,
+  StrigaToggleCardFreezeForAdminDto,
+  StrigaToggleCardFreezeForMeDto,
+} from './dto/striga-card-freeze.dto';
 
 @Injectable()
 export class StrigaCardsService extends StrigaBaseService {
@@ -145,6 +156,85 @@ export class StrigaCardsService extends StrigaBaseService {
     return { updated: response?.success === true };
   }
 
+  async toggleCardFreezeForMe(
+    req: RequestWithUser,
+    payload: StrigaToggleCardFreezeForMeDto,
+  ): Promise<StrigaCardFreezeStatusDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(req.user?.id);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+
+    const card = await this.findUserCardOrFail(payload.cardId, strigaUser);
+    const previousStatus = card.status ?? null;
+
+    await this.invokeCardFreeze(card, payload.freeze);
+
+    const refreshed = await this.refreshCardFromProvider(card);
+    const updatedStatus = refreshed?.status ?? previousStatus;
+    const blockType =
+      refreshed?.blockType ?? card.blockType ?? null;
+
+    return {
+      previousStatus,
+      updatedStatus,
+      cardId: card.id,
+      blockType,
+    };
+  }
+
+  async toggleCardFreezeForAdmin(
+    payload: StrigaToggleCardFreezeForAdminDto,
+  ): Promise<StrigaCardFreezeStatusDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(
+      payload.userId,
+    );
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+
+    const card = await this.findUserCardOrFail(payload.cardId, strigaUser);
+    const previousStatus = card.status ?? null;
+
+    await this.invokeCardFreeze(card, payload.freeze);
+
+    const refreshed = await this.refreshCardFromProvider(card);
+    const updatedStatus = refreshed?.status ?? previousStatus;
+    const blockType =
+      refreshed?.blockType ?? card.blockType ?? null;
+
+    return {
+      previousStatus,
+      updatedStatus,
+      cardId: card.id,
+      blockType,
+    };
+  }
+
+  async getCardFreezeStateForMe(
+    req: RequestWithUser,
+    cardId: string,
+  ): Promise<StrigaCardFreezeStateDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(req.user?.id);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    const card = await this.findUserCardOrFail(cardId, strigaUser);
+    return this.toFreezeStateDto(card);
+  }
+
+  async getCardFreezeStateForAdmin(
+    userId: number,
+    cardId: string,
+  ): Promise<StrigaCardFreezeStateDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(userId);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    const card = await this.findUserCardOrFail(cardId, strigaUser);
+    return this.toFreezeStateDto(card);
+  }
+
   async setCardPinForAdmin(
     payload: StrigaSetCardPinForAdminDto,
   ): Promise<StrigaCardPinResultDto> {
@@ -185,6 +275,66 @@ export class StrigaCardsService extends StrigaBaseService {
       throw new BadRequestException('Card externalId is required.');
     }
     return card;
+  }
+
+  private async invokeCardFreeze(card: StrigaCard, freeze: boolean) {
+    const externalId = card.externalId;
+    if (!externalId) {
+      throw new BadRequestException('Card externalId is required.');
+    }
+
+    if (freeze) {
+      await this.blockCardInProvider({ cardId: externalId });
+    } else {
+      await this.unblockCardInProvider({ cardId: externalId });
+    }
+  }
+
+  private async refreshCardFromProvider(
+    card: StrigaCard,
+  ): Promise<StrigaCard | null> {
+    const externalId = card.externalId;
+    if (!externalId) return null;
+    try {
+      const response = await this.findCardByIdFromProvider({ cardId: externalId });
+      const data = response?.data as any;
+      if (data && typeof data === 'object') {
+        await this.strigaCardRepository.update(card.id, {
+          status:
+            (data.status as StrigaCardStatus | undefined) ?? card.status,
+          blockType:
+            (data.blockType as StrigaCardBlockType | undefined) ??
+            card.blockType,
+        });
+        return {
+          ...card,
+          status:
+            (data.status as StrigaCardStatus | undefined) ?? card.status,
+          blockType:
+            (data.blockType as StrigaCardBlockType | undefined) ??
+            card.blockType,
+        } as StrigaCard;
+      }
+    } catch {
+      // ignore; fallback to local card
+    }
+    return card;
+  }
+
+  private toFreezeStateDto(card: StrigaCard): StrigaCardFreezeStateDto {
+    const status = card.status ?? null;
+    const blockType = card.blockType ?? null;
+    const normalizedStatus = status ? status.toUpperCase() : null;
+    const normalizedBlockType = blockType ? blockType.toUpperCase() : null;
+    const frozen =
+      normalizedStatus === 'BLOCKED' ||
+      (normalizedBlockType?.includes('BLOCK') ?? false);
+
+    return {
+      frozen,
+      status,
+      blockType,
+    };
   }
 
   async findByParentWalletId(

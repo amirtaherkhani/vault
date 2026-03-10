@@ -20,7 +20,12 @@ import {
   StrigaSyncCardForWalletAccountWorkflowDto,
 } from '../dto/striga-card-workflow.dto';
 import { StrigaWalletAccountSummary } from '../helpers/striga-wallet.helper';
-import { StrigaCard, StrigaCardType } from '../striga-cards/domain/striga-card';
+import {
+  StrigaCard,
+  StrigaCardBlockType,
+  StrigaCardStatus,
+  StrigaCardType,
+} from '../striga-cards/domain/striga-card';
 import { CreateStrigaCardDto } from '../striga-cards/dto/create-striga-card.dto';
 import { UpdateStrigaCardDto } from '../striga-cards/dto/update-striga-card.dto';
 import { StrigaCardsService } from '../striga-cards/striga-cards.service';
@@ -582,7 +587,7 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
 
   private toCardWritePayload(providerCard: StrigaCreateCardResponseDto): {
     externalId: string | null;
-    status: string | null;
+    status: StrigaCardStatus | null;
     type: StrigaCardType;
     maskedCardNumber: string | null;
     expiryData: string | null;
@@ -593,11 +598,11 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
     parentWalletId: string | null;
     linkedAccountCurrency: string | null;
     limits: CreateStrigaCardDto['limits'] | null;
-    blockType: string | null;
+    blockType: StrigaCardBlockType | null;
   } {
     return {
       externalId: this.toNullableString(providerCard.id),
-      status: this.toNullableString(providerCard.status),
+      status: this.toCardStatus(providerCard.status),
       type: this.toCardType(providerCard.type),
       maskedCardNumber: this.toNullableString(providerCard.maskedCardNumber),
       expiryData: this.toNullableString(providerCard.expiryData),
@@ -614,7 +619,7 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
         providerCard.linkedAccountCurrency,
       ),
       limits: providerCard.limits as CreateStrigaCardDto['limits'],
-      blockType: this.toNullableString(providerCard.blockType),
+      blockType: this.toCardBlockType(providerCard.blockType),
     };
   }
 
@@ -636,6 +641,26 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
     }
 
     return StrigaCardType.VIRTUAL;
+  }
+
+  private toCardStatus(value: unknown): StrigaCardStatus | null {
+    const normalized = this.toNullableString(value)?.toUpperCase() ?? null;
+    if (!normalized) return null;
+    if ((Object.values(StrigaCardStatus) as string[]).includes(normalized)) {
+      return normalized as StrigaCardStatus;
+    }
+    return null;
+  }
+
+  private toCardBlockType(value: unknown): StrigaCardBlockType | null {
+    const normalized = this.toNullableString(value)?.toUpperCase() ?? null;
+    if (!normalized) return null;
+    if (
+      (Object.values(StrigaCardBlockType) as string[]).includes(normalized)
+    ) {
+      return normalized as StrigaCardBlockType;
+    }
+    return null;
   }
 
   private toCardDto(value: unknown): StrigaCreateCardResponseDto | null {

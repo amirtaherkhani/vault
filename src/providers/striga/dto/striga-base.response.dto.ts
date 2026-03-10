@@ -17,6 +17,10 @@ import {
   StrigaMobileDto,
 } from './striga-base.request.dto';
 import { STRIGA_SUPPORTED_CARD_ASSET_NAMES } from '../types/striga-const.type';
+import {
+  StrigaCardBlockType,
+  StrigaCardStatus,
+} from '../striga-cards/domain/striga-card';
 
 export class StrigaBaseResponseDto<T = unknown> {
   @ApiProperty({ example: 200 })
@@ -694,7 +698,7 @@ export class StrigaCreateCardResponseDto {
   @ApiPropertyOptional({ example: 'ACTIVE' })
   @IsOptional()
   @IsString()
-  status?: string;
+  status?: StrigaCardStatus;
 
   @ApiPropertyOptional({ type: () => StrigaCardAddressResponseDto })
   @IsOptional()
@@ -764,7 +768,7 @@ export class StrigaCreateCardResponseDto {
   @ApiPropertyOptional({ example: 'BLOCKEDBYCLIENT' })
   @IsOptional()
   @IsString()
-  blockType?: string;
+  blockType?: StrigaCardBlockType;
 }
 
 export class StrigaLinkCardAccountResponseDto {

@@ -1,18 +1,19 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
-import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import {
   STRIGA_SUPPORTED_CARD_ASSET_NAMES,
   StrigaSupportedCardAssetName,
 } from '../../types/striga-const.type';
+import { StrigaCardStatus } from '../domain/striga-card';
 
 @Exclude()
 export class FilterStrigaCardsDto {
   @ApiPropertyOptional({ example: 'ACTIVE' })
   @IsOptional()
-  @IsString()
+  @IsEnum(StrigaCardStatus)
   @Expose()
-  status?: string;
+  status?: StrigaCardStatus;
 
   @ApiPropertyOptional({ example: 'EUR' })
   @IsOptional()

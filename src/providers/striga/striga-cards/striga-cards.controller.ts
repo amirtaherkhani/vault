@@ -34,7 +34,13 @@ import {
   StrigaSetCardPinForAdminDto,
   StrigaSetCardPinForMeDto,
 } from './dto/striga-card-pin.dto';
-import { Body, Post } from '@nestjs/common';
+import {
+  StrigaCardFreezeStateDto,
+  StrigaCardFreezeStatusDto,
+  StrigaToggleCardFreezeForAdminDto,
+  StrigaToggleCardFreezeForMeDto,
+} from './dto/striga-card-freeze.dto';
+import { Body, Post, Get } from '@nestjs/common';
 import { StrigaUserExistsGuard } from '../guards/striga-user-exists.guard';
 
 @RequireEnabled('striga.enable')
@@ -176,5 +182,64 @@ export class StrigaCardsController {
     @Body() body: StrigaSetCardPinForAdminDto,
   ): Promise<StrigaCardPinResultDto> {
     return await this.strigaCardsService.setCardPinForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Freeze/Unfreeze current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Post('me/settings/freeze')
+  @ApiOkResponse({ type: StrigaCardFreezeStatusDto })
+  async toggleCardFreezeForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaToggleCardFreezeForMeDto,
+  ): Promise<StrigaCardFreezeStatusDto> {
+    return await this.strigaCardsService.toggleCardFreezeForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Freeze/Unfreeze Striga card for user', [RoleEnum.admin])
+  @Post('settings/freeze')
+  @ApiOkResponse({ type: StrigaCardFreezeStatusDto })
+  async toggleCardFreezeForAdmin(
+    @Body() body: StrigaToggleCardFreezeForAdminDto,
+  ): Promise<StrigaCardFreezeStatusDto> {
+    return await this.strigaCardsService.toggleCardFreezeForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Get current user card freeze status', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Get('me/:id/freeze')
+  @ApiOkResponse({ type: StrigaCardFreezeStateDto })
+  async getCardFreezeStateForMe(
+    @Request() req: RequestWithUser,
+    @Param() params: StrigaCardIdParamDto,
+  ): Promise<StrigaCardFreezeStateDto> {
+    return await this.strigaCardsService.getCardFreezeStateForMe(
+      req,
+      params.id,
+    );
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Get card freeze status (admin)', [RoleEnum.admin])
+  @Get('user/:userId/:id/freeze')
+  @ApiParam({ name: 'userId', type: Number, required: true })
+  @ApiParam({ name: 'id', type: String, required: true })
+  @ApiOkResponse({ type: StrigaCardFreezeStateDto })
+  async getCardFreezeStateForAdmin(
+    @Param('userId') userId: number,
+    @Param('id') cardId: string,
+  ): Promise<StrigaCardFreezeStateDto> {
+    return await this.strigaCardsService.getCardFreezeStateForAdmin(
+      userId,
+      cardId,
+    );
   }
 }

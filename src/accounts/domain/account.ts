@@ -11,7 +11,7 @@ export class Account {
     type: () => String,
     nullable: true,
   })
-  customerRefId!: string | null;
+  customerRefId!: string | null; // This is the reference ID provided (User Id) by the account provider, which can be used to link the account to the provider's system.
 
   @ApiProperty({
     type: () => String,
@@ -43,7 +43,7 @@ export class Account {
     type: () => String,
     nullable: false,
   })
-  accountId: string;
+  accountId: string; // This is the unique identifier for the account within provider system, which can be used to reference the account in provider cloud storage and operations.
 
   @ApiProperty({
     enum: AccountProviderName,
@@ -60,7 +60,7 @@ export class Account {
   @ApiProperty({
     type: String,
   })
-  id: string;
+  id: string; // This is the unique identifier for the account within our system, which can be used to reference the account in our database and operations.
 
   @ApiProperty()
   createdAt: Date;

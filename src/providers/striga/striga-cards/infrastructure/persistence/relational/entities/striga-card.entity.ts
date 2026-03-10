@@ -4,6 +4,8 @@ import {
   StrigaCardLimits,
   StrigaCardSecurity,
   StrigaCardType,
+  StrigaCardStatus,
+  StrigaCardBlockType,
 } from '../../../../domain/striga-card';
 import {
   CreateDateColumn,
@@ -30,7 +32,7 @@ export class StrigaCardEntity extends EntityRelationalHelper {
     nullable: true,
     type: String,
   })
-  status?: string | null;
+  status?: StrigaCardStatus | null;
 
   @Column({
     nullable: false,
@@ -99,7 +101,7 @@ export class StrigaCardEntity extends EntityRelationalHelper {
     nullable: true,
     type: String,
   })
-  blockType?: string | null;
+  blockType?: StrigaCardBlockType | null;
 
   @ManyToOne(() => StrigaUserEntity, { eager: true, nullable: false })
   user: StrigaUserEntity;

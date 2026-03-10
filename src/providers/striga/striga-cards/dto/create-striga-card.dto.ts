@@ -10,7 +10,11 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { StrigaCardType } from '../domain/striga-card';
+import {
+  StrigaCardBlockType,
+  StrigaCardStatus,
+  StrigaCardType,
+} from '../domain/striga-card';
 import { StrigaUserDto } from '../../striga-users/dto/striga-user.dto';
 import {
   STRIGA_SUPPORTED_CARD_ASSET_NAMES,
@@ -416,9 +420,9 @@ export class CreateStrigaCardDto {
     nullable: true,
   })
   @IsOptional()
-  @IsString()
+  @IsEnum(StrigaCardStatus)
   @Expose()
-  status?: string | null;
+  status?: StrigaCardStatus | null;
 
   @ApiPropertyOptional({
     enum: StrigaCardType,
@@ -521,9 +525,9 @@ export class CreateStrigaCardDto {
     nullable: true,
   })
   @IsOptional()
-  @IsString()
+  @IsEnum(StrigaCardBlockType)
   @Expose()
-  blockType?: string | null;
+  blockType?: StrigaCardBlockType | null;
 
   @ApiProperty({
     required: true,
