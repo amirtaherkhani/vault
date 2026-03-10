@@ -40,8 +40,20 @@ import {
   StrigaToggleCardFreezeForAdminDto,
   StrigaToggleCardFreezeForMeDto,
 } from './dto/striga-card-freeze.dto';
-import { Body, Post, Get } from '@nestjs/common';
+import { Body, Post, Patch } from '@nestjs/common';
 import { StrigaUserExistsGuard } from '../guards/striga-user-exists.guard';
+import {
+  StrigaUpdateCardSecurityForAdminDto,
+  StrigaUpdateCardSecurityForMeDto,
+  StrigaUpdateCardSecurityResultDto,
+} from './dto/striga-card-security.dto';
+import {
+  StrigaUpdateCardLimitsForAdminDto,
+  StrigaUpdateCardLimitsForMeDto,
+  StrigaUpdateCardLimitsResultDto,
+  StrigaResetCardLimitsForAdminDto,
+  StrigaResetCardLimitsForMeDto,
+} from './dto/striga-card-limits.dto';
 
 @RequireEnabled('striga.enable')
 @ApiTags('Striga')
@@ -103,6 +115,105 @@ export class StrigaCardsController {
     @Body() body: StrigaSetCardPinForMeDto,
   ): Promise<StrigaCardPinResultDto> {
     return await this.strigaCardsService.setCardPinForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Update security for current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/security')
+  @ApiOkResponse({ type: StrigaUpdateCardSecurityResultDto })
+  async updateCardSecurityForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaUpdateCardSecurityForMeDto,
+  ): Promise<StrigaUpdateCardSecurityResultDto> {
+    return await this.strigaCardsService.updateCardSecurityForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Update spending limits for current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/limits')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async updateCardLimitsForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaUpdateCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.updateCardLimitsForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles(
+    'Disable spending limits (set to zero) for current user Striga card',
+    [RoleEnum.admin, RoleEnum.user],
+  )
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/limits/reset')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetCardLimitsForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaUpdateCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetCardLimitsForMe(req, body);
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Disable withdrawal limits for current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/limits/reset/withdrawals')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetWithdrawalLimitsForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetWithdrawalLimitsForMe(
+      req,
+      body,
+    );
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles('Disable purchase limits for current user Striga card', [
+    RoleEnum.admin,
+    RoleEnum.user,
+  ])
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/limits/reset/purchases')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetPurchaseLimitsForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetPurchaseLimitsForMe(
+      req,
+      body,
+    );
+  }
+
+  @Roles(RoleEnum.admin, RoleEnum.user)
+  @ApiOperationRoles(
+    'Disable per-transaction limits for current user Striga card',
+    [RoleEnum.admin, RoleEnum.user],
+  )
+  @UseGuards(StrigaUserExistsGuard)
+  @Patch('me/settings/limits/reset/transactions')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetTransactionLimitsForMe(
+    @Request() req: RequestWithUser,
+    @Body() body: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetTransactionLimitsForMe(
+      req,
+      body,
+    );
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -182,6 +293,76 @@ export class StrigaCardsController {
     @Body() body: StrigaSetCardPinForAdminDto,
   ): Promise<StrigaCardPinResultDto> {
     return await this.strigaCardsService.setCardPinForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Update security for user Striga card', [RoleEnum.admin])
+  @Patch('settings/security')
+  @ApiOkResponse({ type: StrigaUpdateCardSecurityResultDto })
+  async updateCardSecurityForAdmin(
+    @Body() body: StrigaUpdateCardSecurityForAdminDto,
+  ): Promise<StrigaUpdateCardSecurityResultDto> {
+    return await this.strigaCardsService.updateCardSecurityForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Update spending limits for user Striga card', [
+    RoleEnum.admin,
+  ])
+  @Patch('settings/limits')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async updateCardLimitsForAdmin(
+    @Body() body: StrigaUpdateCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.updateCardLimitsForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Disable spending limits for user Striga card', [
+    RoleEnum.admin,
+  ])
+  @Patch('settings/limits/reset')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetCardLimitsForAdmin(
+    @Body() body: StrigaUpdateCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetCardLimitsForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Disable withdrawal limits for user Striga card', [
+    RoleEnum.admin,
+  ])
+  @Patch('settings/limits/reset/withdrawals')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetWithdrawalLimitsForAdmin(
+    @Body() body: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetWithdrawalLimitsForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Disable purchase limits for user Striga card', [
+    RoleEnum.admin,
+  ])
+  @Patch('settings/limits/reset/purchases')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetPurchaseLimitsForAdmin(
+    @Body() body: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetPurchaseLimitsForAdmin(body);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Disable per-transaction limits for user Striga card', [
+    RoleEnum.admin,
+  ])
+  @Patch('settings/limits/reset/transactions')
+  @ApiOkResponse({ type: StrigaUpdateCardLimitsResultDto })
+  async resetTransactionLimitsForAdmin(
+    @Body() body: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    return await this.strigaCardsService.resetTransactionLimitsForAdmin(body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)

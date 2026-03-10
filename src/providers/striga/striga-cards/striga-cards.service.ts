@@ -38,6 +38,22 @@ import {
   StrigaToggleCardFreezeForAdminDto,
   StrigaToggleCardFreezeForMeDto,
 } from './dto/striga-card-freeze.dto';
+import {
+  StrigaUpdateCardSecurityForAdminDto,
+  StrigaUpdateCardSecurityForMeDto,
+  StrigaUpdateCardSecurityResultDto,
+} from './dto/striga-card-security.dto';
+import { StrigaCardSecuritySettingsRequestDto } from '../dto/striga-base.request.dto';
+import { StrigaCardSecurity, StrigaCardLimits } from './domain/striga-card';
+import {
+  StrigaUpdateCardLimitsForAdminDto,
+  StrigaUpdateCardLimitsForMeDto,
+  StrigaUpdateCardLimitsResultDto,
+  StrigaResetCardLimitsForAdminDto,
+  StrigaResetCardLimitsForMeDto,
+} from './dto/striga-card-limits.dto';
+import { StrigaCardLimitsRequestDto } from '../dto/striga-base.request.dto';
+import { StrigaCardMapper } from './infrastructure/persistence/relational/mappers/striga-card.mapper';
 
 @Injectable()
 export class StrigaCardsService extends StrigaBaseService {
@@ -172,8 +188,7 @@ export class StrigaCardsService extends StrigaBaseService {
 
     const refreshed = await this.refreshCardFromProvider(card);
     const updatedStatus = refreshed?.status ?? previousStatus;
-    const blockType =
-      refreshed?.blockType ?? card.blockType ?? null;
+    const blockType = refreshed?.blockType ?? card.blockType ?? null;
 
     return {
       previousStatus,
@@ -200,8 +215,7 @@ export class StrigaCardsService extends StrigaBaseService {
 
     const refreshed = await this.refreshCardFromProvider(card);
     const updatedStatus = refreshed?.status ?? previousStatus;
-    const blockType =
-      refreshed?.blockType ?? card.blockType ?? null;
+    const blockType = refreshed?.blockType ?? card.blockType ?? null;
 
     return {
       previousStatus,
@@ -220,7 +234,7 @@ export class StrigaCardsService extends StrigaBaseService {
       throw new BadRequestException('Striga user not found.');
     }
     const card = await this.findUserCardOrFail(cardId, strigaUser);
-    return this.toFreezeStateDto(card);
+    return StrigaCardMapper.toFreezeStateDto(card);
   }
 
   async getCardFreezeStateForAdmin(
@@ -232,7 +246,7 @@ export class StrigaCardsService extends StrigaBaseService {
       throw new BadRequestException('Striga user not found.');
     }
     const card = await this.findUserCardOrFail(cardId, strigaUser);
-    return this.toFreezeStateDto(card);
+    return StrigaCardMapper.toFreezeStateDto(card);
   }
 
   async setCardPinForAdmin(
@@ -255,6 +269,144 @@ export class StrigaCardsService extends StrigaBaseService {
     return { updated: response?.success === true };
   }
 
+  async updateCardLimitsForMe(
+    req: RequestWithUser,
+    payload: StrigaUpdateCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(req.user?.id);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    return this.updateCardLimitsInternal(
+      strigaUser,
+      payload.limits,
+      payload.cardId,
+    );
+  }
+
+  async resetCardLimitsForMe(
+    req: RequestWithUser,
+    payload: StrigaUpdateCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroLimits();
+    return this.updateCardLimitsForMe(req, {
+      cardId: payload.cardId,
+      limits: zeroLimits,
+    });
+  }
+
+  async updateCardLimitsForAdmin(
+    payload: StrigaUpdateCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(
+      payload.userId,
+    );
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    return this.updateCardLimitsInternal(
+      strigaUser,
+      payload.limits,
+      payload.cardId,
+    );
+  }
+
+  async resetCardLimitsForAdmin(
+    payload: StrigaUpdateCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroLimits();
+    return this.updateCardLimitsForAdmin({
+      ...payload,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetWithdrawalLimitsForMe(
+    req: RequestWithUser,
+    payload: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroWithdrawalLimits();
+    return this.updateCardLimitsForMe(req, {
+      cardId: payload.cardId,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetPurchaseLimitsForMe(
+    req: RequestWithUser,
+    payload: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroPurchaseLimits();
+    return this.updateCardLimitsForMe(req, {
+      cardId: payload.cardId,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetTransactionLimitsForMe(
+    req: RequestWithUser,
+    payload: StrigaResetCardLimitsForMeDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroTransactionLimits();
+    return this.updateCardLimitsForMe(req, {
+      cardId: payload.cardId,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetWithdrawalLimitsForAdmin(
+    payload: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroWithdrawalLimits();
+    return this.updateCardLimitsForAdmin({
+      ...payload,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetPurchaseLimitsForAdmin(
+    payload: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroPurchaseLimits();
+    return this.updateCardLimitsForAdmin({
+      ...payload,
+      limits: zeroLimits,
+    });
+  }
+
+  async resetTransactionLimitsForAdmin(
+    payload: StrigaResetCardLimitsForAdminDto,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const zeroLimits = this.buildZeroTransactionLimits();
+    return this.updateCardLimitsForAdmin({
+      ...payload,
+      limits: zeroLimits,
+    });
+  }
+
+  async updateCardSecurityForMe(
+    req: RequestWithUser,
+    payload: StrigaUpdateCardSecurityForMeDto,
+  ): Promise<StrigaUpdateCardSecurityResultDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(req.user?.id);
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    return this.updateCardSecurityInternal(strigaUser, payload);
+  }
+
+  async updateCardSecurityForAdmin(
+    payload: StrigaUpdateCardSecurityForAdminDto,
+  ): Promise<StrigaUpdateCardSecurityResultDto> {
+    const strigaUser = await this.strigaUserService.findByUserId(
+      payload.userId,
+    );
+    if (!strigaUser) {
+      throw new BadRequestException('Striga user not found.');
+    }
+    return this.updateCardSecurityInternal(strigaUser, payload);
+  }
+
   private async findUserCardOrFail(
     cardId: string,
     strigaUser: StrigaUser,
@@ -271,10 +423,318 @@ export class StrigaCardsService extends StrigaBaseService {
         errors: { card: 'notExists' },
       });
     }
-    if (!card.externalId) {
+    return card;
+  }
+
+  private async updateCardSecurityInternal(
+    strigaUser: StrigaUser,
+    payload: StrigaUpdateCardSecurityForMeDto,
+  ): Promise<StrigaUpdateCardSecurityResultDto> {
+    const card = await this.findUserCardOrFail(payload.cardId, strigaUser);
+    const externalId = card.externalId;
+    if (!externalId) {
       throw new BadRequestException('Card externalId is required.');
     }
-    return card;
+
+    const providerPayload = {
+      cardId: externalId,
+      security: payload.security,
+    };
+
+    const response = await this.updateCardSecurityInProvider(providerPayload);
+    const data = (response?.data ?? {}) as Record<string, any>;
+    const providerSecurity = (data.security ??
+      null) as StrigaCardSecurity | null;
+    const mergedSecurity = this.mergeSecuritySettings(
+      providerSecurity,
+      payload.security,
+      card.security ?? undefined,
+    );
+    const status =
+      (data.status as StrigaCardStatus | undefined) ?? card.status ?? null;
+    const blockType =
+      (data.blockType as StrigaCardBlockType | undefined) ??
+      card.blockType ??
+      null;
+
+    await this.strigaCardRepository.update(card.id, {
+      security: mergedSecurity,
+      status,
+      blockType,
+    });
+
+    return {
+      updated: response?.success === true,
+      cardId: card.id,
+      security: mergedSecurity,
+      status,
+      blockType,
+    };
+  }
+
+  private async updateCardLimitsInternal(
+    strigaUser: StrigaUser,
+    limits: StrigaCardLimitsRequestDto,
+    cardId: string,
+  ): Promise<StrigaUpdateCardLimitsResultDto> {
+    const card = await this.findUserCardOrFail(cardId, strigaUser);
+    const externalId = card.externalId;
+    if (!externalId) {
+      throw new BadRequestException('Card externalId is required.');
+    }
+
+    const response = await this.updateCardLimitsInProvider({
+      cardId: externalId,
+      limits,
+    });
+    const data = (response?.data ?? {}) as Record<string, any>;
+    const providerLimits = (data.limits ?? null) as StrigaCardLimits | null;
+    const mergedLimits = this.mergeLimits(
+      providerLimits,
+      limits,
+      card.limits ?? undefined,
+    );
+    const status =
+      (data.status as StrigaCardStatus | undefined) ?? card.status ?? null;
+    const blockType =
+      (data.blockType as StrigaCardBlockType | undefined) ??
+      card.blockType ??
+      null;
+
+    await this.strigaCardRepository.update(card.id, {
+      limits: mergedLimits,
+      status,
+      blockType,
+    });
+
+    return {
+      updated: response?.success === true,
+      cardId: card.id,
+      limits: mergedLimits,
+      status,
+      blockType,
+    };
+  }
+
+  private mergeSecuritySettings(
+    providerSecurity: StrigaCardSecurity | null,
+    requestedSecurity: StrigaCardSecuritySettingsRequestDto,
+    currentSecurity?: StrigaCardSecurity,
+  ): StrigaCardSecurity {
+    const base: StrigaCardSecurity = {
+      contactlessEnabled:
+        providerSecurity?.contactlessEnabled ??
+        requestedSecurity.contactlessEnabled ??
+        currentSecurity?.contactlessEnabled ??
+        false,
+      withdrawalEnabled:
+        providerSecurity?.withdrawalEnabled ??
+        requestedSecurity.withdrawalEnabled ??
+        currentSecurity?.withdrawalEnabled ??
+        false,
+      internetPurchaseEnabled:
+        providerSecurity?.internetPurchaseEnabled ??
+        requestedSecurity.internetPurchaseEnabled ??
+        currentSecurity?.internetPurchaseEnabled ??
+        false,
+      overallLimitsEnabled:
+        providerSecurity?.overallLimitsEnabled ??
+        currentSecurity?.overallLimitsEnabled ??
+        true,
+    };
+    return base;
+  }
+
+  private mergeLimits(
+    providerLimits: StrigaCardLimits | null,
+    requestedLimits: StrigaCardLimitsRequestDto,
+    currentLimits?: StrigaCardLimits,
+  ): StrigaCardLimits {
+    const pick = (
+      key: keyof StrigaCardLimitsRequestDto,
+    ): number | undefined => {
+      const providerValue = providerLimits?.[key as keyof StrigaCardLimits];
+      if (typeof providerValue === 'number') return providerValue;
+      const requestedValue = requestedLimits[key];
+      if (typeof requestedValue === 'number') return requestedValue;
+      const currentValue = currentLimits?.[key as keyof StrigaCardLimits];
+      if (typeof currentValue === 'number') return currentValue as number;
+      return undefined;
+    };
+
+    const limits: StrigaCardLimits = {
+      dailyPurchase: pick('dailyPurchase'),
+      dailyWithdrawal: pick('dailyWithdrawal'),
+      dailyInternetPurchase: pick('dailyInternetPurchase'),
+      dailyContactlessPurchase: pick('dailyContactlessPurchase'),
+      weeklyPurchase: pick('weeklyPurchase'),
+      weeklyWithdrawal: pick('weeklyWithdrawal'),
+      weeklyInternetPurchase: pick('weeklyInternetPurchase'),
+      weeklyContactlessPurchase: pick('weeklyContactlessPurchase'),
+      monthlyPurchase: pick('monthlyPurchase'),
+      monthlyWithdrawal: pick('monthlyWithdrawal'),
+      monthlyInternetPurchase: pick('monthlyInternetPurchase'),
+      monthlyContactlessPurchase: pick('monthlyContactlessPurchase'),
+      transactionPurchase: pick('transactionPurchase'),
+      transactionWithdrawal: pick('transactionWithdrawal'),
+      transactionInternetPurchase: pick('transactionInternetPurchase'),
+      transactionContactlessPurchase: pick('transactionContactlessPurchase'),
+      dailyOverallPurchase: pick('dailyOverallPurchase'),
+      weeklyOverallPurchase: pick('weeklyOverallPurchase'),
+      monthlyOverallPurchase: pick('monthlyOverallPurchase'),
+      dailyContactlessPurchaseAvailable:
+        providerLimits?.dailyContactlessPurchaseAvailable ??
+        currentLimits?.dailyContactlessPurchaseAvailable,
+      dailyContactlessPurchaseUsed:
+        providerLimits?.dailyContactlessPurchaseUsed ??
+        currentLimits?.dailyContactlessPurchaseUsed,
+      dailyInternetPurchaseAvailable:
+        providerLimits?.dailyInternetPurchaseAvailable ??
+        currentLimits?.dailyInternetPurchaseAvailable,
+      dailyInternetPurchaseUsed:
+        providerLimits?.dailyInternetPurchaseUsed ??
+        currentLimits?.dailyInternetPurchaseUsed,
+      dailyOverallPurchaseAvailable:
+        providerLimits?.dailyOverallPurchaseAvailable ??
+        currentLimits?.dailyOverallPurchaseAvailable,
+      dailyOverallPurchaseUsed:
+        providerLimits?.dailyOverallPurchaseUsed ??
+        currentLimits?.dailyOverallPurchaseUsed,
+      dailyPurchaseAvailable:
+        providerLimits?.dailyPurchaseAvailable ??
+        currentLimits?.dailyPurchaseAvailable,
+      dailyPurchaseUsed:
+        providerLimits?.dailyPurchaseUsed ?? currentLimits?.dailyPurchaseUsed,
+      dailyWithdrawalAvailable:
+        providerLimits?.dailyWithdrawalAvailable ??
+        currentLimits?.dailyWithdrawalAvailable,
+      dailyWithdrawalUsed:
+        providerLimits?.dailyWithdrawalUsed ??
+        currentLimits?.dailyWithdrawalUsed,
+      monthlyContactlessPurchaseAvailable:
+        providerLimits?.monthlyContactlessPurchaseAvailable ??
+        currentLimits?.monthlyContactlessPurchaseAvailable,
+      monthlyContactlessPurchaseUsed:
+        providerLimits?.monthlyContactlessPurchaseUsed ??
+        currentLimits?.monthlyContactlessPurchaseUsed,
+      monthlyInternetPurchaseAvailable:
+        providerLimits?.monthlyInternetPurchaseAvailable ??
+        currentLimits?.monthlyInternetPurchaseAvailable,
+      monthlyInternetPurchaseUsed:
+        providerLimits?.monthlyInternetPurchaseUsed ??
+        currentLimits?.monthlyInternetPurchaseUsed,
+      monthlyOverallPurchaseAvailable:
+        providerLimits?.monthlyOverallPurchaseAvailable ??
+        currentLimits?.monthlyOverallPurchaseAvailable,
+      monthlyOverallPurchaseUsed:
+        providerLimits?.monthlyOverallPurchaseUsed ??
+        currentLimits?.monthlyOverallPurchaseUsed,
+      monthlyPurchaseAvailable:
+        providerLimits?.monthlyPurchaseAvailable ??
+        currentLimits?.monthlyPurchaseAvailable,
+      monthlyPurchaseUsed:
+        providerLimits?.monthlyPurchaseUsed ??
+        currentLimits?.monthlyPurchaseUsed,
+      monthlyWithdrawalAvailable:
+        providerLimits?.monthlyWithdrawalAvailable ??
+        currentLimits?.monthlyWithdrawalAvailable,
+      monthlyWithdrawalUsed:
+        providerLimits?.monthlyWithdrawalUsed ??
+        currentLimits?.monthlyWithdrawalUsed,
+      weeklyContactlessPurchaseAvailable:
+        providerLimits?.weeklyContactlessPurchaseAvailable ??
+        currentLimits?.weeklyContactlessPurchaseAvailable,
+      weeklyContactlessPurchaseUsed:
+        providerLimits?.weeklyContactlessPurchaseUsed ??
+        currentLimits?.weeklyContactlessPurchaseUsed,
+      weeklyInternetPurchaseAvailable:
+        providerLimits?.weeklyInternetPurchaseAvailable ??
+        currentLimits?.weeklyInternetPurchaseAvailable,
+      weeklyInternetPurchaseUsed:
+        providerLimits?.weeklyInternetPurchaseUsed ??
+        currentLimits?.weeklyInternetPurchaseUsed,
+      weeklyOverallPurchaseAvailable:
+        providerLimits?.weeklyOverallPurchaseAvailable ??
+        currentLimits?.weeklyOverallPurchaseAvailable,
+      weeklyOverallPurchaseUsed:
+        providerLimits?.weeklyOverallPurchaseUsed ??
+        currentLimits?.weeklyOverallPurchaseUsed,
+      weeklyPurchaseAvailable:
+        providerLimits?.weeklyPurchaseAvailable ??
+        currentLimits?.weeklyPurchaseAvailable,
+      weeklyPurchaseUsed:
+        providerLimits?.weeklyPurchaseUsed ??
+        currentLimits?.weeklyPurchaseUsed,
+      weeklyWithdrawalAvailable:
+        providerLimits?.weeklyWithdrawalAvailable ??
+        currentLimits?.weeklyWithdrawalAvailable,
+      weeklyWithdrawalUsed:
+        providerLimits?.weeklyWithdrawalUsed ??
+        currentLimits?.weeklyWithdrawalUsed,
+    };
+
+    return limits;
+  }
+
+  private buildZeroLimits(): StrigaCardLimitsRequestDto {
+    const zero: StrigaCardLimitsRequestDto = {};
+    const keys: (keyof StrigaCardLimitsRequestDto)[] = [
+      'dailyPurchase',
+      'dailyWithdrawal',
+      'dailyInternetPurchase',
+      'dailyContactlessPurchase',
+      'weeklyPurchase',
+      'weeklyWithdrawal',
+      'weeklyInternetPurchase',
+      'weeklyContactlessPurchase',
+      'monthlyPurchase',
+      'monthlyWithdrawal',
+      'monthlyInternetPurchase',
+      'monthlyContactlessPurchase',
+      'transactionPurchase',
+      'transactionWithdrawal',
+      'transactionInternetPurchase',
+      'transactionContactlessPurchase',
+      'dailyOverallPurchase',
+      'weeklyOverallPurchase',
+      'monthlyOverallPurchase',
+    ];
+    keys.forEach((key) => {
+      (zero as Record<string, number>)[key as string] = 0;
+    });
+    return zero;
+  }
+
+  private buildZeroWithdrawalLimits(): StrigaCardLimitsRequestDto {
+    return {
+      dailyWithdrawal: 0,
+      weeklyWithdrawal: 0,
+      monthlyWithdrawal: 0,
+      transactionWithdrawal: 0,
+    };
+  }
+
+  private buildZeroPurchaseLimits(): StrigaCardLimitsRequestDto {
+    return {
+      dailyPurchase: 0,
+      weeklyPurchase: 0,
+      monthlyPurchase: 0,
+      dailyContactlessPurchase: 0,
+      weeklyContactlessPurchase: 0,
+      monthlyContactlessPurchase: 0,
+      dailyOverallPurchase: 0,
+      weeklyOverallPurchase: 0,
+      monthlyOverallPurchase: 0,
+    };
+  }
+
+  private buildZeroTransactionLimits(): StrigaCardLimitsRequestDto {
+    return {
+      transactionPurchase: 0,
+      transactionWithdrawal: 0,
+      transactionInternetPurchase: 0,
+      transactionContactlessPurchase: 0,
+    };
   }
 
   private async invokeCardFreeze(card: StrigaCard, freeze: boolean) {
@@ -296,20 +756,20 @@ export class StrigaCardsService extends StrigaBaseService {
     const externalId = card.externalId;
     if (!externalId) return null;
     try {
-      const response = await this.findCardByIdFromProvider({ cardId: externalId });
+      const response = await this.findCardByIdFromProvider({
+        cardId: externalId,
+      });
       const data = response?.data as any;
       if (data && typeof data === 'object') {
         await this.strigaCardRepository.update(card.id, {
-          status:
-            (data.status as StrigaCardStatus | undefined) ?? card.status,
+          status: (data.status as StrigaCardStatus | undefined) ?? card.status,
           blockType:
             (data.blockType as StrigaCardBlockType | undefined) ??
             card.blockType,
         });
         return {
           ...card,
-          status:
-            (data.status as StrigaCardStatus | undefined) ?? card.status,
+          status: (data.status as StrigaCardStatus | undefined) ?? card.status,
           blockType:
             (data.blockType as StrigaCardBlockType | undefined) ??
             card.blockType,
@@ -319,22 +779,6 @@ export class StrigaCardsService extends StrigaBaseService {
       // ignore; fallback to local card
     }
     return card;
-  }
-
-  private toFreezeStateDto(card: StrigaCard): StrigaCardFreezeStateDto {
-    const status = card.status ?? null;
-    const blockType = card.blockType ?? null;
-    const normalizedStatus = status ? status.toUpperCase() : null;
-    const normalizedBlockType = blockType ? blockType.toUpperCase() : null;
-    const frozen =
-      normalizedStatus === 'BLOCKED' ||
-      (normalizedBlockType?.includes('BLOCK') ?? false);
-
-    return {
-      frozen,
-      status,
-      blockType,
-    };
   }
 
   async findByParentWalletId(

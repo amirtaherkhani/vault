@@ -1,4 +1,5 @@
 import { StrigaCard } from '../../../../domain/striga-card';
+import { StrigaCardFreezeStateDto } from '../../../../dto/striga-card-freeze.dto';
 
 import { StrigaUserMapper } from '../../../../../striga-users/infrastructure/persistence/relational/mappers/striga-user.mapper';
 
@@ -65,5 +66,21 @@ export class StrigaCardMapper {
     persistenceEntity.updatedAt = domainEntity.updatedAt;
 
     return persistenceEntity;
+  }
+
+  static toFreezeStateDto(card: StrigaCard): StrigaCardFreezeStateDto {
+    const status = card.status ?? null;
+    const blockType = card.blockType ?? null;
+    const normalizedStatus = status ? status.toUpperCase() : null;
+    const normalizedBlockType = blockType ? blockType.toUpperCase() : null;
+    const frozen =
+      normalizedStatus === 'BLOCKED' ||
+      (normalizedBlockType?.includes('BLOCK') ?? false);
+
+    return {
+      frozen,
+      status,
+      blockType,
+    };
   }
 }
