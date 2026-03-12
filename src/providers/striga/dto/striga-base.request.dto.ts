@@ -143,15 +143,24 @@ export type StrigaGetWalletRequestDto = Record<string, unknown>;
 export type StrigaCreateWalletRequestDto = Record<string, unknown>;
 
 export class StrigaGetAccountTransactionsByIdRequestDto {
-  @ApiProperty({ description: 'Striga user id', example: '65fbc66a-1898-4df7-82bc-f9ec464585fd' })
+  @ApiProperty({
+    description: 'Striga user id',
+    example: '65fbc66a-1898-4df7-82bc-f9ec464585fd',
+  })
   @IsString()
   userId!: string;
 
-  @ApiProperty({ description: 'Striga account id (wallet sub-account)', example: 'd8a8c7c7ceeec2c221971febd00d5685' })
+  @ApiProperty({
+    description: 'Striga account id (wallet sub-account)',
+    example: 'd8a8c7c7ceeec2c221971febd00d5685',
+  })
   @IsString()
   accountId!: string;
 
-  @ApiProperty({ description: 'Transaction UUID', example: '5f6b6711-fdb0-4aee-bc60-ed49bd74b575' })
+  @ApiProperty({
+    description: 'Transaction UUID',
+    example: '5f6b6711-fdb0-4aee-bc60-ed49bd74b575',
+  })
   @IsString()
   txId!: string;
 }

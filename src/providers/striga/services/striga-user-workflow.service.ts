@@ -851,9 +851,9 @@ export class StrigaUserWorkflowService {
       this.logger.debug(
         `[trace=${traceId}] Calling Striga getUserByEmail email=${email}.`,
       );
-      const response = await this.userKycService.findUserByEmailFromProvider(
-        { email },
-      );
+      const response = await this.userKycService.findUserByEmailFromProvider({
+        email,
+      });
       const user = this.extractObjectData(response?.data);
       this.logger.debug(
         `[trace=${traceId}] Striga getUserByEmail completed email=${email} found=${user ? 'yes' : 'no'} status=${response?.status ?? 'n/a'} success=${String(response?.success ?? 'n/a')}.`,

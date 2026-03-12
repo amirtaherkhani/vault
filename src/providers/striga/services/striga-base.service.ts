@@ -288,7 +288,6 @@ export abstract class StrigaBaseService {
     });
   }
 
-
   async burnCardInProvider(
     payload: StrigaBurnCardRequestDto,
   ): Promise<StrigaBaseResponseDto> {
@@ -336,7 +335,6 @@ export abstract class StrigaBaseService {
       body: payload,
     });
   }
-
 
   async updateCardLimitsInProvider(
     payload: StrigaUpdateCardLimitsRequestDto,

@@ -219,9 +219,8 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
           const getCardByIdPayload: StrigaCardIdRequestDto = {
             cardId: localExternalId,
           };
-          const getCardByIdResponse = await this.findCardByIdFromProvider(
-            getCardByIdPayload,
-          );
+          const getCardByIdResponse =
+            await this.findCardByIdFromProvider(getCardByIdPayload);
           providerCardByExternalId = this.toCardDto(getCardByIdResponse?.data);
         } catch (error) {
           this.logger.warn(
@@ -655,9 +654,7 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
   private toCardBlockType(value: unknown): StrigaCardBlockType | null {
     const normalized = this.toNullableString(value)?.toUpperCase() ?? null;
     if (!normalized) return null;
-    if (
-      (Object.values(StrigaCardBlockType) as string[]).includes(normalized)
-    ) {
+    if ((Object.values(StrigaCardBlockType) as string[]).includes(normalized)) {
       return normalized as StrigaCardBlockType;
     }
     return null;

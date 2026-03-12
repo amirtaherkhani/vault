@@ -1,7 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsUUID, Min, ValidateNested } from 'class-validator';
-import { StrigaCardBlockType, StrigaCardLimits, StrigaCardStatus } from '../domain/striga-card';
+import {
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import {
+  StrigaCardBlockType,
+  StrigaCardLimits,
+  StrigaCardStatus,
+} from '../domain/striga-card';
 import { StrigaCardLimitsRequestDto } from '../../dto/striga-base.request.dto';
 
 export class StrigaUpdateCardLimitsForMeDto {

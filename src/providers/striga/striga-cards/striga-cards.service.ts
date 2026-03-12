@@ -663,8 +663,7 @@ export class StrigaCardsService extends StrigaBaseService {
         providerLimits?.weeklyPurchaseAvailable ??
         currentLimits?.weeklyPurchaseAvailable,
       weeklyPurchaseUsed:
-        providerLimits?.weeklyPurchaseUsed ??
-        currentLimits?.weeklyPurchaseUsed,
+        providerLimits?.weeklyPurchaseUsed ?? currentLimits?.weeklyPurchaseUsed,
       weeklyWithdrawalAvailable:
         providerLimits?.weeklyWithdrawalAvailable ??
         currentLimits?.weeklyWithdrawalAvailable,

@@ -257,9 +257,7 @@ export class StrigaController {
 
   // Transactions - account by id (admin)
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get account statement by accountId', [
-    RoleEnum.admin,
-  ])
+  @ApiOperationRoles('Get account statement by accountId', [RoleEnum.admin])
   @Post('transactions/accounts')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: StrigaBaseResponseDto })
@@ -294,9 +292,7 @@ export class StrigaController {
 
   // Transactions - account by currency (admin)
   @Roles(RoleEnum.admin)
-  @ApiOperationRoles('Get account statement by currency', [
-    RoleEnum.admin,
-  ])
+  @ApiOperationRoles('Get account statement by currency', [RoleEnum.admin])
   @Post('transactions/accounts/asset')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: StrigaBaseResponseDto })

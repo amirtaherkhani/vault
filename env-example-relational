@@ -118,6 +118,19 @@ REDIS_WORKER_URL=redis://redis:6379/4
 # Cache System
 ########################################
 CACHE_ENABLE=false
+
+########################################
+# WebSocket Layer (upstream feeds)
+########################################
+# Enable per-stream leader election (Redis lock) to avoid duplicate upstream sockets across pods
+WS_LOCK_ENABLE=true                 # Lock ON by default: single leader per stream across pods
+# Redis URL for lock (falls back to CACHE_REDIS_URL or INTERNAL_EVENTS_REDIS_URL if set)
+WS_LOCK_REDIS_URL=redis://redis:6379/5
+# Lock TTL (ms) and key prefix
+WS_LOCK_TTL_MS=15000                # Short TTL for fast failover; renews at ~60% of TTL
+WS_LOCK_KEY_PREFIX=ws-lock:
+# Connection budget per process (max concurrent upstream WS)
+WS_MAX_CONNECTIONS=64               # Protects against socket explosion; backoff when full
 CACHE_REDIS_URL=redis://redis:6379/0
 CACHE_KEY_PREFIX=cache
 CACHE_DEFAULT_TTL_SECONDS=300
@@ -201,6 +214,16 @@ CMC_REQUEST_TIMEOUT_MS=10000
 CMC_MAX_RETRIES=3
 CMC_DEFAULT_FIAT_CURRENCY=USD
 CMC_DEFAULT_SYMBOLS=BTC,ETH,USDT
+
+########################################
+# Binance (market data)
+########################################
+BINANCE_ENABLE=false
+BINANCE_BASE_URL=https://api.binance.com
+# Optional comma-separated fallbacks (better perf, less stable): api-gcp, api1-4
+BINANCE_ALT_BASE_URLS=https://api-gcp.binance.com,https://api1.binance.com,https://api2.binance.com,https://api3.binance.com,https://api4.binance.com
+BINANCE_REQUEST_TIMEOUT_MS=10000
+BINANCE_DEFAULT_QUOTE_ASSET=USDT
 
 ########################################
 # Custody provider - Fireblocks

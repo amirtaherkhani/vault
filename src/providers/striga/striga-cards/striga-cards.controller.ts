@@ -174,10 +174,7 @@ export class StrigaCardsController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaResetCardLimitsForMeDto,
   ): Promise<StrigaUpdateCardLimitsResultDto> {
-    return await this.strigaCardsService.resetWithdrawalLimitsForMe(
-      req,
-      body,
-    );
+    return await this.strigaCardsService.resetWithdrawalLimitsForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -192,10 +189,7 @@ export class StrigaCardsController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaResetCardLimitsForMeDto,
   ): Promise<StrigaUpdateCardLimitsResultDto> {
-    return await this.strigaCardsService.resetPurchaseLimitsForMe(
-      req,
-      body,
-    );
+    return await this.strigaCardsService.resetPurchaseLimitsForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)
@@ -210,10 +204,7 @@ export class StrigaCardsController {
     @Request() req: RequestWithUser,
     @Body() body: StrigaResetCardLimitsForMeDto,
   ): Promise<StrigaUpdateCardLimitsResultDto> {
-    return await this.strigaCardsService.resetTransactionLimitsForMe(
-      req,
-      body,
-    );
+    return await this.strigaCardsService.resetTransactionLimitsForMe(req, body);
   }
 
   @Roles(RoleEnum.admin, RoleEnum.user)

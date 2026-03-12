@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { io, Socket } from 'socket.io-client';
 
 // Your JWT token

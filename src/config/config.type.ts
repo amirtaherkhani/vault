@@ -17,6 +17,8 @@ import { QueueDashConfig } from '../common/queuedash/config/queuedash-config.typ
 import { InternalEventsConfig } from '../common/internal-events/config/internal-events-config.type';
 import { CacheConfig } from '../common/cache/config/cache-config.type';
 import { StrigaConfig } from '../providers/striga/config/striga-config.type';
+import { WsConfig } from '../common/ws/config/ws-config.type';
+import { BinanceConfig } from '../providers/binance/config/binance-config.type';
 
 export type AllConfigType = {
   app: AppConfig;
@@ -38,4 +40,6 @@ export type AllConfigType = {
   internalEvents: InternalEventsConfig;
   cache: CacheConfig;
   striga: StrigaConfig;
+  ws: WsConfig;
+  binance: BinanceConfig;
 };

@@ -45,12 +45,14 @@ import cmcConfig from './providers/cmc/config/cmc-config';
 import { ProvidersModule } from './providers/providers.module';
 import { StrigaModule } from './providers/striga/striga.module';
 import strigaConfig from './providers/striga/config/striga.config';
+import binanceConfig from './providers/binance/config/binance.config';
 import awsSecretsManagerConfig from './config/aws-secrets-manager.config';
 import fireblocksConfig from './providers/fireblocks/cw/config/fireblocks.config';
 import { FireblocksCwModule } from './providers/fireblocks/cw/fireblocks-cw.module';
 import queuedashConfig from './common/queuedash/config/queuedash.config';
 import internalEventsConfig from './common/internal-events/config/internal-events.config';
 import cacheConfig from './common/cache/config/cache.config';
+import wsConfig from './common/ws/config/ws.config';
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -100,12 +102,14 @@ import { StrigaCardsModule } from './providers/striga/striga-cards/striga-cards.
         rabbitmqConfig,
         minioConfig,
         cmcConfig,
+        binanceConfig,
         strigaConfig,
         awsSecretsManagerConfig,
         fireblocksConfig,
         queuedashConfig,
         internalEventsConfig,
         cacheConfig,
+        wsConfig,
       ],
       envFilePath: ['.env'],
     }),
