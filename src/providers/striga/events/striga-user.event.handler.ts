@@ -322,6 +322,13 @@ export class StrigaUserKycTierUpdatedEventHandler extends InternalEventHandlerBa
       `[trace=${traceId}] Handling internal event kyc:tier:update source=${String(payload.source ?? 'n/a')} trigger=${String(payload.trigger ?? 'n/a')} localId=${String(payload.localId ?? 'n/a')} externalId=${String(payload.externalId ?? payload.userId ?? 'n/a')} tier=${tier} previous=${previousStatus || 'null'} current=${currentStatus || 'null'}.`,
     );
 
+    if (payload.source === 'workflow' && payload.trigger === 'login') {
+      this.logger.debug(
+        `[trace=${traceId}] KYC tier update card flow skipped because vero-login already runs isolated card recovery for workflow/login events.`,
+      );
+      return;
+    }
+
     if (tier !== 'tier1' || currentStatus !== 'APPROVED') {
       this.logger.debug(
         `[trace=${traceId}] KYC tier update card flow skipped tier=${tier} current=${currentStatus || 'null'} (required: tier1 + APPROVED).`,

@@ -9,6 +9,13 @@ This integration keeps Striga user, wallet, and card state synchronized with the
 - Striga KYC webhook (`STRIGA_WEBHOOK_KYC_EVENT`)
 - KYC tier change internal event (`kyc:tier:update`)
 
+Important behavior:
+
+- Login/create handlers run the isolated card recovery flow themselves when local tier1 is already `APPROVED`.
+- `kyc:tier:update` still exists and still tracks KYC state transitions, but card recovery is skipped for
+  `source=workflow` + `trigger=login` to avoid duplicate provider calls after login sync.
+- Webhook-driven or non-login tier updates can still run card recovery when tier1 becomes `APPROVED`.
+
 ## Core Provider Model
 
 Striga model is:
@@ -64,7 +71,9 @@ When KYC webhook arrives:
 
 1. Resolve local Striga user by `externalId`.
 2. Update local `striga_user.kyc`.
-3. Emit `kyc:tier:update`; handlers may trigger wallet/card flows when tier1 becomes `APPROVED`.
+3. Emit `kyc:tier:update`.
+4. `kyc:tier:update` may trigger card flow only for tier1 `APPROVED` updates that are not the duplicate `workflow/login`
+   path.
 
 Main code:
 
@@ -92,7 +101,7 @@ Helper location:
 Card workflow runs **separately** (no nested flows) when:
 
 - Login/create workflows finish and the user already has tier1 `APPROVED`.
-- `kyc:tier:update` indicates tier1 transitioned to `APPROVED`.
+- `kyc:tier:update` indicates tier1 transitioned to `APPROVED` from webhook or other non-login paths.
 
 Rules:
 
@@ -119,6 +128,57 @@ Config:
 - `STRIGA_CARD_ASSET_NAMES` (default `EUR`)
 - `STRIGA_CARD_DEFAULT_PASSWORD` (default `VeroVault123!`)
 
+## Card API Surface
+
+Card endpoints are exposed from:
+
+- `src/providers/striga/striga-cards/striga-cards.controller.ts`
+
+Implemented card operations:
+
+- Read current user cards, card-by-id, card-by-currency, and card-linked local account.
+- Set card PIN.
+- Update card security using Striga `/card/security`.
+- Freeze / unfreeze virtual cards using Striga block / unblock endpoints.
+- Get current freeze state from local DB snapshot (`status` + `blockType`).
+- Update card spending limits.
+- Reset all limits to zero.
+- Reset only withdrawal limits to zero.
+- Reset only purchase-related limits to zero.
+- Reset only transaction limits to zero.
+
+Persistence rules for card settings:
+
+- Card `status` is stored from provider response and represented by `StrigaCardStatus`.
+- Card `blockType` is stored from provider response and represented by `StrigaCardBlockType`.
+- Card `security` and `limits` are merged with provider response and persisted after successful provider calls.
+
+Current gap:
+
+- Striga `/card/3ds` exists in base provider service but is not exposed by controller endpoints yet.
+
+## Transaction API Surface
+
+Transaction endpoints are exposed from:
+
+- `src/providers/striga/striga.controller.ts`
+- `src/providers/striga/services/striga-transaction.service.ts`
+
+Implemented transaction operations:
+
+- Account statement by local account / wallet mapping.
+- Account statement by asset name.
+- Account transaction drill-down by Striga transaction id.
+- Card statement for current user.
+- Card statement for admin.
+
+Validation rules:
+
+- Current-user endpoints rely on `StrigaUserExistsGuard`.
+- Card transaction endpoints validate that the local card belongs to the resolved Striga user before calling the
+  provider.
+- Account transaction endpoints validate that the local Striga account exists before calling the provider.
+
 ## How To Extend Safely
 
 If you add new Striga features:
@@ -139,3 +199,11 @@ If local wallet is missing after tier1 approval:
 3. Check wallet calls order: `/wallets/get/account` -> `/wallets/get` -> `/wallets/get/all`.
 4. Check selected wallet id is written to local `account.accountId`.
 5. For card issues, confirm requested currency is in `STRIGA_SUPPORTED_CARD_ASSET_NAMES`; DTO validation will reject others.
+
+If card recovery fails:
+
+1. Check whether the card flow already succeeded in the login/create handler before `kyc:tier:update` started.
+2. Check logs from `StrigaCardWorkflowService` for `Cards/get-all failed...` including `externalId`, `offset`, `limit`,
+   and provider response body.
+3. Confirm the failing tier update was not a duplicate `source=workflow` + `trigger=login` path.
+4. Confirm local `account.accountId` still contains the primary Striga `walletId`.

@@ -175,7 +175,7 @@ export class BinanceSocketService {
     this.ensureChartSeriesStream(symbol, preset, baselineOpen, includeLive);
   }
 
- async unsubscribeChartSeries(
+  async unsubscribeChartSeries(
     socket: Socket,
     payload: { symbol: string; preset: BinanceChartPreset },
   ) {

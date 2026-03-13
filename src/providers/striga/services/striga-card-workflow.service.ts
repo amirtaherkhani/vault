@@ -79,10 +79,18 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
       return;
     }
 
-    const providerCards = await this.findVirtualCardsByUserFromProvider(
-      externalId,
-      traceId,
-    );
+    let providerCards: StrigaCreateCardResponseDto[] = [];
+    try {
+      providerCards = await this.findVirtualCardsByUserFromProvider(
+        externalId,
+        traceId,
+      );
+    } catch (error) {
+      this.logger.error(
+        `[trace=${traceId}] Cards/get-all failed while resolving provider cards externalId=${externalId} reason=${this.formatError(error)} source=${source}.`,
+      );
+      throw error;
+    }
     const providerWalletCards = providerCards.filter(
       (card) => this.toNullableString(card.parentWalletId) === walletId,
     );
@@ -370,7 +378,15 @@ export class StrigaCardWorkflowService extends StrigaBaseService {
         limit: STRIGA_CARDS_PAGE_LIMIT,
         offset,
       };
-      const response = await this.findCardsByUserFromProvider(requestPayload);
+      let response;
+      try {
+        response = await this.findCardsByUserFromProvider(requestPayload);
+      } catch (error) {
+        this.logger.error(
+          `[trace=${traceId}] Cards/get-all request failed externalId=${externalId} offset=${offset} limit=${STRIGA_CARDS_PAGE_LIMIT} reason=${this.formatError(error)}.`,
+        );
+        throw error;
+      }
 
       const page = this.extractCardsByUserData(response?.data);
       const pageCards = page.cards ?? [];
