@@ -3,7 +3,7 @@
 ########################################
 NODE_ENV=development
 APP_PORT=3000
-APP_NAME="Vault"
+APP_NAME=Vault
 API_PREFIX=api
 APP_FALLBACK_LANGUAGE=en
 APP_HEADER_LANGUAGE=x-custom-lang
@@ -119,18 +119,6 @@ REDIS_WORKER_URL=redis://redis:6379/4
 ########################################
 CACHE_ENABLE=false
 
-########################################
-# WebSocket Layer (upstream feeds)
-########################################
-# Enable per-stream leader election (Redis lock) to avoid duplicate upstream sockets across pods
-WS_LOCK_ENABLE=true                 # Lock ON by default: single leader per stream across pods
-# Redis URL for lock (falls back to CACHE_REDIS_URL or INTERNAL_EVENTS_REDIS_URL if set)
-WS_LOCK_REDIS_URL=redis://redis:6379/5
-# Lock TTL (ms) and key prefix
-WS_LOCK_TTL_MS=15000                # Short TTL for fast failover; renews at ~60% of TTL
-WS_LOCK_KEY_PREFIX=ws-lock:
-# Connection budget per process (max concurrent upstream WS)
-WS_MAX_CONNECTIONS=64               # Protects against socket explosion; backoff when full
 CACHE_REDIS_URL=redis://redis:6379/0
 CACHE_KEY_PREFIX=cache
 CACHE_DEFAULT_TTL_SECONDS=300
@@ -148,6 +136,22 @@ CACHE_LOG_HITS=true
 CACHE_LOG_MISSES=true
 CACHE_METRICS_ENABLE=false
 CACHE_METRICS_PREFIX=cache
+
+########################################
+# WebSocket Layer (upstream feeds)
+########################################
+# Enable per-stream leader election (Redis lock) to avoid duplicate upstream sockets across pods
+# Lock ON by default: single leader per stream across pods
+WS_LOCK_ENABLE=true
+# Redis URL for lock (falls back to CACHE_REDIS_URL or INTERNAL_EVENTS_REDIS_URL if set)
+WS_LOCK_REDIS_URL=redis://redis:6379/5
+# Lock TTL (ms) and key prefix
+# Short TTL for fast failover; renews at ~60% of TTL
+WS_LOCK_TTL_MS=15000
+WS_LOCK_KEY_PREFIX=vero-ws-lock:
+# Connection budget per process (max concurrent upstream WS)
+# Protects against socket explosion; backoff when full
+WS_MAX_CONNECTIONS=64
 
 ########################################
 # Internal Events
