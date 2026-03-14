@@ -5,6 +5,7 @@ import {
   ApiFunction,
   RequestInput,
 } from 'src/common/api-gateway/types/api-gateway.type';
+import { plainToInstance } from 'class-transformer';
 import { AllConfigType } from '../../../config/config.type';
 import {
   BinanceBookTickerResponseDto,
@@ -79,17 +80,19 @@ export class BinanceBaseService implements OnModuleInit {
   async getTickerPrice(
     payload: BinanceTickerPriceRequestDto,
   ): Promise<BinanceTickerPriceResponseDto | BinanceTickerPriceResponseDto[]> {
-    return this.call(BINANCE_ENDPOINT_NAME.tickerPrice, {
+    const data = await this.call(BINANCE_ENDPOINT_NAME.tickerPrice, {
       query: this.buildSymbolsQuery(payload),
     });
+    return this.toDto(BinanceTickerPriceResponseDto, data);
   }
 
   async getBookTicker(
     payload: BinanceBookTickerRequestDto,
   ): Promise<BinanceBookTickerResponseDto | BinanceBookTickerResponseDto[]> {
-    return this.call(BINANCE_ENDPOINT_NAME.bookTicker, {
+    const data = await this.call(BINANCE_ENDPOINT_NAME.bookTicker, {
       query: this.buildSymbolsQuery(payload),
     });
+    return this.toDto(BinanceBookTickerResponseDto, data);
   }
 
   async getKlines(
@@ -117,15 +120,21 @@ export class BinanceBaseService implements OnModuleInit {
     if (payload.showPermissionSets !== undefined) {
       Object.assign(query, { showPermissionSets: payload.showPermissionSets });
     }
-    return this.call(BINANCE_ENDPOINT_NAME.exchangeInfo, { query });
+    const data = await this.call(BINANCE_ENDPOINT_NAME.exchangeInfo, { query });
+    return this.toDto(
+      BinanceExchangeInfoResponseDto,
+      data,
+    ) as BinanceExchangeInfoResponseDto;
   }
 
   async ping(): Promise<BinancePingResponseDto> {
-    return this.call(BINANCE_ENDPOINT_NAME.ping);
+    const data = await this.call(BINANCE_ENDPOINT_NAME.ping);
+    return this.toDto(BinancePingResponseDto, data) as BinancePingResponseDto;
   }
 
   async getServerTime(): Promise<BinanceTimeResponseDto> {
-    return this.call(BINANCE_ENDPOINT_NAME.time);
+    const data = await this.call(BINANCE_ENDPOINT_NAME.time);
+    return this.toDto(BinanceTimeResponseDto, data) as BinanceTimeResponseDto;
   }
 
   private buildSymbolsQuery(
@@ -207,5 +216,12 @@ export class BinanceBaseService implements OnModuleInit {
       this.ensureClient();
       return this.callWithFallback(endpointName, input, nextIndex);
     }
+  }
+
+  private toDto<T>(cls: new () => T, data: any): T | T[] {
+    if (Array.isArray(data)) {
+      return plainToInstance(cls, data);
+    }
+    return plainToInstance(cls, data);
   }
 }

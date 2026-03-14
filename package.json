@@ -77,7 +77,6 @@
     "@queuedash/ui": "^3.16.0",
     "@scalar/nestjs-api-reference": "^0.4.16",
     "@socket.io/redis-adapter": "^8.3.0",
-    "@trpc/server": "^11.8.0",
     "@types/multer-s3": "3.0.3",
     "@types/prompts": "2.4.9",
     "amqp-connection-manager": "^4.1.14",

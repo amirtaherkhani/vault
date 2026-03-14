@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { Exclude, Expose } from 'class-transformer';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class BinancePriceQueryDto {
   @ApiProperty({
@@ -19,13 +20,18 @@ export class BinancePriceQueryDto {
   live?: string;
 }
 
+@Exclude()
 export class BinancePriceDto {
   @ApiProperty({ example: 'BTCUSDT' })
+  @Expose()
   symbol!: string;
 
   @ApiProperty({ example: '65000.12', nullable: true })
+  @Expose()
   price!: string | null;
 
   @ApiProperty({ enum: ['rest', 'cache'] })
+  @IsEnum(['rest', 'cache'])
+  @Expose()
   source!: 'rest' | 'cache';
 }

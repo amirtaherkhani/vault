@@ -11,7 +11,7 @@ import {
   BINANCE_PRESET_TO_INTERVAL,
   BinanceChartPreset,
 } from './types/binance-const.type';
-import { normalizeAssetPair } from './binance.helper';
+import { tryNormalizeSymbol, streamKey } from './helper/binance-socket.helper';
 import { BinanceCandleDto } from './dto/binance-klines.dto';
 import { WsSubscription } from 'src/common/ws/types/ws-client.types';
 
@@ -60,31 +60,26 @@ export class BinanceSocketService {
   }
 
   private normSymbol(symbol: string): string | null {
-    try {
-      return normalizeAssetPair(symbol);
-    } catch (err) {
+    const norm = tryNormalizeSymbol(symbol);
+    if (!norm) {
       this.logger.debug(
-        `Binance symbol normalize error: ${(err as Error).message}`,
+        `Binance symbol normalize error: ${symbol}`,
         BinanceSocketService.name,
       );
-      return null;
     }
-  }
-
-  private streamKey(feed: string, ...parts: Array<string | number>): string {
-    return ['binance', feed, ...parts].map((p) => String(p)).join(':');
+    return norm;
   }
 
   // ---------------------------------------------------------------------------
   // Public subscribe APIs
   // ---------------------------------------------------------------------------
-  subscribePrices(socket: Socket, symbols: string[]) {
+  async subscribePrices(socket: Socket, symbols: string[]) {
     if (!this.isEnabled || !Array.isArray(symbols)) return;
     const normalized = symbols
       .map((s) => this.normSymbol(String(s)))
       .filter((s): s is string => Boolean(s));
     for (const symbol of normalized) {
-      socket.join(`price:${symbol}`);
+      await socket.join(`price:${symbol}`);
       this.ensurePriceStream(symbol);
     }
   }
@@ -136,7 +131,7 @@ export class BinanceSocketService {
     if (!symbol || !preset || !(preset in BINANCE_PRESET_TO_INTERVAL)) return;
 
     const room = `chart:series:${symbol}:${preset}`;
-    socket.join(room);
+    await socket.join(room);
     socket.emit(`${room}:ack`, { ok: true });
 
     const { points, interval } = await this.binance.getSeriesByPreset(
@@ -192,7 +187,6 @@ export class BinanceSocketService {
   handleDisconnect(socket: Socket) {
     if (!this.isEnabled) return;
     for (const room of socket.rooms) {
-      if (typeof room !== 'string') continue;
       if (room.startsWith('chart:series:')) {
         const parts = room.split(':');
         if (parts.length === 4) {
@@ -219,7 +213,7 @@ export class BinanceSocketService {
   // Ensure stream helpers
   // ---------------------------------------------------------------------------
   private ensurePriceStream(symbol: string) {
-    const key = this.streamKey('price', symbol);
+    const key = streamKey('price', symbol);
     const current = this.priceStreams.get(key);
     if (current) {
       current.refs += 1;
@@ -262,7 +256,7 @@ export class BinanceSocketService {
   }
 
   private releasePriceStream(symbol: string) {
-    const key = this.streamKey('price', symbol);
+    const key = streamKey('price', symbol);
     const state = this.priceStreams.get(key);
     if (!state) return;
     state.refs -= 1;
@@ -273,7 +267,7 @@ export class BinanceSocketService {
   }
 
   private ensureCandleStream(symbol: string, interval: string) {
-    const key = this.streamKey('candle', symbol, interval);
+    const key = streamKey('candle', symbol, interval);
     const existing = this.candleStreams.get(key);
     if (existing) {
       existing.refs += 1;
@@ -320,7 +314,7 @@ export class BinanceSocketService {
   }
 
   private releaseCandleStream(symbol: string, interval: string) {
-    const key = this.streamKey('candle', symbol, interval);
+    const key = streamKey('candle', symbol, interval);
     const state = this.candleStreams.get(key);
     if (!state) return;
     state.refs -= 1;
@@ -331,7 +325,7 @@ export class BinanceSocketService {
   }
 
   private ensureGlobalPriceStream() {
-    const key = this.streamKey('price', 'all');
+    const key = streamKey('price', 'all');
     const existing = this.globalPriceStreams.get(key);
     if (existing) {
       existing.refs += 1;
@@ -370,7 +364,7 @@ export class BinanceSocketService {
   }
 
   private releaseGlobalPriceStream() {
-    const key = this.streamKey('price', 'all');
+    const key = streamKey('price', 'all');
     const state = this.globalPriceStreams.get(key);
     if (!state) return;
     state.refs -= 1;
@@ -381,7 +375,7 @@ export class BinanceSocketService {
   }
 
   private ensureMidStream(symbol: string) {
-    const key = this.streamKey('mid', symbol);
+    const key = streamKey('mid', symbol);
     const existing = this.midStreams.get(key);
     if (existing) {
       existing.refs += 1;
@@ -420,7 +414,7 @@ export class BinanceSocketService {
   }
 
   private releaseMidStream(symbol: string) {
-    const key = this.streamKey('mid', symbol);
+    const key = streamKey('mid', symbol);
     const state = this.midStreams.get(key);
     if (!state) return;
     state.refs -= 1;
@@ -437,7 +431,7 @@ export class BinanceSocketService {
     includeLive: boolean,
   ) {
     const interval = BINANCE_PRESET_TO_INTERVAL[preset];
-    const key = this.streamKey('chart-series', symbol, preset);
+    const key = streamKey('chart-series', symbol, preset);
     const existing = this.chartSeriesStreams.get(key);
     if (existing) {
       existing.refs += 1;
@@ -508,7 +502,7 @@ export class BinanceSocketService {
   }
 
   private releaseChartSeriesStream(symbol: string, preset: BinanceChartPreset) {
-    const key = this.streamKey('chart-series', symbol, preset);
+    const key = streamKey('chart-series', symbol, preset);
     const state = this.chartSeriesStreams.get(key);
     if (!state) return;
     state.refs -= 1;

@@ -13,7 +13,6 @@ import {
   StrigaGetWalletAccountRequestDto,
   StrigaGetWalletAccountStatementRequestDto,
   StrigaGetWalletRequestDto,
-  StrigaLinkCardAccountRequestDto,
   StrigaResendEmailRequestDto,
   StrigaResendSmsRequestDto,
   StrigaSetCardPinRequestDto,

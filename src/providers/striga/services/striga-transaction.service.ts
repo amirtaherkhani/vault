@@ -23,7 +23,6 @@ import { normalizeSupportedCurrency } from '../helpers/striga-currency.helper';
 import { StrigaBaseResponseDto } from '../dto/striga-base.response.dto';
 import { AccountsService } from '../../../accounts/accounts.service';
 import { AccountProviderName } from '../../../accounts/types/account-enum.type';
-import { RoleEnum } from '../../../roles/roles.enum';
 import {
   isAccountOwnedByAppUser,
   isAccountOwnedByStrigaUser,

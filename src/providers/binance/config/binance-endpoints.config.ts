@@ -3,7 +3,6 @@ import { HttpMethod } from 'src/common/api-gateway/types/api-gateway-enum.type';
 import {
   BINANCE_REQUEST_TIMEOUT_MS,
   BINANCE_BASE_URL,
-  BINANCE_BASE_URLS,
 } from '../types/binance-const.type';
 import { BINANCE_ENDPOINT_NAME } from '../types/binance-base.type';
 

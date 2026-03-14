@@ -8,7 +8,6 @@ import {
   IsOptional,
   IsString,
   ValidateIf,
-  ValidateNested,
 } from 'class-validator';
 
 export enum BinanceSymbolStatus {

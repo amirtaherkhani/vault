@@ -10,17 +10,35 @@ import {
   BinanceChartPreset,
   BinanceKlineInterval,
 } from './types/binance-const.type';
+import { berlinCalendarAnchorStart, intervalMs } from './binance.helper';
 import {
-  berlinCalendarAnchorStart,
-  intervalMs,
-  normalizeAssetPair,
-} from './binance.helper';
+  normalizeSymbolsOrThrow,
+  parseSymbolCsv,
+  sliceCandles,
+} from './helper/binance-service.helper';
 import { BinanceCandleDto } from './dto/binance-klines.dto';
 import { BinanceSupportedAssetDto } from './dto/binance-account.dto';
 import { BinanceBaseService } from './services/binance-base.service';
 import { BinanceMapper } from './infrastructure/persistence/relational/mappers/binance.mapper';
-import { BinanceChartMidPriceDto } from './dto/binance-chart.dto';
-import { BinancePriceDto } from './dto/binance-price.dto';
+import {
+  BinanceChartHeaderDto,
+  BinanceChartMidPriceDto,
+  BinanceChartMidPriceQueryDto,
+  BinanceChartSeriesDto,
+  BinanceChartSeriesQueryDto,
+  BinanceChartSeriesRangeDto,
+  BinanceChartSeriesRangeQueryDto,
+  BinanceChartHeaderQueryDto,
+} from './dto/binance-chart.dto';
+import { BinancePriceDto, BinancePriceQueryDto } from './dto/binance-price.dto';
+import { BinanceHistoryQueryDto } from './dto/binance-klines.dto';
+import {
+  GroupPlainToInstance,
+  GroupPlainToInstances,
+} from '../../utils/transformers/class.transformer';
+import { BinanceSupportedAssetsQueryDto } from './dto/binance-account.dto';
+import { BinanceHealthDto } from './dto/binance-health.dto';
+import { computeBaselineStats } from './helper/binance-service.helper';
 
 @Injectable()
 export class BinanceService
@@ -58,6 +76,86 @@ export class BinanceService
     return this.isEnabled && this.baseService.isReady();
   }
 
+  // ---------------------------------------------------------------------------
+  // Controller-facing helpers (DTO + transformation)
+  // ---------------------------------------------------------------------------
+  async getLatestPriceDtos(
+    query: BinancePriceQueryDto,
+  ): Promise<BinancePriceDto[]> {
+    const symbols = parseSymbolCsv(query.symbols);
+    const live = query.live !== 'false';
+    const result = await this.getLatestPrices(symbols, live);
+    return GroupPlainToInstances(BinancePriceDto, result);
+  }
+
+  async getHistoryDtos(
+    query: BinanceHistoryQueryDto,
+  ): Promise<BinanceCandleDto[]> {
+    const interval = (query.interval as BinanceKlineInterval) ?? '1m';
+    const limit = query.limit ? Number(query.limit) : 100;
+    const live = query.live !== 'false';
+    const points = await this.getCandlesticks(
+      query.symbol,
+      interval,
+      limit,
+      live,
+    );
+    return GroupPlainToInstances(BinanceCandleDto, points);
+  }
+
+  async getSupportedAssetsDtos(
+    query: BinanceSupportedAssetsQueryDto,
+  ): Promise<BinanceSupportedAssetDto[]> {
+    const assets = await this.getSupportedAssets(query.quoteAsset);
+    return GroupPlainToInstances(BinanceSupportedAssetDto, assets);
+  }
+
+  async getChartHeaderDto(
+    query: BinanceChartHeaderQueryDto,
+  ): Promise<BinanceChartHeaderDto> {
+    const preset = (query.preset || 'today') as BinanceChartPreset;
+    const dto = await this.getChartHeader(query.symbol, preset);
+    return GroupPlainToInstance(BinanceChartHeaderDto, dto);
+  }
+
+  async getChartSeriesDto(
+    query: BinanceChartSeriesQueryDto,
+  ): Promise<BinanceChartSeriesDto> {
+    const preset = (query.preset || 'today') as BinanceChartPreset;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const series = await this.buildChartSeries(query.symbol, preset, limit);
+    return GroupPlainToInstance(BinanceChartSeriesDto, series);
+  }
+
+  async getChartMidPriceDtos(
+    query: BinanceChartMidPriceQueryDto,
+  ): Promise<BinanceChartMidPriceDto[]> {
+    const symbols = parseSymbolCsv(query.symbols);
+    const mids = await this.getMidPrices(symbols);
+    return GroupPlainToInstances(BinanceChartMidPriceDto, mids);
+  }
+
+  async getChartSeriesRangeDto(
+    query: BinanceChartSeriesRangeQueryDto,
+  ): Promise<BinanceChartSeriesRangeDto> {
+    const preset = (query.preset || 'today') as BinanceChartPreset;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const startTime = query.startTime ? Number(query.startTime) : undefined;
+    const endTime = query.endTime ? Number(query.endTime) : undefined;
+    const series = await this.buildChartSeriesRange(query.symbol, preset, {
+      startTime,
+      endTime,
+      limit,
+    });
+    return GroupPlainToInstance(BinanceChartSeriesRangeDto, series);
+  }
+
+  async healthCheck(): Promise<BinanceHealthDto> {
+    const ok = await this.checkConnection();
+    const payload = { ok, message: ok ? 'ok' : 'binance ping failed' };
+    return GroupPlainToInstance(BinanceHealthDto, payload);
+  }
+
   private async checkConnection(): Promise<boolean> {
     try {
       await this.baseService.ping();
@@ -75,7 +173,7 @@ export class BinanceService
   ): Promise<BinancePriceDto[]> {
     this.checkIfEnabled();
 
-    const normalized = this.normalizeSymbols(symbols);
+    const normalized = normalizeSymbolsOrThrow(symbols);
     if (!normalized.length) {
       throw new BadRequestException('No symbols provided');
     }
@@ -289,6 +387,53 @@ export class BinanceService
     return { points, interval };
   }
 
+  async buildChartSeries(
+    symbol: string,
+    preset: BinanceChartPreset,
+    limit?: number,
+  ): Promise<BinanceChartSeriesDto> {
+    const { points, interval } = await this.getSeriesByPreset(
+      symbol,
+      preset,
+      limit,
+      true,
+    );
+    const base = await this.getBaselineOpen(symbol, preset);
+    const { baselineOpen, priceStr, changePercent } = computeBaselineStats(
+      points,
+      base.baselineOpen ?? null,
+    );
+
+    return {
+      symbol,
+      preset,
+      interval,
+      baseline: { open: baselineOpen, time: base.baselineTime },
+      price: priceStr,
+      changePercent,
+      points,
+    };
+  }
+
+  async buildChartSeriesRange(
+    symbol: string,
+    preset: BinanceChartPreset,
+    opts: { startTime?: number; endTime?: number; limit?: number } = {},
+  ): Promise<BinanceChartSeriesRangeDto> {
+    const { points, interval } = await this.getSeriesByPresetRange(
+      symbol,
+      preset,
+      opts,
+    );
+    return {
+      symbol,
+      preset,
+      interval,
+      points,
+      range: { startTime: opts.startTime, endTime: opts.endTime },
+    };
+  }
+
   private async fetchBaselineOpen(
     symbol: string,
     interval: BinanceKlineInterval,
@@ -315,29 +460,15 @@ export class BinanceService
       limit,
     });
 
-    let points: BinanceCandleDto[] = BinanceMapper.toCandles(klines, {
+    const points = BinanceMapper.toCandles(klines, {
       source: 'rest',
       now,
     });
 
-    if (points.length > limit) {
-      points = points.slice(-limit);
-    }
-
-    return { points, interval };
+    return { points: sliceCandles(points, limit), interval };
   }
 
-  private normalizeSymbols(symbols: string[]): string[] {
-    const normalized: string[] = [];
-    for (const s of symbols) {
-      try {
-        normalized.push(normalizeAssetPair(s));
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Invalid symbol format';
-        throw new BadRequestException(message);
-      }
-    }
-    return normalized;
+  private parseSymbols(csv: string): string[] {
+    return parseSymbolCsv(csv);
   }
 }
