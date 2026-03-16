@@ -48,64 +48,64 @@ export class BinanceController {
   @Get('price')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinancePriceDto] })
-  async getLatestPrice(
+  async findTickerPrices(
     @Query() query: BinancePriceQueryDto,
   ): Promise<BinancePriceDto[]> {
-    return this.service.getLatestPriceDtos(query);
+    return this.service.findTickerPrices(query);
   }
 
   @Get('history')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceCandleDto] })
-  async getCandles(
+  async findKlines(
     @Query() query: BinanceHistoryQueryDto,
   ): Promise<BinanceCandleDto[]> {
-    return this.service.getHistoryDtos(query);
+    return this.service.findKlines(query);
   }
 
   @Get('supported-assets')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceSupportedAssetDto] })
-  async getSupportedAssets(
+  async findSupportedAssets(
     @Query() query: BinanceSupportedAssetsQueryDto,
   ): Promise<BinanceSupportedAssetDto[]> {
-    return this.service.getSupportedAssetsDtos(query);
+    return this.service.findSupportedAssets(query);
   }
 
   @Get('chart/header')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartHeaderDto })
-  async getChartHeader(
+  async findChartHeader(
     @Query() query: BinanceChartHeaderQueryDto,
   ): Promise<BinanceChartHeaderDto> {
-    return this.service.getChartHeaderDto(query);
+    return this.service.findChartHeader(query);
   }
 
   @Get('chart/series')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartSeriesDto })
-  async getChartSeries(
+  async findChartSeries(
     @Query() query: BinanceChartSeriesQueryDto,
   ): Promise<BinanceChartSeriesDto> {
-    return this.service.getChartSeriesDto(query);
+    return this.service.findChartSeries(query);
   }
 
   @Get('chart/mid-price')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceChartMidPriceDto] })
-  async getChartMidPrice(
+  async findChartMidPrice(
     @Query() query: BinanceChartMidPriceQueryDto,
   ): Promise<BinanceChartMidPriceDto[]> {
-    return this.service.getChartMidPriceDtos(query);
+    return this.service.findChartMidPrices(query);
   }
 
   @Get('chart/series-range')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartSeriesRangeDto })
-  async getChartSeriesRange(
+  async findChartSeriesRange(
     @Query() query: BinanceChartSeriesRangeQueryDto,
   ): Promise<BinanceChartSeriesRangeDto> {
-    return this.service.getChartSeriesRangeDto(query);
+    return this.service.findChartSeriesRange(query);
   }
 
   @Get('healthz')

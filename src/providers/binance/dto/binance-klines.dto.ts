@@ -1,32 +1,63 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import type { BinanceKlineInterval } from '../types/binance-const.type';
 import { BinanceKlineIntervalEnum } from '../types/binance-enum.type';
+
+export type BinanceKlineRaw = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
+  string,
+  number,
+  string,
+  string,
+  string,
+];
 
 export class BinanceHistoryQueryDto {
   @ApiProperty({ example: 'BTCUSDT' })
   @IsString()
   symbol!: string;
 
-  @ApiProperty({ example: '1m', required: false, default: '1m' })
+  @ApiPropertyOptional({
+    example: '1m',
+    default: '1m',
+    enum: BinanceKlineIntervalEnum,
+  })
   @IsOptional()
   @IsEnum(BinanceKlineIntervalEnum)
   interval?: BinanceKlineInterval;
 
-  @ApiProperty({ example: 100, required: false, default: 100 })
+  @ApiPropertyOptional({ example: 100, default: 100, type: Number })
   @IsOptional()
-  @IsString()
-  limit?: string;
+  @Type(() => Number)
+  @IsInt()
+  limit?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Use live stream cache when available',
-    required: false,
     default: true,
+    type: Boolean,
   })
   @IsOptional()
-  @IsString()
-  live?: string;
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    return value === 'true' || value === '1';
+  })
+  live?: boolean;
 }
 
 @Exclude()

@@ -10,7 +10,6 @@ import { AllConfigType } from '../../../config/config.type';
 import {
   BinanceBookTickerResponseDto,
   BinanceExchangeInfoResponseDto,
-  BinanceKlineRaw,
   BinancePingResponseDto,
   BinanceTimeResponseDto,
   BinanceTickerPriceResponseDto,
@@ -29,6 +28,7 @@ import {
   BINANCE_ENDPOINT_NAME,
   BinanceEndpointName,
 } from '../types/binance-base.type';
+import { BinanceKlineRaw } from '../dto/binance-klines.dto';
 
 @Injectable()
 export class BinanceBaseService implements OnModuleInit {
@@ -111,11 +111,15 @@ export class BinanceBaseService implements OnModuleInit {
   }
 
   async getExchangeInfo(
-    payload: BinanceExchangeInfoRequestDto = {},
+    payload: BinanceExchangeInfoRequestDto = { permissions: ['SPOT'] },
   ): Promise<BinanceExchangeInfoResponseDto> {
+    const permissions =
+      payload.permissions && payload.permissions.length > 0
+        ? payload.permissions
+        : ['SPOT'];
     const query = this.buildSymbolsQuery(payload);
-    if (payload.permissions?.length) {
-      Object.assign(query, { permissions: payload.permissions });
+    if (permissions?.length) {
+      Object.assign(query, { permissions });
     }
     if (payload.showPermissionSets !== undefined) {
       Object.assign(query, { showPermissionSets: payload.showPermissionSets });

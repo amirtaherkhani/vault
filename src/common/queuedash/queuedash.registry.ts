@@ -40,14 +40,6 @@ export class QueueDashRegistry {
     );
   }
 
-  registerBullQueue(queue: unknown, displayName: string): void {
-    this.registerQueue({
-      queue,
-      displayName,
-      type: 'bull',
-    });
-  }
-
   registerBullMqQueue(queue: unknown, displayName: string): void {
     this.registerQueue({
       queue,

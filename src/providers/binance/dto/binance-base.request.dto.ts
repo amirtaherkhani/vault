@@ -9,12 +9,7 @@ import {
   IsString,
   ValidateIf,
 } from 'class-validator';
-
-export enum BinanceSymbolStatus {
-  TRADING = 'TRADING',
-  HALT = 'HALT',
-  BREAK = 'BREAK',
-}
+import { BinanceSymbolStatus } from '../types/binance-symbol-status.type';
 
 export class BinanceTickerPriceRequestDto {
   @ApiPropertyOptional({ example: 'BTCUSDT' })
@@ -107,7 +102,12 @@ export class BinanceExchangeInfoRequestDto {
   @IsString({ each: true })
   symbols?: string[];
 
-  @ApiPropertyOptional({ example: ['SPOT', 'MARGIN'] })
+  @ApiPropertyOptional({
+    example: ['SPOT', 'MARGIN'],
+    default: ['SPOT'],
+    description:
+      'Filter by permissions. Defaults to SPOT to limit results to spot trading pairs.',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

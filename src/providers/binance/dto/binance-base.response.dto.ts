@@ -39,21 +39,6 @@ export class BinanceBookTickerResponseDto {
   askQty!: string;
 }
 
-export type BinanceKlineRaw = [
-  number,
-  string,
-  string,
-  string,
-  string,
-  string,
-  number,
-  string,
-  number,
-  string,
-  string,
-  string,
-];
-
 export class BinanceExchangeInfoSymbolDto {
   @ApiProperty({ example: 'BTCUSDT' })
   @IsString()

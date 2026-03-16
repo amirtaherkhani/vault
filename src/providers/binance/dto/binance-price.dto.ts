@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Expose, Transform } from 'class-transformer';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class BinancePriceQueryDto {
   @ApiProperty({
@@ -10,14 +10,19 @@ export class BinancePriceQueryDto {
   @IsString()
   symbols!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Use live price stream when available',
-    required: false,
     default: true,
+    type: Boolean,
   })
   @IsOptional()
-  @IsString()
-  live?: string;
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    return value === 'true' || value === '1';
+  })
+  live?: boolean;
 }
 
 @Exclude()

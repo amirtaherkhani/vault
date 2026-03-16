@@ -5,6 +5,7 @@ import { Socket } from 'socket.io';
 import { WsConnectionManager } from 'src/common/ws/ws-connection.manager';
 import { LoggerService } from 'src/common/logger/logger.service';
 import { SocketServerProvider } from 'src/communication/socketio/utils/socketio.provider';
+import type { Server } from 'socket.io';
 import { AllConfigType } from 'src/config/config.type';
 import { BinanceService } from './binance.service';
 import {
@@ -12,6 +13,7 @@ import {
   BinanceChartPreset,
 } from './types/binance-const.type';
 import { tryNormalizeSymbol, streamKey } from './helper/binance-socket.helper';
+import { computeBaselineStats } from './helper/binance-service.helper';
 import { BinanceCandleDto } from './dto/binance-klines.dto';
 import { WsSubscription } from 'src/common/ws/types/ws-client.types';
 
@@ -55,8 +57,16 @@ export class BinanceSocketService {
     return this.configService.get('binance.enable', { infer: true }) ?? false;
   }
 
-  private server() {
-    return this.socketProvider.getServer?.() ?? this.socketProvider.server;
+  private getServerSafe(): Server | null {
+    const srv = this.socketProvider.getServer?.();
+    if (!srv) {
+      this.logger.debug(
+        'Socket.IO server is not ready; skipping emit.',
+        BinanceSocketService.name,
+      );
+      return null;
+    }
+    return srv;
   }
 
   private normSymbol(symbol: string): string | null {
@@ -142,17 +152,10 @@ export class BinanceSocketService {
     );
     const base = await this.binance.getBaselineOpen(symbol, preset);
     const baselineOpen = base.baselineOpen ?? null;
-
-    const lastClose = points.length
-      ? Number(points[points.length - 1].close)
-      : NaN;
-    const priceNow = Number.isFinite(lastClose) ? lastClose : NaN;
-    const priceStr = Number.isFinite(priceNow) ? String(priceNow) : null;
-
-    const changePercent =
-      baselineOpen && baselineOpen > 0 && Number.isFinite(priceNow)
-        ? ((priceNow - baselineOpen) / baselineOpen) * 100
-        : null;
+    const { priceStr, changePercent } = computeBaselineStats(
+      points,
+      baselineOpen,
+    );
 
     const initPayload = {
       symbol,
@@ -232,7 +235,9 @@ export class BinanceSocketService {
             const payload = JSON.parse(data.toString());
             const price = String(payload?.c ?? '');
             if (!price) return;
-            this.server()
+            const srv = this.getServerSafe();
+            if (!srv) return;
+            srv
               .to(`price:${symbol}`)
               .emit(`price:${symbol}`, { symbol, price });
           } catch (err) {
@@ -296,7 +301,9 @@ export class BinanceSocketService {
               closed: k.x,
               source: 'ws',
             };
-            this.server()
+            const srv = this.getServerSafe();
+            if (!srv) return;
+            srv
               .to(`candle:${symbol}:${interval}`)
               .emit(`candle:${symbol}:${interval}`, candle);
           } catch (err) {
@@ -345,9 +352,9 @@ export class BinanceSocketService {
               const symbol = String(t.s);
               const price = String(t.c);
               if (!symbol || !price) continue;
-              this.server()
-                .to('price:all')
-                .emit('price:all', { symbol, price });
+              const srv = this.getServerSafe();
+              if (!srv) return;
+              srv.to('price:all').emit('price:all', { symbol, price });
             }
           } catch (err) {
             this.logger.debug(
@@ -396,9 +403,9 @@ export class BinanceSocketService {
             if (!Number.isFinite(bid) || !Number.isFinite(ask)) return;
             const mid = ((bid + ask) / 2).toString();
             const room = `chart:price:${symbol}`;
-            this.server()
-              .to(room)
-              .emit(room, { symbol, price: mid, type: 'mid' });
+            const srv = this.getServerSafe();
+            if (!srv) return;
+            srv.to(room).emit(room, { symbol, price: mid, type: 'mid' });
           } catch (err) {
             this.logger.debug(
               `Binance mid price parse error: ${(err as Error).message}`,
@@ -485,7 +492,9 @@ export class BinanceSocketService {
 
               state.lastClose = close;
               const room = `chart:series:${symbol}:${preset}`;
-              this.server().to(room).emit(room, candle);
+              const srv = this.getServerSafe();
+              if (!srv) return;
+              srv.to(room).emit(room, candle);
             } catch (err) {
               this.logger.debug(
                 `Binance chart series parse error: ${(err as Error).message}`,

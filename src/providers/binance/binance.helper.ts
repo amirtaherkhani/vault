@@ -38,87 +38,95 @@ export function intervalMs(interval: BinanceKlineInterval): number {
   return m[interval] ?? 0;
 }
 
-function berlinOffsetMsAt(utcMs: number): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Berlin',
-    timeZoneName: 'shortOffset',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(utcMs));
-
-  const tz = parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+1';
-  const match = tz.match(/GMT([+-])(\d{1,2})/);
-  if (!match) return 3_600_000;
+function parseOffsetMinutes(tz?: string): number | null {
+  if (!tz) return null;
+  const match = tz.match(/^([+-]?)(\d{1,2})(?::?(\d{2}))?$/);
+  if (!match) return null;
   const sign = match[1] === '-' ? -1 : 1;
   const hours = parseInt(match[2], 10);
-  return sign * hours * 3_600_000;
+  const minutes = match[3] ? parseInt(match[3], 10) : 0;
+  return sign * (hours * 60 + minutes);
 }
 
-function berlinWeekday1to7(utcMs: number): number {
-  const wdStr = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Berlin',
-    weekday: 'short',
-  }).format(new Date(utcMs));
-  const map: Record<string, number> = {
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-    Sun: 7,
+function offsetMsAt(timeZone: string, utcMs: number): number {
+  // Try Intl first (works for IANA zones and Etc/GMT offsets)
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      timeZoneName: 'shortOffset',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(utcMs));
+    const tz = parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+0';
+    const match = tz.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+    if (!match) return 0;
+    const sign = match[1] === '-' ? -1 : 1;
+    const hours = parseInt(match[2], 10);
+    const mins = match[3] ? parseInt(match[3], 10) : 0;
+    return sign * (hours * 60 + mins) * 60_000;
+  } catch {
+    // fallback below
+  }
+
+  const offsetMinutes = parseOffsetMinutes(timeZone);
+  if (offsetMinutes !== null) return offsetMinutes * 60_000;
+
+  return 0;
+}
+
+function weekday1to7Local(utcMs: number, offsetMs: number): number {
+  const local = new Date(utcMs + offsetMs);
+  const wd = local.getUTCDay(); // 0=Sun
+  const map: Record<number, number> = {
+    0: 7,
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    5: 5,
+    6: 6,
   };
-  return map[wdStr] ?? 1;
+  return map[wd] ?? 1;
 }
 
-export function berlinCalendarAnchorStart(preset: BinanceChartPreset): number {
-  const nowUtc = Date.now();
-  const dateParts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Berlin',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-    .format(new Date(nowUtc))
-    .split('-');
-  const [yStr, mStr, dStr] = dateParts;
-  const y = parseInt(yStr, 10);
-  const m = parseInt(mStr, 10);
-  const d = parseInt(dStr, 10);
+/**
+ * Returns the UTC timestamp for the start of the chart preset window
+ * using the provided timeZone (IANA or +/-HH:MM). Defaults to Europe/Berlin
+ * for backward compatibility.
+ */
+export function calendarAnchorStart(
+  preset: BinanceChartPreset,
+  timeZone = 'Europe/Berlin',
+  nowUtc = Date.now(),
+): number {
+  const offset = offsetMsAt(timeZone, nowUtc);
+  const local = new Date(nowUtc + offset);
+  const y = local.getUTCFullYear();
+  const m = local.getUTCMonth(); // 0-based
+  const d = local.getUTCDate();
 
   let by = y;
   let bm = m;
   let bd = d;
 
   if (preset === 'week') {
-    const wd = berlinWeekday1to7(nowUtc);
+    const wd = weekday1to7Local(nowUtc, offset); // Mon=1
     const daysFromMonday = wd - 1;
-    const todayBerlinUTC0 = Date.UTC(y, m - 1, d, 0, 0, 0);
-    const todayOffset = berlinOffsetMsAt(todayBerlinUTC0);
-    const todayUTC = todayBerlinUTC0 - todayOffset;
-    const mondayUTC = todayUTC - daysFromMonday * 86_400_000;
-    const mondayParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Berlin',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-      .format(new Date(mondayUTC))
-      .split('-');
-    by = parseInt(mondayParts[0], 10);
-    bm = parseInt(mondayParts[1], 10);
-    bd = parseInt(mondayParts[2], 10);
-  } else if (preset === 'month') {
+    const anchorLocalMs =
+      Date.UTC(y, m, d, 0, 0, 0) - daysFromMonday * 86_400_000;
+    return anchorLocalMs - offset;
+  }
+
+  if (preset === 'month') {
     bd = 1;
   } else if (preset === 'year') {
-    bm = 1;
+    bm = 0;
     bd = 1;
   }
 
-  const candidateUTC0 = Date.UTC(by, bm - 1, bd, 0, 0, 0);
-  const off = berlinOffsetMsAt(candidateUTC0);
-  return candidateUTC0 - off;
+  const anchorLocalMs = Date.UTC(by, bm, bd, 0, 0, 0);
+  return anchorLocalMs - offset;
 }

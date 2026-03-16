@@ -45,6 +45,7 @@ import cmcConfig from './providers/cmc/config/cmc-config';
 import { ProvidersModule } from './providers/providers.module';
 import { StrigaModule } from './providers/striga/striga.module';
 import strigaConfig from './providers/striga/config/striga.config';
+import { BinanceModule } from './providers/binance/binance.module';
 import binanceConfig from './providers/binance/config/binance.config';
 import awsSecretsManagerConfig from './config/aws-secrets-manager.config';
 import fireblocksConfig from './providers/fireblocks/cw/config/fireblocks.config';
@@ -162,6 +163,7 @@ import { StrigaCardsModule } from './providers/striga/striga-cards/striga-cards.
     CacheModule,
     SocketIoModule,
     CmcModule,
+    BinanceModule,
     StrigaModule,
     ProvidersModule,
   ],

@@ -1,11 +1,13 @@
-import { BinanceCandleDto } from '../../../../dto/binance-klines.dto';
+import {
+  BinanceCandleDto,
+  BinanceKlineRaw,
+} from '../../../../dto/binance-klines.dto';
 import { BinanceSupportedAssetDto } from '../../../../dto/binance-account.dto';
 import { BinanceChartMidPriceDto } from '../../../../dto/binance-chart.dto';
 import { BinancePriceDto } from '../../../../dto/binance-price.dto';
 import {
   BinanceBookTickerResponseDto,
   BinanceExchangeInfoResponseDto,
-  BinanceKlineRaw,
   BinanceTickerPriceResponseDto,
 } from '../../../../dto/binance-base.response.dto';
 

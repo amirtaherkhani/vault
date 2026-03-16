@@ -1,6 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
 import type { BinanceChartPreset } from '../types/binance-const.type';
 import { BinanceChartPresetEnum } from '../types/binance-enum.type';
 import { BinanceCandleDto } from './binance-klines.dto';
@@ -10,10 +10,19 @@ export class BinanceChartHeaderQueryDto {
   @IsString()
   symbol!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
+    description:
+      'Client timezone (IANA or offset, e.g. "America/New_York" or "+03:30")',
+    example: 'Europe/Berlin',
+  })
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
+
+  @ApiPropertyOptional({
     example: 'today',
-    required: false,
     default: 'today',
+    enum: BinanceChartPresetEnum,
   })
   @IsOptional()
   @IsEnum(BinanceChartPresetEnum)
@@ -48,15 +57,29 @@ export class BinanceChartSeriesQueryDto {
   @IsString()
   symbol!: string;
 
-  @ApiProperty({ example: 'today', required: false, default: 'today' })
+  @ApiPropertyOptional({
+    description:
+      'Client timezone (IANA or offset, e.g. "America/New_York" or "+03:30")',
+    example: 'Europe/Berlin',
+  })
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
+
+  @ApiPropertyOptional({
+    example: 'today',
+    default: 'today',
+    enum: BinanceChartPresetEnum,
+  })
   @IsOptional()
   @IsEnum(BinanceChartPresetEnum)
   preset?: BinanceChartPreset;
 
-  @ApiProperty({ example: 300, required: false })
+  @ApiPropertyOptional({ example: 300, type: Number })
   @IsOptional()
-  @IsString()
-  limit?: string;
+  @Type(() => Number)
+  @IsInt()
+  limit?: number;
 }
 
 @Exclude()
@@ -120,25 +143,41 @@ export class BinanceChartSeriesRangeQueryDto {
   @IsString()
   symbol!: string;
 
-  @ApiProperty({ example: 'today', required: false, default: 'today' })
+  @ApiPropertyOptional({
+    description:
+      'Client timezone (IANA or offset, e.g. "America/New_York" or "+03:30")',
+    example: 'Europe/Berlin',
+  })
+  @IsOptional()
+  @IsString()
+  timeZone?: string;
+
+  @ApiPropertyOptional({
+    example: 'today',
+    default: 'today',
+    enum: BinanceChartPresetEnum,
+  })
   @IsOptional()
   @IsEnum(BinanceChartPresetEnum)
   preset?: BinanceChartPreset;
 
-  @ApiProperty({ example: 1710000000000, required: false })
+  @ApiPropertyOptional({ example: 1710000000000, type: Number })
   @IsOptional()
-  @IsString()
-  startTime?: string;
+  @Type(() => Number)
+  @IsInt()
+  startTime?: number;
 
-  @ApiProperty({ example: 1710003600000, required: false })
+  @ApiPropertyOptional({ example: 1710003600000, type: Number })
   @IsOptional()
-  @IsString()
-  endTime?: string;
+  @Type(() => Number)
+  @IsInt()
+  endTime?: number;
 
-  @ApiProperty({ example: 1000, required: false })
+  @ApiPropertyOptional({ example: 1000, type: Number })
   @IsOptional()
-  @IsString()
-  limit?: string;
+  @Type(() => Number)
+  @IsInt()
+  limit?: number;
 }
 
 @Exclude()

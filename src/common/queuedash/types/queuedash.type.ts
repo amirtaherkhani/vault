@@ -1,4 +1,4 @@
-export type QueueDashQueueType = 'bull' | 'bullmq';
+export type QueueDashQueueType = 'bullmq';
 
 export type QueueDashQueueRegistration = {
   queue: unknown;
