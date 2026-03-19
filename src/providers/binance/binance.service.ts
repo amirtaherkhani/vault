@@ -39,7 +39,6 @@ import {
   GroupPlainToInstances,
 } from '../../utils/transformers/class.transformer';
 import { BinanceSupportedAssetsQueryDto } from './dto/binance-account.dto';
-import { BinanceHealthDto } from './dto/binance-health.dto';
 import { computeBaselineStats } from './helper/binance-service.helper';
 import { ConfigGet } from '../../config/config.decorator';
 import {
@@ -214,10 +213,9 @@ export class BinanceService
     return GroupPlainToInstance(BinanceChartSeriesRangeDto, series);
   }
 
-  async healthCheck(): Promise<BinanceHealthDto> {
+  async healthCheck(): Promise<{ ok: boolean; message: string }> {
     const ok = await this.checkConnection();
-    const payload = { ok, message: ok ? 'ok' : 'binance ping failed' };
-    return GroupPlainToInstance(BinanceHealthDto, payload);
+    return { ok, message: ok ? 'ok' : 'binance ping failed' };
   }
 
   async findExecutionRules(

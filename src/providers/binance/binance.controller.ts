@@ -41,13 +41,16 @@ import {
 import {
   BinanceExecutionRulesResponseDto,
   BinanceExchangeInfoResponseDto,
-  BinancePingResponseDto,
   BinanceTimeResponseDto,
 } from './dto/binance-base.response.dto';
 import {
   BinanceExecutionRulesRequestDto,
   BinanceExchangeInfoRequestDto,
 } from './dto/binance-base.request.dto';
+import {
+  BinanceExchangeInfoApiQueryDto,
+  BinanceExecutionRulesApiQueryDto,
+} from './dto/binance-exchange-execution.api.dto';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
@@ -131,23 +134,21 @@ export class BinanceController {
     return this.service.findChartSeriesRange(query);
   }
 
-  @Roles(RoleEnum.admin)
   @Get('healthz')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     type: BinanceHealthDto,
-    description: 'Binance provider health',
+    description:
+      'Binance provider health (REST + Socket.IO). ok=true only if both are healthy.',
   })
   async health(): Promise<BinanceHealthDto> {
-    return this.service.healthCheck();
-  }
-
-  @Roles(RoleEnum.admin)
-  @Get('ping')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({ type: BinancePingResponseDto })
-  async ping(): Promise<BinancePingResponseDto> {
-    return this.service.ping();
+    const rest = await this.service.healthCheck();
+    const socket = await this.socketService.testConnectivity();
+    return {
+      ok: rest.ok && socket.ok,
+      rest,
+      socket,
+    };
   }
 
   @Roles(RoleEnum.admin)
@@ -163,29 +164,11 @@ export class BinanceController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceExchangeInfoResponseDto })
   async exchangeInfo(
-    @Query() query: BinanceExchangeInfoRequestDto,
+    @Query() query: BinanceExchangeInfoApiQueryDto,
   ): Promise<BinanceExchangeInfoResponseDto> {
-    return this.service.findExchangeInfo(query);
-  }
-
-  @Roles(RoleEnum.admin)
-  @Get('ws/health')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({
-    schema: {
-      type: 'object',
-      properties: {
-        ok: { type: 'boolean', example: true },
-        message: {
-          type: 'string',
-          example: 'Binance socket layer is ready',
-        },
-      },
-    },
-    description: 'Checks Binance websocket layer readiness (no upstream call).',
-  })
-  async websocketHealth(): Promise<{ ok: boolean; message: string }> {
-    return this.socketService.testConnectivity();
+    return this.service.findExchangeInfo(
+      query as BinanceExchangeInfoRequestDto,
+    );
   }
 
   @Roles(RoleEnum.admin)
@@ -193,8 +176,10 @@ export class BinanceController {
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceExecutionRulesResponseDto })
   async findExecutionRules(
-    @Query() query: BinanceExecutionRulesRequestDto,
+    @Query() query: BinanceExecutionRulesApiQueryDto,
   ): Promise<BinanceExecutionRulesResponseDto> {
-    return this.service.findExecutionRules(query);
+    return this.service.findExecutionRules(
+      query as BinanceExecutionRulesRequestDto,
+    );
   }
 }

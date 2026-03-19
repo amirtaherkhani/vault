@@ -1,24 +1,40 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { Exclude, Expose, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
-@Exclude()
-export class BinanceHealthDto {
-  @ApiProperty({
-    example: true,
-    description: 'Indicates if Binance REST is reachable',
-  })
+class BinanceHealthItemDto {
+  @ApiProperty({ example: true })
   @IsBoolean()
   @Expose()
   ok!: boolean;
 
-  @ApiProperty({
-    example: 'ok',
-    description: 'Optional message for additional context',
-    required: false,
-  })
+  @ApiProperty({ example: 'ok', required: false })
   @IsOptional()
   @IsString()
   @Expose()
   message?: string;
+}
+
+@Exclude()
+export class BinanceHealthDto {
+  @ApiProperty({ example: true })
+  @Expose()
+  ok!: boolean;
+
+  @ApiProperty({ type: BinanceHealthItemDto })
+  @ValidateNested()
+  @Type(() => BinanceHealthItemDto)
+  @Expose()
+  rest!: BinanceHealthItemDto;
+
+  @ApiProperty({ type: BinanceHealthItemDto })
+  @ValidateNested()
+  @Type(() => BinanceHealthItemDto)
+  @Expose()
+  socket!: BinanceHealthItemDto;
 }

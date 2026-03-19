@@ -52,6 +52,9 @@
   - `GET /v1/binance/chart/series?...` (response symbol underscore)
   - `GET /v1/binance/chart/mid-price?symbols=BTC_USDT,ETH_USDT` (response symbol underscore)
   - `GET /v1/binance/chart/series-range?...` (response symbol underscore)
+  - `GET /v1/binance/exchange-info?symbol=BTC_USDT&...` (accepts underscore input, strips before hitting Binance, returns underscore symbols)
+  - `GET /v1/binance/execution-rules?symbol=BTC_USDT&...` (same underscore handling as exchange-info)
+  - `GET /v1/binance/healthz` (REST+Socket status; only endpoint left for health)
 - Response DTOs remain exactly as before; mapping handled server-side.
 
 ## Usage principles

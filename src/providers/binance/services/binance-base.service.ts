@@ -219,9 +219,11 @@ export class BinanceBaseService implements OnModuleInit {
   ): Record<string, unknown> {
     const query: Record<string, unknown> = {};
     if (payload.symbol && !payload.symbols?.length) {
-      query.symbol = payload.symbol;
+      query.symbol = payload.symbol.replace(/_/g, '');
     } else if (payload.symbols?.length) {
-      query.symbols = JSON.stringify(payload.symbols);
+      query.symbols = JSON.stringify(
+        payload.symbols.map((s) => s.replace(/_/g, '')),
+      );
     }
     if ('symbolStatus' in payload && payload.symbolStatus) {
       query.symbolStatus = payload.symbolStatus;
