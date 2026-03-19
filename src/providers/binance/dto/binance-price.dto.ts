@@ -4,7 +4,8 @@ import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class BinancePriceQueryDto {
   @ApiProperty({
-    description: 'Comma-separated symbols in BASE_QUOTE format (e.g. BTC_USDT)',
+    description:
+      'Comma-separated symbols in BASE_QUOTE format with underscore (e.g. BTC_USDT,ETH_USDT)',
     example: 'BTC_USDT,ETH_USDT',
     type: String,
   })
@@ -28,7 +29,7 @@ export class BinancePriceQueryDto {
 
 @Exclude()
 export class BinancePriceDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   symbol!: string;
 

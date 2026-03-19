@@ -6,7 +6,10 @@ import { BinanceChartPresetEnum } from '../types/binance-enum.type';
 import { BinanceCandleDto } from './binance-klines.dto';
 
 export class BinanceChartHeaderQueryDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({
+    example: 'BTC_USDT',
+    description: 'Symbol in BASE_QUOTE format with underscore (e.g. BTC_USDT)',
+  })
   @IsString()
   symbol!: string;
 
@@ -31,7 +34,7 @@ export class BinanceChartHeaderQueryDto {
 
 @Exclude()
 export class BinanceChartHeaderDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   symbol!: string;
 
@@ -53,7 +56,10 @@ export class BinanceChartHeaderDto {
 }
 
 export class BinanceChartSeriesQueryDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({
+    example: 'BTC_USDT',
+    description: 'Symbol in BASE_QUOTE format with underscore (e.g. BTC_USDT)',
+  })
   @IsString()
   symbol!: string;
 
@@ -84,7 +90,7 @@ export class BinanceChartSeriesQueryDto {
 
 @Exclude()
 export class BinanceChartSeriesDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   symbol!: string;
 
@@ -118,14 +124,18 @@ export class BinanceChartSeriesDto {
 }
 
 export class BinanceChartMidPriceQueryDto {
-  @ApiProperty({ example: 'BTCUSDT,ETHUSDT' })
+  @ApiProperty({
+    example: 'BTC_USDT,ETH_USDT',
+    description:
+      'Comma-separated symbols in BASE_QUOTE format with underscore (e.g. BTC_USDT,ETH_USDT)',
+  })
   @IsString()
   symbols!: string;
 }
 
 @Exclude()
 export class BinanceChartMidPriceDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   symbol!: string;
 
@@ -139,7 +149,10 @@ export class BinanceChartMidPriceDto {
 }
 
 export class BinanceChartSeriesRangeQueryDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({
+    example: 'BTC_USDT',
+    description: 'Symbol in BASE_QUOTE format with underscore (e.g. BTC_USDT)',
+  })
   @IsString()
   symbol!: string;
 
@@ -182,7 +195,7 @@ export class BinanceChartSeriesRangeQueryDto {
 
 @Exclude()
 export class BinanceChartSeriesRangeDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   symbol!: string;
 

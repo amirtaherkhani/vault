@@ -6,13 +6,53 @@ import {
   BINANCE_WEEKDAY_MAP,
 } from './types/binance-const.type';
 
+// Common quote assets on Binance Spot (non-exhaustive, sorted by length desc)
+const KNOWN_QUOTE_ASSETS = [
+  'USDT',
+  'FDUSD',
+  'USDC',
+  'TUSD',
+  'BUSD',
+  'USDP',
+  'DAI',
+  'BIDR',
+  'BVND',
+  'BKRW',
+  'IDRT',
+  'NGN',
+  'TRY',
+  'BRL',
+  'EUR',
+  'GBP',
+  'RUB',
+  'AUD',
+  'UAH',
+  'ZAR',
+  'ARS',
+  'BNB',
+  'BTC',
+  'ETH',
+];
+
 export function normalizeAssetPair(input: string): string {
-  const cleaned = input.toUpperCase();
-  if (/^[A-Z0-9]+$/.test(cleaned)) return cleaned;
+  const cleaned = input.trim().toUpperCase();
+
+  // If underscore provided, trust regex parsing.
   const match = cleaned.match(BINANCE_SYMBOL_REGEX);
-  if (!match) throw new Error(`Invalid symbol format: ${input}`);
-  const [, baseAsset, quoteAsset] = match;
-  return `${baseAsset}${quoteAsset}`;
+  if (match) {
+    const [, baseAsset, quoteAsset] = match;
+    return `${baseAsset}${quoteAsset}`;
+  }
+
+  // Try to detect quote suffix when no underscore supplied.
+  for (const quote of KNOWN_QUOTE_ASSETS) {
+    if (cleaned.endsWith(quote) && cleaned.length > quote.length) {
+      const baseAsset = cleaned.slice(0, cleaned.length - quote.length);
+      return `${baseAsset}${quote}`;
+    }
+  }
+
+  throw new Error(`Invalid symbol format: ${input}`);
 }
 
 export function intervalMs(interval: BinanceKlineInterval): number {

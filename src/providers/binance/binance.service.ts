@@ -15,6 +15,8 @@ import {
   normalizeSymbolsOrThrow,
   parseSymbolCsv,
   sliceCandles,
+  normalizeClientSymbolsCsv,
+  normalizeClientSymbol,
 } from './helper/binance-service.helper';
 import { BinanceCandleDto } from './dto/binance-klines.dto';
 import { BinanceSupportedAssetDto } from './dto/binance-account.dto';
@@ -121,9 +123,13 @@ export class BinanceService
   async findTickerPrices(
     query: BinancePriceQueryDto,
   ): Promise<BinancePriceDto[]> {
-    const symbols = parseSymbolCsv(query.symbols);
+    const { normalized, external } = normalizeClientSymbolsCsv(query.symbols);
     const live = query.live ?? true;
-    const result = await this.findTickerPricesFromProvider(symbols, live);
+    const result = await this.findTickerPricesFromProvider(
+      normalized,
+      external,
+      live,
+    );
     return GroupPlainToInstances(BinancePriceDto, result);
   }
 
@@ -131,8 +137,9 @@ export class BinanceService
     const interval = (query.interval as BinanceKlineInterval) ?? '1m';
     const limit = query.limit ?? 100;
     const live = query.live ?? true;
+    const { normalized } = normalizeClientSymbol(query.symbol);
     const points = await this.findKlinesFromProvider(
-      query.symbol,
+      normalized,
       interval,
       limit,
       live,
@@ -151,10 +158,12 @@ export class BinanceService
     query: BinanceChartHeaderQueryDto,
   ): Promise<BinanceChartHeaderDto> {
     const preset = (query.preset || 'today') as BinanceChartPreset;
+    const { normalized, external } = normalizeClientSymbol(query.symbol);
     const dto = await this.buildChartHeader(
-      query.symbol,
+      normalized,
       preset,
       query.timeZone,
+      external,
     );
     return GroupPlainToInstance(BinanceChartHeaderDto, dto);
   }
@@ -164,11 +173,13 @@ export class BinanceService
   ): Promise<BinanceChartSeriesDto> {
     const preset = (query.preset || 'today') as BinanceChartPreset;
     const limit = query.limit;
+    const { normalized, external } = normalizeClientSymbol(query.symbol);
     const series = await this.buildChartSeries(
-      query.symbol,
+      normalized,
       preset,
       limit,
       query.timeZone,
+      external,
     );
     return GroupPlainToInstance(BinanceChartSeriesDto, series);
   }
@@ -176,8 +187,8 @@ export class BinanceService
   async findChartMidPrices(
     query: BinanceChartMidPriceQueryDto,
   ): Promise<BinanceChartMidPriceDto[]> {
-    const symbols = parseSymbolCsv(query.symbols);
-    const mids = await this.findMidPricesFromProvider(symbols);
+    const { normalized, external } = normalizeClientSymbolsCsv(query.symbols);
+    const mids = await this.findMidPricesFromProvider(normalized, external);
     return GroupPlainToInstances(BinanceChartMidPriceDto, mids);
   }
 
@@ -188,8 +199,9 @@ export class BinanceService
     const limit = query.limit;
     const startTime = query.startTime;
     const endTime = query.endTime;
+    const { normalized, external } = normalizeClientSymbol(query.symbol);
     const series = await this.buildChartSeriesRange(
-      query.symbol,
+      normalized,
       preset,
       {
         startTime,
@@ -197,6 +209,7 @@ export class BinanceService
         limit,
       },
       query.timeZone,
+      external,
     );
     return GroupPlainToInstance(BinanceChartSeriesRangeDto, series);
   }
@@ -244,25 +257,35 @@ export class BinanceService
   }
 
   async findTickerPricesFromProvider(
-    symbols: string[],
+    normalizedSymbols: string[],
+    externalSymbols: string[],
     live = true,
   ): Promise<BinancePriceDto[]> {
     this.checkIfEnabled();
 
-    const normalized = normalizeSymbolsOrThrow(symbols);
+    const normalized = normalizeSymbolsOrThrow(normalizedSymbols);
     if (!normalized.length) {
       throw new BadRequestException('No symbols provided');
     }
 
+    const symbolMap = new Map<string, string>();
+    normalized.forEach((n, i) => {
+      const ext = externalSymbols[i];
+      if (ext) symbolMap.set(n, ext.toUpperCase());
+    });
+
+    let firstError: unknown;
     try {
       const payload = await this.baseService.getTickerPrice({
         symbols: normalized,
       });
-      return BinanceMapper.toLatestPrices(payload);
+      return BinanceMapper.toLatestPrices(payload).map((p) => ({
+        ...p,
+        symbol: symbolMap.get(p.symbol) ?? p.symbol,
+      }));
     } catch (error) {
-      if (!live) {
-        throw error;
-      }
+      firstError = error;
+      if (!live) throw error;
     }
 
     const fallback: BinancePriceDto[] = [];
@@ -270,12 +293,25 @@ export class BinanceService
       try {
         const payload = await this.baseService.getTickerPrice({ symbol });
         const mapped = BinanceMapper.toLatestPrices(payload);
-        if (mapped.length) fallback.push(mapped[0]);
-      } catch {
-        fallback.push({ symbol, price: null, source: 'rest' });
+        if (mapped.length) {
+          const m = mapped[0];
+          fallback.push({
+            ...m,
+            symbol: symbolMap.get(m.symbol) ?? m.symbol,
+          });
+        }
+      } catch (err) {
+        if (!firstError) firstError = err;
       }
     }
-    return fallback;
+
+    if (fallback.length) return fallback;
+
+    const message =
+      firstError instanceof Error
+        ? firstError.message
+        : 'Binance price lookup failed';
+    throw new BadRequestException(message);
   }
 
   async findKlinesFromProvider(
@@ -322,6 +358,7 @@ export class BinanceService
     symbol: string,
     preset: BinanceChartPreset,
     timeZone?: string,
+    externalSymbol?: string,
   ) {
     this.checkIfEnabled();
 
@@ -359,7 +396,7 @@ export class BinanceService
         : null;
 
     return {
-      symbol: upper,
+      symbol: externalSymbol ?? upper,
       price: Number.isFinite(priceNow) ? String(priceNow) : null,
       changePercent,
       preset,
@@ -449,15 +486,24 @@ export class BinanceService
 
   async findMidPricesFromProvider(
     symbols: string[],
+    externalSymbols?: string[],
   ): Promise<BinanceChartMidPriceDto[]> {
     this.checkIfEnabled();
 
     const upperSymbols = symbols.map((s) => s.toUpperCase());
+    const symbolMap = new Map<string, string>();
+    upperSymbols.forEach((n, i) => {
+      const ext = externalSymbols?.[i];
+      if (ext) symbolMap.set(n, ext.toUpperCase());
+    });
     const payload = await this.baseService.getBookTicker({
       symbols: upperSymbols,
     });
 
-    return BinanceMapper.toMidPrices(payload);
+    return BinanceMapper.toMidPrices(payload).map((m) => ({
+      ...m,
+      symbol: symbolMap.get(m.symbol) ?? m.symbol,
+    }));
   }
 
   async getSeriesByPresetRange(
@@ -497,6 +543,7 @@ export class BinanceService
     preset: BinanceChartPreset,
     limit?: number,
     timeZone?: string,
+    externalSymbol?: string,
   ): Promise<BinanceChartSeriesDto> {
     const { points, interval } = await this.getSeriesByPreset(
       symbol,
@@ -512,7 +559,7 @@ export class BinanceService
     );
 
     return {
-      symbol,
+      symbol: externalSymbol ?? symbol,
       preset,
       interval,
       baseline: { open: baselineOpen, time: base.baselineTime },
@@ -527,6 +574,7 @@ export class BinanceService
     preset: BinanceChartPreset,
     opts: { startTime?: number; endTime?: number; limit?: number } = {},
     timeZone?: string,
+    externalSymbol?: string,
   ): Promise<BinanceChartSeriesRangeDto> {
     const { points, interval } = await this.getSeriesByPresetRange(
       symbol,
@@ -535,7 +583,7 @@ export class BinanceService
       timeZone,
     );
     return {
-      symbol,
+      symbol: externalSymbol ?? symbol,
       preset,
       interval,
       points,

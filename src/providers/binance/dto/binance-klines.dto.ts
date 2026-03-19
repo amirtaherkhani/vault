@@ -26,7 +26,10 @@ export type BinanceKlineRaw = [
 ];
 
 export class BinanceHistoryQueryDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({
+    example: 'BTC_USDT',
+    description: 'Symbol in BASE_QUOTE format with underscore (e.g. BTC_USDT)',
+  })
   @IsString()
   symbol!: string;
 

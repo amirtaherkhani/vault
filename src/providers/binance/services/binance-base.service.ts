@@ -82,19 +82,53 @@ export class BinanceBaseService implements OnModuleInit {
   async getTickerPrice(
     payload: BinanceTickerPriceRequestDto,
   ): Promise<BinanceTickerPriceResponseDto | BinanceTickerPriceResponseDto[]> {
-    const data = await this.call(BINANCE_ENDPOINT_NAME.tickerPrice, {
-      query: this.buildSymbolsQuery(payload),
-    });
-    return this.toDto(BinanceTickerPriceResponseDto, data);
+    const data = this.unwrap(
+      await this.call(BINANCE_ENDPOINT_NAME.tickerPrice, {
+        query: this.buildSymbolsQuery(payload),
+      }),
+    );
+
+    if (Array.isArray(data)) {
+      return this.toDto(BinanceTickerPriceResponseDto, data);
+    }
+
+    if (data && typeof data === 'object' && 'symbol' in data) {
+      return this.toDto(BinanceTickerPriceResponseDto, data);
+    }
+
+    const preview =
+      data && typeof data === 'object'
+        ? JSON.stringify(data).slice(0, 200)
+        : String(data);
+    throw new Error(
+      `Unexpected ticker price payload from Binance; expected object/array, got ${preview}`,
+    );
   }
 
   async getBookTicker(
     payload: BinanceBookTickerRequestDto,
   ): Promise<BinanceBookTickerResponseDto | BinanceBookTickerResponseDto[]> {
-    const data = await this.call(BINANCE_ENDPOINT_NAME.bookTicker, {
-      query: this.buildSymbolsQuery(payload),
-    });
-    return this.toDto(BinanceBookTickerResponseDto, data);
+    const data = this.unwrap(
+      await this.call(BINANCE_ENDPOINT_NAME.bookTicker, {
+        query: this.buildSymbolsQuery(payload),
+      }),
+    );
+
+    if (Array.isArray(data)) {
+      return this.toDto(BinanceBookTickerResponseDto, data);
+    }
+
+    if (data && typeof data === 'object' && 'symbol' in data) {
+      return this.toDto(BinanceBookTickerResponseDto, data);
+    }
+
+    const preview =
+      data && typeof data === 'object'
+        ? JSON.stringify(data).slice(0, 200)
+        : String(data);
+    throw new Error(
+      `Unexpected bookTicker payload from Binance; expected object/array, got ${preview}`,
+    );
   }
 
   async getKlines(
@@ -109,7 +143,19 @@ export class BinanceBaseService implements OnModuleInit {
       limit,
       timeZone,
     };
-    return this.call(BINANCE_ENDPOINT_NAME.klines, { query });
+    const data = this.unwrap(
+      await this.call(BINANCE_ENDPOINT_NAME.klines, { query }),
+    );
+    if (!Array.isArray(data)) {
+      const preview =
+        data && typeof data === 'object'
+          ? JSON.stringify(data).slice(0, 200)
+          : String(data);
+      throw new Error(
+        `Unexpected klines payload from Binance; expected array, got ${preview}`,
+      );
+    }
+    return data as BinanceKlineRaw[];
   }
 
   async getExchangeInfo(
@@ -121,12 +167,19 @@ export class BinanceBaseService implements OnModuleInit {
         : ['SPOT'];
     const query = this.buildSymbolsQuery(payload);
     if (permissions?.length) {
-      Object.assign(query, { permissions });
+      Object.assign(query, {
+        permissions:
+          permissions.length === 1
+            ? permissions[0]
+            : JSON.stringify(permissions),
+      });
     }
     if (payload.showPermissionSets !== undefined) {
       Object.assign(query, { showPermissionSets: payload.showPermissionSets });
     }
-    const data = await this.call(BINANCE_ENDPOINT_NAME.exchangeInfo, { query });
+    const data = this.unwrap(
+      await this.call(BINANCE_ENDPOINT_NAME.exchangeInfo, { query }),
+    );
     return this.toDto(
       BinanceExchangeInfoResponseDto,
       data,
@@ -139,16 +192,18 @@ export class BinanceBaseService implements OnModuleInit {
   }
 
   async getServerTime(): Promise<BinanceTimeResponseDto> {
-    const data = await this.call(BINANCE_ENDPOINT_NAME.time);
+    const data = this.unwrap(await this.call(BINANCE_ENDPOINT_NAME.time));
     return this.toDto(BinanceTimeResponseDto, data) as BinanceTimeResponseDto;
   }
 
   async getExecutionRules(
     payload: BinanceExecutionRulesRequestDto = {},
   ): Promise<BinanceExecutionRulesResponseDto> {
-    const data = await this.call(BINANCE_ENDPOINT_NAME.executionRules, {
-      query: this.buildSymbolsQuery(payload),
-    });
+    const data = this.unwrap(
+      await this.call(BINANCE_ENDPOINT_NAME.executionRules, {
+        query: this.buildSymbolsQuery(payload),
+      }),
+    );
     return this.toDto(
       BinanceExecutionRulesResponseDto,
       data,
@@ -246,5 +301,12 @@ export class BinanceBaseService implements OnModuleInit {
       return plainToInstance(cls, data);
     }
     return plainToInstance(cls, data);
+  }
+
+  private unwrap<T>(data: any): T {
+    if (data && typeof data === 'object' && 'data' in data) {
+      return (data as any).data as T;
+    }
+    return data as T;
   }
 }

@@ -11,7 +11,7 @@ export class BinanceSupportedAssetsQueryDto {
 
 @Exclude()
 export class BinanceSupportedAssetDto {
-  @ApiProperty({ example: 'BTCUSDT' })
+  @ApiProperty({ example: 'BTC_USDT' })
   @Expose()
   @IsString()
   symbol!: string;

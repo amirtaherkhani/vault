@@ -3,7 +3,7 @@
 ## What’s inside
 - **Transport**: REST via Api Gateway, WS via shared WS layer.
 - **Modules**: `BinanceModule` (controllers/services), `BinanceBaseService` (gateway calls), `BinanceSocketService` (WS streaming).
-- **DTOs**: Client-facing DTOs unchanged in `src/providers/binance/dto/*`.
+- **DTOs**: Public inputs/outputs use `BASE_QUOTE` with underscore (e.g. `BTC_USDT`) across all endpoints. Inputs without an underscore (e.g. `BTCUSDT`) are accepted and auto-detected using Binance quote-asset patterns, but responses are always returned with an underscore.
 
 ## REST (Api Gateway)
 - Endpoints registered in `config/binance-endpoints.config.ts` and accessed through `BinanceBaseService`:
@@ -45,13 +45,13 @@
 
 ## Client-facing API (unchanged)
 - Controller: `binance.controller.ts`
-  - `GET /v1/binance/price?symbols=BTC_USDT,...`
-  - `GET /v1/binance/history?symbol=BTCUSDT&interval=1m&limit=100`
-  - `GET /v1/binance/supported-assets?quoteAsset=USDT`
-  - `GET /v1/binance/chart/header?symbol=BTCUSDT&preset=today`
-  - `GET /v1/binance/chart/series?...`
-  - `GET /v1/binance/chart/mid-price?symbols=BTCUSDT,ETHUSDT`
-  - `GET /v1/binance/chart/series-range?...`
+  - `GET /v1/binance/price?symbols=BTC_USDT,...` (input/output symbols underscore)
+  - `GET /v1/binance/history?symbol=BTC_USDT&interval=1m&limit=100`
+  - `GET /v1/binance/supported-assets?quoteAsset=USDT` (symbols returned with underscore)
+  - `GET /v1/binance/chart/header?symbol=BTC_USDT&preset=today` (response symbol underscore)
+  - `GET /v1/binance/chart/series?...` (response symbol underscore)
+  - `GET /v1/binance/chart/mid-price?symbols=BTC_USDT,ETH_USDT` (response symbol underscore)
+  - `GET /v1/binance/chart/series-range?...` (response symbol underscore)
 - Response DTOs remain exactly as before; mapping handled server-side.
 
 ## Usage principles

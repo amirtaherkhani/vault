@@ -16,11 +16,20 @@ export class BinanceMapper {
     payload: BinanceTickerPriceResponseDto | BinanceTickerPriceResponseDto[],
   ): BinancePriceDto[] {
     const arr = Array.isArray(payload) ? payload : [payload];
-    return arr.map((item) => ({
-      symbol: item.symbol,
-      price: item.price ?? null,
-      source: 'rest' as const,
-    }));
+    return arr.map((item) => {
+      if (!item?.symbol) {
+        throw new Error('Binance ticker item missing symbol');
+      }
+      const price =
+        item.price !== undefined && item.price !== null
+          ? String(item.price)
+          : null;
+      return {
+        symbol: item.symbol,
+        price,
+        source: 'rest' as const,
+      };
+    });
   }
 
   static toMidPrices(
@@ -78,7 +87,7 @@ export class BinanceMapper {
     });
 
     return filtered.map((s) => ({
-      symbol: s.symbol,
+      symbol: `${s.baseAsset}_${s.quoteAsset}`,
       baseAsset: s.baseAsset,
       quoteAsset: s.quoteAsset,
     }));
