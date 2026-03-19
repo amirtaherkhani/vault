@@ -1,41 +1,22 @@
 import {
   BinanceChartPreset,
   BinanceKlineInterval,
+  BINANCE_INTERVAL_MS,
+  BINANCE_SYMBOL_REGEX,
+  BINANCE_WEEKDAY_MAP,
 } from './types/binance-const.type';
 
 export function normalizeAssetPair(input: string): string {
   const cleaned = input.toUpperCase();
-  if (/^[A-Z0-9]+$/.test(cleaned)) {
-    return cleaned;
-  }
-  const regex = /^([A-Z0-9]+?)(?:_[A-Z]+)?_([A-Z0-9]+?)(?:_[A-Z]+)?$/;
-  const match = cleaned.match(regex);
-  if (!match) {
-    throw new Error(`Invalid symbol format: ${input}`);
-  }
+  if (/^[A-Z0-9]+$/.test(cleaned)) return cleaned;
+  const match = cleaned.match(BINANCE_SYMBOL_REGEX);
+  if (!match) throw new Error(`Invalid symbol format: ${input}`);
   const [, baseAsset, quoteAsset] = match;
   return `${baseAsset}${quoteAsset}`;
 }
 
 export function intervalMs(interval: BinanceKlineInterval): number {
-  const m: Record<BinanceKlineInterval, number> = {
-    '1m': 60_000,
-    '3m': 180_000,
-    '5m': 300_000,
-    '15m': 900_000,
-    '30m': 1_800_000,
-    '1h': 3_600_000,
-    '2h': 7_200_000,
-    '4h': 14_400_000,
-    '6h': 21_600_000,
-    '8h': 28_800_000,
-    '12h': 43_200_000,
-    '1d': 86_400_000,
-    '3d': 259_200_000,
-    '1w': 604_800_000,
-    '1M': 2_629_800_000,
-  };
-  return m[interval] ?? 0;
+  return BINANCE_INTERVAL_MS[interval] ?? 0;
 }
 
 function parseOffsetMinutes(tz?: string): number | null {
@@ -49,7 +30,6 @@ function parseOffsetMinutes(tz?: string): number | null {
 }
 
 function offsetMsAt(timeZone: string, utcMs: number): number {
-  // Try Intl first (works for IANA zones and Etc/GMT offsets)
   try {
     const parts = new Intl.DateTimeFormat('en-US', {
       timeZone,
@@ -78,18 +58,8 @@ function offsetMsAt(timeZone: string, utcMs: number): number {
 }
 
 function weekday1to7Local(utcMs: number, offsetMs: number): number {
-  const local = new Date(utcMs + offsetMs);
-  const wd = local.getUTCDay(); // 0=Sun
-  const map: Record<number, number> = {
-    0: 7,
-    1: 1,
-    2: 2,
-    3: 3,
-    4: 4,
-    5: 5,
-    6: 6,
-  };
-  return map[wd] ?? 1;
+  const wd = new Date(utcMs + offsetMs).getUTCDay(); // 0=Sun
+  return BINANCE_WEEKDAY_MAP[wd] ?? 1;
 }
 
 /**
@@ -108,7 +78,7 @@ export function calendarAnchorStart(
   const m = local.getUTCMonth(); // 0-based
   const d = local.getUTCDate();
 
-  let by = y;
+  const by = y;
   let bm = m;
   let bd = d;
 

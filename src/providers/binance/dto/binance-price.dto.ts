@@ -6,6 +6,7 @@ export class BinancePriceQueryDto {
   @ApiProperty({
     description: 'Comma-separated symbols in BASE_QUOTE format (e.g. BTC_USDT)',
     example: 'BTC_USDT,ETH_USDT',
+    type: String,
   })
   @IsString()
   symbols!: string;

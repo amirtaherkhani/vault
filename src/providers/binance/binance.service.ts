@@ -44,6 +44,16 @@ import {
   BINANCE_DEFAULT_QUOTE_ASSET,
   BINANCE_ENABLE,
 } from './types/binance-const.type';
+import {
+  BinanceExecutionRulesResponseDto,
+  BinanceExchangeInfoResponseDto,
+  BinancePingResponseDto,
+  BinanceTimeResponseDto,
+} from './dto/binance-base.response.dto';
+import {
+  BinanceExecutionRulesRequestDto,
+  BinanceExchangeInfoRequestDto,
+} from './dto/binance-base.request.dto';
 
 @Injectable()
 export class BinanceService
@@ -195,6 +205,30 @@ export class BinanceService
     const ok = await this.checkConnection();
     const payload = { ok, message: ok ? 'ok' : 'binance ping failed' };
     return GroupPlainToInstance(BinanceHealthDto, payload);
+  }
+
+  async findExecutionRules(
+    query: BinanceExecutionRulesRequestDto = {},
+  ): Promise<BinanceExecutionRulesResponseDto> {
+    const data = await this.baseService.getExecutionRules(query);
+    return GroupPlainToInstance(BinanceExecutionRulesResponseDto, data);
+  }
+
+  async ping(): Promise<BinancePingResponseDto> {
+    const data = await this.baseService.ping();
+    return GroupPlainToInstance(BinancePingResponseDto, data);
+  }
+
+  async getServerTime(): Promise<BinanceTimeResponseDto> {
+    const data = await this.baseService.getServerTime();
+    return GroupPlainToInstance(BinanceTimeResponseDto, data);
+  }
+
+  async findExchangeInfo(
+    query: BinanceExchangeInfoRequestDto = { permissions: ['SPOT'] },
+  ): Promise<BinanceExchangeInfoResponseDto> {
+    const data = await this.baseService.getExchangeInfo(query);
+    return GroupPlainToInstance(BinanceExchangeInfoResponseDto, data);
   }
 
   private async checkConnection(): Promise<boolean> {

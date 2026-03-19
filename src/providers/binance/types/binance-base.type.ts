@@ -6,6 +6,7 @@ export const BINANCE_ENDPOINT_NAME = {
   exchangeInfo: 'exchangeInfo',
   ping: 'ping',
   time: 'time',
+  executionRules: 'executionRules',
 } as const;
 
 export type BinanceEndpointName =

@@ -13,11 +13,13 @@ import {
   BinancePingResponseDto,
   BinanceTimeResponseDto,
   BinanceTickerPriceResponseDto,
+  BinanceExecutionRulesResponseDto,
 } from '../dto/binance-base.response.dto';
 import {
   BinanceBookTickerRequestDto,
   BinanceExchangeInfoRequestDto,
   BinanceKlinesRequestDto,
+  BinanceExecutionRulesRequestDto,
   BinanceTickerPriceRequestDto,
 } from '../dto/binance-base.request.dto';
 import {
@@ -141,11 +143,24 @@ export class BinanceBaseService implements OnModuleInit {
     return this.toDto(BinanceTimeResponseDto, data) as BinanceTimeResponseDto;
   }
 
+  async getExecutionRules(
+    payload: BinanceExecutionRulesRequestDto = {},
+  ): Promise<BinanceExecutionRulesResponseDto> {
+    const data = await this.call(BINANCE_ENDPOINT_NAME.executionRules, {
+      query: this.buildSymbolsQuery(payload),
+    });
+    return this.toDto(
+      BinanceExecutionRulesResponseDto,
+      data,
+    ) as BinanceExecutionRulesResponseDto;
+  }
+
   private buildSymbolsQuery(
     payload:
       | BinanceTickerPriceRequestDto
       | BinanceBookTickerRequestDto
-      | BinanceExchangeInfoRequestDto,
+      | BinanceExchangeInfoRequestDto
+      | BinanceExecutionRulesRequestDto,
   ): Record<string, unknown> {
     const query: Record<string, unknown> = {};
     if (payload.symbol && !payload.symbols?.length) {
@@ -211,6 +226,10 @@ export class BinanceBaseService implements OnModuleInit {
       const nextIndex = attempt + 1;
       const nextBase = this.baseUrlCandidates[nextIndex];
       if (!nextBase) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `Binance request failed and no fallback URL left. endpoint=${endpointName} attempt=${attempt + 1} error=${message}`,
+        );
         throw error;
       }
       this.logger.warn(

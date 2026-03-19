@@ -72,5 +72,12 @@ export class BinanceApiConfig extends ApiGatewayConfig {
       '/api/v3/time',
       { timeoutMs: BINANCE_REQUEST_TIMEOUT_MS },
     );
+
+    this.addEndpoint(
+      BINANCE_ENDPOINT_NAME.executionRules,
+      HttpMethod.GET,
+      '/api/v3/executionRules',
+      { timeoutMs: BINANCE_REQUEST_TIMEOUT_MS },
+    );
   }
 }

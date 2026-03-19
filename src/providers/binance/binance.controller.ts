@@ -14,7 +14,10 @@ import {
   RequireEnabled,
   RequireServiceReady,
 } from 'src/utils/decorators/service-toggleable.decorators';
+import { Roles } from 'src/roles/roles.decorator';
+import { RoleEnum } from 'src/roles/roles.enum';
 import { BinanceService } from './binance.service';
+import { BinanceSocketService } from './binance.socket.service';
 import { BinancePriceDto, BinancePriceQueryDto } from './dto/binance-price.dto';
 import {
   BinanceHistoryQueryDto,
@@ -35,6 +38,16 @@ import {
   BinanceSupportedAssetDto,
   BinanceSupportedAssetsQueryDto,
 } from './dto/binance-account.dto';
+import {
+  BinanceExecutionRulesResponseDto,
+  BinanceExchangeInfoResponseDto,
+  BinancePingResponseDto,
+  BinanceTimeResponseDto,
+} from './dto/binance-base.response.dto';
+import {
+  BinanceExecutionRulesRequestDto,
+  BinanceExchangeInfoRequestDto,
+} from './dto/binance-base.request.dto';
 
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), RolesGuard, EnableGuard)
@@ -43,8 +56,12 @@ import {
 @ApiTags('Binance')
 @Controller({ path: 'binance', version: '1' })
 export class BinanceController {
-  constructor(private readonly service: BinanceService) {}
+  constructor(
+    private readonly service: BinanceService,
+    private readonly socketService: BinanceSocketService,
+  ) {}
 
+  @Roles(RoleEnum.admin)
   @Get('price')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinancePriceDto] })
@@ -54,6 +71,7 @@ export class BinanceController {
     return this.service.findTickerPrices(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('history')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceCandleDto] })
@@ -63,6 +81,7 @@ export class BinanceController {
     return this.service.findKlines(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('supported-assets')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceSupportedAssetDto] })
@@ -72,6 +91,7 @@ export class BinanceController {
     return this.service.findSupportedAssets(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('chart/header')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartHeaderDto })
@@ -81,6 +101,7 @@ export class BinanceController {
     return this.service.findChartHeader(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('chart/series')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartSeriesDto })
@@ -90,6 +111,7 @@ export class BinanceController {
     return this.service.findChartSeries(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('chart/mid-price')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: [BinanceChartMidPriceDto] })
@@ -99,6 +121,7 @@ export class BinanceController {
     return this.service.findChartMidPrices(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('chart/series-range')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: BinanceChartSeriesRangeDto })
@@ -108,6 +131,7 @@ export class BinanceController {
     return this.service.findChartSeriesRange(query);
   }
 
+  @Roles(RoleEnum.admin)
   @Get('healthz')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
@@ -116,5 +140,61 @@ export class BinanceController {
   })
   async health(): Promise<BinanceHealthDto> {
     return this.service.healthCheck();
+  }
+
+  @Roles(RoleEnum.admin)
+  @Get('ping')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: BinancePingResponseDto })
+  async ping(): Promise<BinancePingResponseDto> {
+    return this.service.ping();
+  }
+
+  @Roles(RoleEnum.admin)
+  @Get('time')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: BinanceTimeResponseDto })
+  async time(): Promise<BinanceTimeResponseDto> {
+    return this.service.getServerTime();
+  }
+
+  @Roles(RoleEnum.admin)
+  @Get('exchange-info')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: BinanceExchangeInfoResponseDto })
+  async exchangeInfo(
+    @Query() query: BinanceExchangeInfoRequestDto,
+  ): Promise<BinanceExchangeInfoResponseDto> {
+    return this.service.findExchangeInfo(query);
+  }
+
+  @Roles(RoleEnum.admin)
+  @Get('ws/health')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        ok: { type: 'boolean', example: true },
+        message: {
+          type: 'string',
+          example: 'Binance socket layer is ready',
+        },
+      },
+    },
+    description: 'Checks Binance websocket layer readiness (no upstream call).',
+  })
+  async websocketHealth(): Promise<{ ok: boolean; message: string }> {
+    return this.socketService.testConnectivity();
+  }
+
+  @Roles(RoleEnum.admin)
+  @Get('execution-rules')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: BinanceExecutionRulesResponseDto })
+  async findExecutionRules(
+    @Query() query: BinanceExecutionRulesRequestDto,
+  ): Promise<BinanceExecutionRulesResponseDto> {
+    return this.service.findExecutionRules(query);
   }
 }

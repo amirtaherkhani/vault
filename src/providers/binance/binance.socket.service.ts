@@ -57,6 +57,22 @@ export class BinanceSocketService {
     return this.configService.get('binance.enable', { infer: true }) ?? false;
   }
 
+  isReady(): boolean {
+    return this.isEnabled && Boolean(this.getServerSafe());
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async testConnectivity(): Promise<{ ok: boolean; message: string }> {
+    if (!this.isEnabled) {
+      return { ok: false, message: 'Binance socket disabled' };
+    }
+    const server = this.getServerSafe();
+    if (!server) {
+      return { ok: false, message: 'Socket.IO server not ready' };
+    }
+    return { ok: true, message: 'Binance socket layer is ready' };
+  }
+
   private getServerSafe(): Server | null {
     const srv = this.socketProvider.getServer?.();
     if (!srv) {
@@ -248,8 +264,9 @@ export class BinanceSocketService {
           }
         },
         onError: (err) => {
-          this.logger.debug(
-            `Binance price stream error ${symbol}: ${(err as Error)?.message ?? err}`,
+          const message = (err as Error)?.message ?? String(err);
+          this.logger.error(
+            `Binance price stream error ${symbol}: ${message}`,
             BinanceSocketService.name,
           );
         },
@@ -313,6 +330,13 @@ export class BinanceSocketService {
             );
           }
         },
+        onError: (err) => {
+          const message = (err as Error)?.message ?? String(err);
+          this.logger.error(
+            `Binance candle stream error ${symbol}:${interval}: ${message}`,
+            BinanceSocketService.name,
+          );
+        },
       },
       { label: `binance:candle:${symbol}:${interval}` },
     );
@@ -363,6 +387,13 @@ export class BinanceSocketService {
             );
           }
         },
+        onError: (err) => {
+          const message = (err as Error)?.message ?? String(err);
+          this.logger.error(
+            `Binance global price stream error: ${message}`,
+            BinanceSocketService.name,
+          );
+        },
       },
       { label: 'binance:price:all' },
     );
@@ -412,6 +443,13 @@ export class BinanceSocketService {
               BinanceSocketService.name,
             );
           }
+        },
+        onError: (err) => {
+          const message = (err as Error)?.message ?? String(err);
+          this.logger.error(
+            `Binance mid-price stream error ${symbol}: ${message}`,
+            BinanceSocketService.name,
+          );
         },
       },
       { label: `binance:mid:${symbol}` },
@@ -501,6 +539,13 @@ export class BinanceSocketService {
                 BinanceSocketService.name,
               );
             }
+          },
+          onError: (err) => {
+            const message = (err as Error)?.message ?? String(err);
+            this.logger.error(
+              `Binance chart-series stream error ${symbol}:${preset}: ${message}`,
+              BinanceSocketService.name,
+            );
           },
         },
         { label: `binance:chart-series:${symbol}:${preset}` },

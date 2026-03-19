@@ -18,7 +18,10 @@ export class BinanceTickerPriceRequestDto {
   @ValidateIf((o) => !o.symbols?.length)
   symbol?: string;
 
-  @ApiPropertyOptional({ example: ['BTCUSDT', 'ETHUSDT'] })
+  @ApiPropertyOptional({
+    example: ['BTCUSDT', 'ETHUSDT'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @ValidateIf((o) => !o.symbol)
@@ -41,7 +44,10 @@ export class BinanceBookTickerRequestDto {
   @ValidateIf((o) => !o.symbols?.length)
   symbol?: string;
 
-  @ApiPropertyOptional({ example: ['BTCUSDT', 'ETHUSDT'] })
+  @ApiPropertyOptional({
+    example: ['BTCUSDT', 'ETHUSDT'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @ValidateIf((o) => !o.symbol)
@@ -96,7 +102,10 @@ export class BinanceExchangeInfoRequestDto {
   @IsString()
   symbol?: string;
 
-  @ApiPropertyOptional({ example: ['BTCUSDT', 'ETHUSDT'] })
+  @ApiPropertyOptional({
+    example: ['BTCUSDT', 'ETHUSDT'],
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -105,6 +114,7 @@ export class BinanceExchangeInfoRequestDto {
   @ApiPropertyOptional({
     example: ['SPOT', 'MARGIN'],
     default: ['SPOT'],
+    type: [String],
     description:
       'Filter by permissions. Defaults to SPOT to limit results to spot trading pairs.',
   })
@@ -124,6 +134,33 @@ export class BinanceExchangeInfoRequestDto {
       'Optional tradingStatus filter. Not allowed together with symbol/symbols.',
   })
   @IsOptional()
+  @IsEnum(BinanceSymbolStatus)
+  symbolStatus?: BinanceSymbolStatus;
+}
+
+export class BinanceExecutionRulesRequestDto {
+  @ApiPropertyOptional({ example: 'BTCUSDT' })
+  @IsOptional()
+  @IsString()
+  @ValidateIf((o) => !o.symbols?.length && !o.symbolStatus)
+  symbol?: string;
+
+  @ApiPropertyOptional({
+    example: ['BTCUSDT', 'ETHUSDT'],
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateIf((o) => !o.symbol && !o.symbolStatus)
+  @IsString({ each: true })
+  symbols?: string[];
+
+  @ApiPropertyOptional({
+    enum: BinanceSymbolStatus,
+    description: 'Query symbols with the specified trading status',
+  })
+  @IsOptional()
+  @ValidateIf((o) => !o.symbol && !o.symbols?.length)
   @IsEnum(BinanceSymbolStatus)
   symbolStatus?: BinanceSymbolStatus;
 }

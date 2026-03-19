@@ -1,9 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import { IsOptional, IsString } from 'class-validator';
 
 export class BinanceSupportedAssetsQueryDto {
-  @ApiProperty({ example: 'USDT', required: false, default: 'USDT' })
+  @ApiPropertyOptional({ example: 'USDT', default: 'USDT', type: String })
   @IsOptional()
   @IsString()
   quoteAsset?: string;
@@ -13,13 +13,16 @@ export class BinanceSupportedAssetsQueryDto {
 export class BinanceSupportedAssetDto {
   @ApiProperty({ example: 'BTCUSDT' })
   @Expose()
+  @IsString()
   symbol!: string;
 
   @ApiProperty({ example: 'BTC' })
   @Expose()
+  @IsString()
   baseAsset!: string;
 
   @ApiProperty({ example: 'USDT' })
   @Expose()
+  @IsString()
   quoteAsset!: string;
 }
