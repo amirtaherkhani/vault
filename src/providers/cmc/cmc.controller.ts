@@ -46,13 +46,19 @@ import { CmcBlockchainStatisticsLatestDto } from './dto/cmc-blockchain.dto';
 import { CmcFearAndGreedHistoricalDto } from './dto/cmc-fear-and-greed.dto';
 import {
   CmcCryptoInfoV1Dto,
+  CmcCryptoInfoV2Dto,
   CmcCryptoListingsLatestV1Dto,
+  CmcCryptoListingsLatestV3Dto,
   CmcCryptoMapV1Dto,
   CmcCryptoMarketPairsLatestV1Dto,
+  CmcCryptoMarketPairsLatestV2Dto,
   CmcCryptoOhlcvHistoricalV1Dto,
+  CmcCryptoOhlcvHistoricalV2Dto,
   CmcCryptoOhlcvLatestV1Dto,
+  CmcCryptoOhlcvLatestV2Dto,
   CmcCryptoQuotesHistoricalV1Dto,
   CmcCryptoQuotesLatestV1Dto,
+  CmcCryptoQuotesLatestV3Dto,
   CmcTrendingGainersLosersV1Dto,
   CmcTrendingLatestV1Dto,
   CmcTrendingMostVisitedV1Dto,
@@ -187,6 +193,17 @@ export class CmcController {
   }
 
   @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Crypto info v2', [RoleEnum.admin])
+  @Get('cryptocurrency/info/v2')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoInfoV2Dto })
+  getCryptoInfoV2(
+    @Query() query: CmcCryptoInfoQueryDto,
+  ): Promise<CmcCryptoInfoV2Dto> {
+    return this.cmc.getCryptoInfoV2(query);
+  }
+
+  @Roles(RoleEnum.admin)
   @ApiOperationRoles('Crypto listings latest', [RoleEnum.admin])
   @Get('cryptocurrency/listings/latest')
   @HttpCode(HttpStatus.OK)
@@ -195,6 +212,17 @@ export class CmcController {
     @Query() query: CmcCryptoListingsLatestQueryDto,
   ): Promise<CmcCryptoListingsLatestV1Dto> {
     return this.cmc.getCryptoListingsLatest(query);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Crypto listings latest v3', [RoleEnum.admin])
+  @Get('cryptocurrency/listings/latest/v3')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoListingsLatestV3Dto })
+  getCryptoListingsLatestV3(
+    @Query() query: CmcCryptoListingsLatestQueryDto,
+  ): Promise<CmcCryptoListingsLatestV3Dto> {
+    return this.cmc.getCryptoListingsLatestV3(query);
   }
 
   // ---------------------------------------------------------------------------
@@ -209,6 +237,17 @@ export class CmcController {
     @Query() query: CmcCryptoQuotesLatestV1QueryDto,
   ): Promise<CmcCryptoQuotesLatestV1Dto> {
     return this.cmc.getQuotesLatest(query);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Crypto quotes latest v3', [RoleEnum.admin])
+  @Get('cryptocurrency/quotes/latest/v3')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoQuotesLatestV3Dto })
+  getQuotesLatestV3(
+    @Query() query: CmcCryptoQuotesLatestV1QueryDto,
+  ): Promise<CmcCryptoQuotesLatestV3Dto> {
+    return this.cmc.getQuotesLatestV3(query);
   }
 
   @Roles(RoleEnum.admin)
@@ -234,6 +273,17 @@ export class CmcController {
   }
 
   @Roles(RoleEnum.admin)
+  @ApiOperationRoles('OHLCV latest v2', [RoleEnum.admin])
+  @Get('cryptocurrency/ohlcv/latest/v2')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoOhlcvLatestV2Dto })
+  getOhlcvLatestV2(
+    @Query() query: CmcCryptoOhlcvLatestV1QueryDto,
+  ): Promise<CmcCryptoOhlcvLatestV2Dto> {
+    return this.cmc.getOhlcvLatestV2(query);
+  }
+
+  @Roles(RoleEnum.admin)
   @ApiOperationRoles('OHLCV historical', [RoleEnum.admin])
   @Get('cryptocurrency/ohlcv/historical')
   @HttpCode(HttpStatus.OK)
@@ -242,6 +292,17 @@ export class CmcController {
     @Query() query: CmcCryptoOhlcvHistoricalV1QueryDto,
   ): Promise<CmcCryptoOhlcvHistoricalV1Dto> {
     return this.cmc.getOhlcvHistorical(query);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('OHLCV historical v2', [RoleEnum.admin])
+  @Get('cryptocurrency/ohlcv/historical/v2')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoOhlcvHistoricalV2Dto })
+  getOhlcvHistoricalV2(
+    @Query() query: CmcCryptoOhlcvHistoricalV1QueryDto,
+  ): Promise<CmcCryptoOhlcvHistoricalV2Dto> {
+    return this.cmc.getOhlcvHistoricalV2(query);
   }
 
   // ---------------------------------------------------------------------------
@@ -256,6 +317,17 @@ export class CmcController {
     @Query() query: CmcCryptoMarketPairsLatestV1QueryDto,
   ): Promise<CmcCryptoMarketPairsLatestV1Dto> {
     return this.cmc.getMarketPairsLatest(query);
+  }
+
+  @Roles(RoleEnum.admin)
+  @ApiOperationRoles('Market pairs latest v2', [RoleEnum.admin])
+  @Get('cryptocurrency/market-pairs/latest/v2')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: CmcCryptoMarketPairsLatestV2Dto })
+  getMarketPairsLatestV2(
+    @Query() query: CmcCryptoMarketPairsLatestV1QueryDto,
+  ): Promise<CmcCryptoMarketPairsLatestV2Dto> {
+    return this.cmc.getMarketPairsLatestV2(query);
   }
 
   // ---------------------------------------------------------------------------

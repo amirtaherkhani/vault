@@ -1,5 +1,7 @@
 ########################################
+
 # Application
+
 ########################################
 NODE_ENV=development
 APP_PORT=3000
@@ -7,14 +9,19 @@ APP_NAME=Vault
 API_PREFIX=api
 APP_FALLBACK_LANGUAGE=en
 APP_HEADER_LANGUAGE=x-custom-lang
-FRONTEND_DOMAIN=http://localhost:3000
-BACKEND_DOMAIN=http://localhost:3000
+FRONTEND_DOMAIN=<http://localhost:3000>
+BACKEND_DOMAIN=<http://localhost:3000>
 
 ########################################
+
 # Database
+
 ########################################
-# When running Nest locally (`npm run start:dev`) while Postgres runs in Docker,
-# use DATABASE_HOST=localhost in your local `.env`.
+
+# When running Nest locally (`npm run start:dev`) while Postgres runs in Docker
+
+# use DATABASE_HOST=localhost in your local `.env`
+
 DATABASE_TYPE=postgres
 DATABASE_HOST=postgres
 DATABASE_PORT=5432
@@ -32,7 +39,9 @@ DATABASE_CERT=
 DATABASE_URL=
 
 ########################################
+
 # File storage
+
 ########################################
 FILE_DRIVER=local
 ACCESS_KEY_ID=
@@ -41,7 +50,9 @@ AWS_S3_REGION=
 AWS_DEFAULT_S3_BUCKET=
 
 ########################################
+
 # Mail
+
 ########################################
 MAIL_HOST=maildev
 MAIL_PORT=1025
@@ -50,12 +61,14 @@ MAIL_PASSWORD=
 MAIL_IGNORE_TLS=true
 MAIL_SECURE=false
 MAIL_REQUIRE_TLS=false
-MAIL_DEFAULT_EMAIL=noreply@example.com
+MAIL_DEFAULT_EMAIL=<noreply@example.com>
 MAIL_DEFAULT_NAME=Api
 MAIL_CLIENT_PORT=1080
 
 ########################################
+
 # Authentication
+
 ########################################
 AUTH_JWT_SECRET=secret
 AUTH_JWT_TOKEN_EXPIRES_IN=15m
@@ -67,55 +80,77 @@ AUTH_CONFIRM_EMAIL_SECRET=secret_for_confirm_email
 AUTH_CONFIRM_EMAIL_TOKEN_EXPIRES_IN=1d
 
 ########################################
+
 # Auth via Vero
+
 ########################################
 AUTH_VERO_USE_EXTERNAL_TOKEN=false
-VERO_PROFILE_API_BASE_URL=https://gateway.veroapi.com/veritas
-VERO_JWKS_URI=https://gateway.veroapi.com/veritas/jwks
+VERO_PROFILE_API_BASE_URL=<https://gateway.veroapi.com/veritas>
+VERO_JWKS_URI=<https://gateway.veroapi.com/veritas/jwks>
 VERO_JWKS_CACHE_MAX_AGE_MS=900000
 VERO_ENABLE_JWKS_VALIDATION=false
 
 ########################################
+
 # Sessions
+
 ########################################
 SESSION_MAX_PER_USER=10
 SESSION_ACTIVE_WITHIN_DAYS=30
 
 ########################################
+
 # QueueDash (Queue UI)
+
 ########################################
+
 # Enable/disable QueueDash endpoint + UI
+
 QUEUEDASH_ENABLE=true
+
 # Relative path mounted under `/${API_PREFIX}` (default: `queuedash`) -> `/api/queuedash`
+
 QUEUEDASH_PATH=queuedash
+
 # Allow tRPC batching (optional)
+
 QUEUEDASH_ALLOW_BATCHING=true
+
 # Log QueueDash HTTP requests
+
 QUEUEDASH_LOG_REQUESTS=true
 
-# Optional: register a demo Bull queue so QueueDash UI shows something.
-# Requires Redis (default here: redis://redis:6379).
+# Optional: register a demo Bull queue so QueueDash UI shows something
+
+# Requires Redis (default here: redis://redis:6379)
+
 QUEUEDASH_DEMO_QUEUE_ENABLE=false
 QUEUEDASH_REDIS_URL=redis://redis:6379
 QUEUEDASH_DEMO_QUEUE_NAME=report-queue
 QUEUEDASH_DEMO_QUEUE_DISPLAY_NAME=Reports
 
 ########################################
+
 # OAuth providers
+
 ########################################
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 APPLE_APP_AUDIENCE=[]
 
 ########################################
+
 # Redis
+
 ########################################
 REDIS_SESSION_URL=redis://redis:6379/1
 REDIS_RATE_LIMIT_URL=redis://redis:6379/2
 REDIS_WORKER_URL=redis://redis:6379/4
 
 ########################################
+
 # Cache System
+
 ########################################
 CACHE_ENABLE=false
 
@@ -138,60 +173,113 @@ CACHE_METRICS_ENABLE=false
 CACHE_METRICS_PREFIX=cache
 
 ########################################
-# WebSocket Layer (upstream feeds)
+
+# Socket.IO
+
 ########################################
+SOCKETIO_ENABLE=true
+SOCKETIO_PING_INTERVAL=25000
+SOCKETIO_PING_TIMEOUT=60000
+SOCKETIO_MAX_HTTP_BUFFER_SIZE=100000000
+SOCKETIO_DEFAULT_REAUTH_GRACE_MS=5000
+SOCKETIO_MAX_REAUTH_TRIES=3
+
+########################################
+
+# WebSocket Layer (upstream feeds)
+
+########################################
+
 # Enable per-stream leader election (Redis lock) to avoid duplicate upstream sockets across pods
+
 # Lock ON by default: single leader per stream across pods
+
 WS_LOCK_ENABLE=true
+
 # Redis URL for lock (falls back to CACHE_REDIS_URL or INTERNAL_EVENTS_REDIS_URL if set)
+
 WS_LOCK_REDIS_URL=redis://redis:6379/5
+
 # Lock TTL (ms) and key prefix
+
 # Short TTL for fast failover; renews at ~60% of TTL
+
 WS_LOCK_TTL_MS=15000
 WS_LOCK_KEY_PREFIX=vero-ws-lock:
+
 # Connection budget per process (max concurrent upstream WS)
+
 # Protects against socket explosion; backoff when full
+
 WS_MAX_CONNECTIONS=64
 
 ########################################
+
 # Internal Events
+
 ########################################
 INTERNAL_EVENTS_ENABLE=true
 INTERNAL_EVENTS_SERVICE_NAME=api
 INTERNAL_EVENTS_STREAM_NAME=internal.events
 INTERNAL_EVENTS_DLQ_STREAM_NAME=internal.events.dlq
 INTERNAL_EVENTS_REDIS_URL=redis://redis:6379/5
+
 # Interval (ms) between dispatch cycles
+
 INTERNAL_EVENTS_DISPATCH_INTERVAL_MS=10000
+
 # Max unpublished rows to push per dispatch cycle
+
 INTERNAL_EVENTS_DISPATCH_BATCH_SIZE=50
+
 # Days to retain published outbox rows before cleanup
+
 INTERNAL_EVENTS_OUTBOX_RETENTION_DAYS=7 # Dev-friendly short retention
+
 # XREADGROUP block timeout (ms)
+
 INTERNAL_EVENTS_CONSUMER_BLOCK_MS=10000
+
 # Number of messages to read per XREADGROUP
+
 INTERNAL_EVENTS_CONSUMER_COUNT=20
+
 # Idempotency key TTL (seconds)
+
 INTERNAL_EVENTS_IDEMPOTENCY_TTL_SECONDS=172800
+
 # Max retries before sending to DLQ
+
 INTERNAL_EVENTS_MAX_RETRIES=20
+
 # Milliseconds before pending messages are claimed by another consumer
+
 INTERNAL_EVENTS_PENDING_CLAIM_AFTER_MS=120000
-# Redis stream MAXLEN (~ trimming). Set blank to disable. Dev-friendly cap.
+
+# Redis stream MAXLEN (~ trimming). Set blank to disable. Dev-friendly cap
+
 INTERNAL_EVENTS_STREAM_TRIM_MAX_LEN=100
+
 # Redis retry step (ms) and max backoff (ms)
+
 INTERNAL_EVENTS_REDIS_RETRY_STEP_MS=60000
 INTERNAL_EVENTS_REDIS_RETRY_MAX_MS=60000
+
 # Redis max retries per request (-1 means unlimited)
+
 INTERNAL_EVENTS_REDIS_MAX_RETRIES_PER_REQUEST=-1
 
 ########################################
+
 # Secret manager (default:src/config/secrets)
+
 ########################################
 GLOBAL_SECRET_PATH="files/secrets"
 
 ########################################
+
 # AWS Secrets Manager
+
 ########################################
 AWS_SECRETS_MANAGER_ENABLE=false
 AWS_SECRETS_MANAGER_REGION=
@@ -200,15 +288,19 @@ AWS_SECRETS_MANAGER_SET_TO_ENV=true
 AWS_SECRETS_MANAGER_DEBUG=false
 
 ########################################
+
 # Notifications - Gorush
+
 ########################################
 GORUSH_ENABLE=false
 GORUSH_REQUEST_TIMEOUT=5000
-GORUSH_URL=http://example.com:8088
+GORUSH_URL=<http://example.com:8088>
 GORUSH_GRPC_PORT=9000
 
 ########################################
+
 # CoinMarketCap market data (CMC)
+
 ########################################
 CMC_ENABLE=false
 CMC_API_KEY=
@@ -220,17 +312,23 @@ CMC_DEFAULT_FIAT_CURRENCY=USD
 CMC_DEFAULT_SYMBOLS=BTC,ETH,USDT
 
 ########################################
+
 # Binance (market data)
+
 ########################################
 BINANCE_ENABLE=false
-BINANCE_BASE_URL=https://api.binance.com
+BINANCE_BASE_URL=<https://api.binance.com>
+
 # Optional comma-separated fallbacks (better perf, less stable): api-gcp, api1-4
-BINANCE_ALT_BASE_URLS=https://api-gcp.binance.com,https://api1.binance.com,https://api2.binance.com,https://api3.binance.com,https://api4.binance.com
+
+BINANCE_ALT_BASE_URLS=<https://api-gcp.binance.com,https://api1.binance.com,https://api2.binance.com,https://api3.binance.com,https://api4.binance.com>
 BINANCE_REQUEST_TIMEOUT_MS=10000
 BINANCE_DEFAULT_QUOTE_ASSET=USDT
 
 ########################################
+
 # Custody provider - Fireblocks
+
 ########################################
 FIREBLOCKS_CW_ENABLE=false
 FIREBLOCKS_CW_API_KEY=
@@ -247,7 +345,9 @@ FIREBLOCKS_CW_DEBUG_LOGGING=false
 FIREBLOCKS_CW_VAULT_NAME_PREFIX=
 
 ########################################
+
 # Message broker - RabbitMQ
+
 ########################################
 RABBITMQ_ENABLE=false
 RABBITMQ_URLS=amqp://localhost:5672
@@ -257,7 +357,9 @@ RABBITMQ_QUEUE_DURABLE=true
 RABBITMQ_PERSISTENT=true
 
 ########################################
+
 # Object storage - MinIO
+
 ########################################
 MINIO_ENABLE=false
 MINIO_S3_HOST=localhost
@@ -267,7 +369,9 @@ MINIO_USE_SSL=false
 MINIO_PORT=9000
 
 ########################################
+
 # Socket.IO - ws communication layer
+
 ########################################
 SOCKETIO_ENABLE=false
 SOCKETIO_PING_INTERVAL=25000
@@ -277,27 +381,30 @@ SOCKETIO_DEFAULT_REAUTH_GRACE_MS=5000
 SOCKETIO_MAX_REAUTH_TRIES=3
 
 ########################################
+
 # AWS SNS Service
+
 ########################################
 AWS_SNS_ENABLE=false
-AWS_REGION=my-region-example 
-AWS_SQS_QUEUE_URL=https://sqs.my-region-example.amazonaws.com/123456789012/my-queue
+AWS_REGION=my-region-example
+AWS_SQS_QUEUE_URL=<https://sqs.my-region-example.amazonaws.com/123456789012/my-queue>
 AWS_SQS_POLL_INTERVAL=3000
 AWS_SQS_MAX_MESSAGES=10
 AWS_SQS_VISIBILITY_TIMEOUT=30
 AWS_SQS_WAIT_TIME_SECONDS=10
 
-
 ########################################
+
 # Striga
+
 ########################################
 STRIGA_ENABLE=false
 STRIGA_APPLICATION_ID=
 STRIGA_API_KEY=
 STRIGA_API_SECRET=
 STRIGA_UI_SECRET=
-STRIGA_BASE_URL=https://www.sandbox.striga.com/api/v1
+STRIGA_BASE_URL=<https://www.sandbox.striga.com/api/v1>
 STRIGA_REQUEST_TIMEOUT_MS=10000
 STRIGA_MAX_RETRIES=2
 STRIGA_CARD_ASSET_NAMES=EUR
-STRIGA_CARD_DEFAULT_PASSWORD=VeroVaultwe13@ #dont change this 
+STRIGA_CARD_DEFAULT_PASSWORD=VeroVaultwe13@ #dont change this

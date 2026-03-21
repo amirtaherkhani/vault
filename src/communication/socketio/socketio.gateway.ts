@@ -408,6 +408,16 @@ export class SocketIoGateway
           true,
         );
         this.logger.log(authOk, SocketIoGateway.name);
+        const ua =
+          (socket.handshake.headers['user-agent'] as string | undefined) || '-';
+        this.logger.log(
+          `[WS][CONNECT] ns=${socket.nsp?.name ?? '/'} sid=${socket.id} ip=${
+            socket.handshake?.address || ''
+          } user=${user.id} role=${roleName} ua="${ua}" rooms=${
+            socket.rooms?.size ?? 0
+          }`,
+          SocketIoGateway.name,
+        );
       } else {
         const authFail = LoggerSocketIoPlugin.formatAuthLogContext(
           SocketIoGateway.name,
@@ -560,7 +570,12 @@ export class SocketIoGateway
       undefined,
       dur,
     );
-    this.logger.warn(line, SocketIoGateway.name);
+    const ua =
+      (socket.handshake.headers['user-agent'] as string | undefined) || '-';
+    this.logger.warn(
+      `${line} ua="${ua}" rooms=${socket.rooms?.size ?? 0}`,
+      SocketIoGateway.name,
+    );
     try {
       const ctx = LoggerSocketIoPlugin.extractSocketContext(socket);
       const uid = socket.data?.user?.id

@@ -200,14 +200,14 @@ export class CmcAssetBaseDto {
   @IsOptional()
   @IsArray()
   @Expose()
-  tags?: string[];
+  tags?: any[];
 
   @ApiPropertyOptional({ type: () => CmcPlatformRefDto })
   @IsOptional()
   @ValidateNested()
   @Type(() => CmcPlatformRefDto)
   @Expose()
-  platform?: CmcPlatformRefDto;
+  platform?: CmcPlatformRefDto | null;
 
   @ApiPropertyOptional({ example: 17199862 })
   @IsOptional()
@@ -231,7 +231,7 @@ export class CmcAssetBaseDto {
   @IsOptional()
   @IsBoolean()
   @Expose()
-  infinite_supply?: boolean;
+  infinite_supply?: boolean | null;
 
   @ApiPropertyOptional({ example: null })
   @IsOptional()
@@ -598,6 +598,171 @@ export class CmcCryptoInfoV1Dto extends CmcEnvelopeDto<
   status!: CmcStatusDto;
 }
 
+// Info v2
+@Exclude()
+export class CmcCryptoInfoUrlsV2Dto {
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  website?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  technical_doc?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  twitter?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  reddit?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  message_board?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  announcement?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  chat?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  explorer?: string[];
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  source_code?: string[];
+}
+
+@Exclude()
+export class CmcCryptoInfoItemV2Dto extends CmcAssetBaseDto {
+  @ApiPropertyOptional({ type: () => CmcCryptoInfoUrlsV2Dto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CmcCryptoInfoUrlsV2Dto)
+  @Expose()
+  urls?: CmcCryptoInfoUrlsV2Dto;
+
+  @ApiPropertyOptional({
+    description: 'Logo URL',
+    example: 'https://s2.coinmarketcap.com/static/img/coins/64x64/1.png',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  logo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Asset description',
+    example: 'Bitcoin (BTC) is a consensus network ...',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  description?: string;
+
+  @ApiPropertyOptional({ example: '2013-04-28T00:00:00.000Z' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  date_added?: string;
+
+  @ApiPropertyOptional({ example: '2013-04-28T00:00:00.000Z' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  date_launched?: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['mineable'] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  tags?: any[];
+
+  @ApiPropertyOptional({ example: 'coin' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  category?: string;
+
+  @ApiPropertyOptional({ type: () => CmcPlatformRefDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CmcPlatformRefDto)
+  @Expose()
+  platform?: CmcPlatformRefDto | null;
+
+  @ApiPropertyOptional({ example: 19000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_circulating_supply?: number | null;
+
+  @ApiPropertyOptional({ example: 500000000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_market_cap?: number | null;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Expose()
+  self_reported_tags?: string[] | null;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @Expose()
+  infinite_supply?: boolean | null;
+
+  @ApiPropertyOptional({ example: null })
+  @IsOptional()
+  @Expose()
+  notice?: string | null;
+}
+
+@Exclude()
+@ApiExtraModels(CmcCryptoInfoItemV2Dto, CmcStatusDto)
+export class CmcCryptoInfoV2Dto extends CmcEnvelopeDto<
+  Record<string, CmcCryptoInfoItemV2Dto>
+> {
+  @ApiProperty({
+    description: 'Keyed by Id or symbol',
+    type: Object,
+  })
+  @IsObject()
+  @Expose()
+  data!: Record<string, CmcCryptoInfoItemV2Dto>;
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
 // Listings
 @Exclude()
 export class CmcCryptoListingItemV1Dto extends CmcAssetBaseDto {
@@ -630,6 +795,340 @@ export class CmcCryptoListingsLatestV1Dto extends CmcEnvelopeDto<
   @Type(() => CmcCryptoListingItemV1Dto)
   @Expose()
   data!: CmcCryptoListingItemV1Dto[];
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
+// Listings v3
+@Exclude()
+export class CmcCryptoListingQuoteV3Dto {
+  @ApiProperty({ example: 2781 })
+  @IsNumber()
+  @Expose()
+  id!: number;
+
+  @ApiProperty({ example: 'USD' })
+  @IsString()
+  @Expose()
+  symbol!: string;
+
+  @ApiProperty({ example: 6602.60701122 })
+  @IsNumber()
+  @Expose()
+  price!: number;
+
+  @ApiPropertyOptional({ example: 4314444687.5194 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_24h?: number;
+
+  @ApiPropertyOptional({ example: 4314444687.5194 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_24h_reported?: number;
+
+  @ApiPropertyOptional({ example: 100000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_7d?: number;
+
+  @ApiPropertyOptional({ example: 100000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_7d_reported?: number;
+
+  @ApiPropertyOptional({ example: 100000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_30d?: number;
+
+  @ApiPropertyOptional({ example: 100000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_30d_reported?: number;
+
+  @ApiPropertyOptional({ example: -0.152774 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  volume_change_24h?: number;
+
+  @ApiPropertyOptional({ example: 0.988615 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_1h?: number;
+
+  @ApiPropertyOptional({ example: 4.37185 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_24h?: number;
+
+  @ApiPropertyOptional({ example: -12.1352 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_7d?: number;
+
+  @ApiPropertyOptional({ example: -12.1352 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_30d?: number;
+
+  @ApiPropertyOptional({ example: -12.1352 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_60d?: number;
+
+  @ApiPropertyOptional({ example: -12.1352 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  percent_change_90d?: number;
+
+  @ApiPropertyOptional({ example: 852164659250.2758 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  market_cap?: number;
+
+  @ApiPropertyOptional({ example: 51 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  market_cap_dominance?: number;
+
+  @ApiPropertyOptional({ example: 952835089431.14 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  fully_diluted_market_cap?: number;
+
+  @ApiPropertyOptional({ example: 1000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  tvl?: number;
+
+  @ApiPropertyOptional({ example: 100000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  market_cap_by_total_supply?: number;
+
+  @ApiPropertyOptional({ example: '2018-08-09T21:56:28.000Z' })
+  @IsOptional()
+  @IsString()
+  @IsDateString()
+  @Expose()
+  last_updated?: string;
+}
+
+@Exclude()
+export class CmcCryptoListingItemV3Dto extends CmcAssetBaseDto {
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Expose()
+  infinite_supply?: boolean;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Expose()
+  is_market_cap_included_in_calc?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Expose()
+  is_fiat?: number;
+
+  @ApiPropertyOptional({ example: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  num_market_pairs?: number;
+
+  @ApiPropertyOptional({ example: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  tvl_ratio?: number;
+
+  @ApiPropertyOptional({ example: 19000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_circulating_supply?: number;
+
+  @ApiPropertyOptional({ example: 500000000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_market_cap?: number;
+
+  @ApiPropertyOptional({ example: 18000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  unlocked_circulating_supply?: number;
+
+  @ApiPropertyOptional({ example: 600000000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  unlocked_market_cap?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quote list (typically one per convert symbol)',
+    type: [CmcCryptoListingQuoteV3Dto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CmcCryptoListingQuoteV3Dto)
+  @Expose()
+  quote?: CmcCryptoListingQuoteV3Dto[];
+}
+
+@Exclude()
+@ApiExtraModels(CmcCryptoListingItemV3Dto, CmcStatusDto)
+export class CmcCryptoListingsLatestV3Dto extends CmcEnvelopeDto<
+  CmcCryptoListingItemV3Dto[]
+> {
+  @ApiProperty({ type: () => [CmcCryptoListingItemV3Dto] })
+  @ValidateNested({ each: true })
+  @Type(() => CmcCryptoListingItemV3Dto)
+  @Expose()
+  data!: CmcCryptoListingItemV3Dto[];
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
+// Quotes latest v3
+@Exclude()
+export class CmcCryptoTagV3Dto {
+  @ApiPropertyOptional({ example: 'layer-1' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  slug?: string;
+
+  @ApiPropertyOptional({ example: 'Layer 1' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'category' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  category?: string;
+}
+
+@Exclude()
+export class CmcCryptoQuoteItemV3Dto extends CmcAssetBaseDto {
+  @ApiPropertyOptional({ type: [CmcCryptoTagV3Dto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CmcCryptoTagV3Dto)
+  @Expose()
+  tags?: CmcCryptoTagV3Dto[];
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Expose()
+  infinite_supply?: boolean;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @IsInt()
+  @Expose()
+  is_market_cap_included_in_calc?: number;
+
+  @ApiPropertyOptional({ example: 0 })
+  @IsOptional()
+  @IsInt()
+  @Expose()
+  is_fiat?: number;
+
+  @ApiPropertyOptional({ example: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  num_market_pairs?: number;
+
+  @ApiPropertyOptional({ example: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  tvl_ratio?: number;
+
+  @ApiPropertyOptional({ example: 19000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_circulating_supply?: number;
+
+  @ApiPropertyOptional({ example: 500000000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  self_reported_market_cap?: number;
+
+  @ApiPropertyOptional({ example: 18000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  unlocked_circulating_supply?: number;
+
+  @ApiPropertyOptional({ example: 600000000000 })
+  @IsOptional()
+  @IsNumber()
+  @Expose()
+  unlocked_market_cap?: number;
+
+  @ApiPropertyOptional({
+    description: 'Quote list (typically one per convert symbol)',
+    type: [CmcCryptoListingQuoteV3Dto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CmcCryptoListingQuoteV3Dto)
+  @Expose()
+  quote?: CmcCryptoListingQuoteV3Dto[];
+}
+
+@Exclude()
+@ApiExtraModels(CmcCryptoQuoteItemV3Dto, CmcStatusDto)
+export class CmcCryptoQuotesLatestV3Dto extends CmcEnvelopeDto<
+  CmcCryptoQuoteItemV3Dto[]
+> {
+  @ApiProperty({ type: () => [CmcCryptoQuoteItemV3Dto] })
+  @ValidateNested({ each: true })
+  @Type(() => CmcCryptoQuoteItemV3Dto)
+  @Expose()
+  data!: CmcCryptoQuoteItemV3Dto[];
 
   @ApiProperty({ type: () => CmcStatusDto })
   @ValidateNested()
@@ -793,6 +1292,23 @@ export class CmcCryptoMarketPairsLatestV1Dto extends CmcEnvelopeDto<CmcMarketPai
   status!: CmcStatusDto;
 }
 
+// Market pairs latest (v2) — same payload shape, different endpoint/version
+@Exclude()
+@ApiExtraModels(CmcMarketPairsDataV1Dto, CmcStatusDto)
+export class CmcCryptoMarketPairsLatestV2Dto extends CmcEnvelopeDto<CmcMarketPairsDataV1Dto> {
+  @ApiProperty({ type: () => CmcMarketPairsDataV1Dto })
+  @ValidateNested()
+  @Type(() => CmcMarketPairsDataV1Dto)
+  @Expose()
+  data!: CmcMarketPairsDataV1Dto;
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
 // OHLCV latest (v1)
 @Exclude()
 export class CmcOhlcvLatestAssetV1Dto {
@@ -865,6 +1381,27 @@ export class CmcCryptoOhlcvLatestV1Dto extends CmcEnvelopeDto<
   status!: CmcStatusDto;
 }
 
+// OHLCV latest (v2) - same shape, different endpoint/version
+@Exclude()
+@ApiExtraModels(CmcOhlcvLatestAssetV1Dto, CmcStatusDto)
+export class CmcCryptoOhlcvLatestV2Dto extends CmcEnvelopeDto<
+  Record<string, CmcOhlcvLatestAssetV1Dto>
+> {
+  @ApiProperty({
+    description: 'Keyed by id as string',
+    type: Object,
+  })
+  @IsObject()
+  @Expose()
+  data!: Record<string, CmcOhlcvLatestAssetV1Dto>;
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
 // OHLCV historical (v1)
 @Exclude()
 export class CmcOhlcvHistoricalAssetV1Dto {
@@ -893,6 +1430,23 @@ export class CmcOhlcvHistoricalAssetV1Dto {
 @Exclude()
 @ApiExtraModels(CmcOhlcvHistoricalAssetV1Dto, CmcStatusDto)
 export class CmcCryptoOhlcvHistoricalV1Dto extends CmcEnvelopeDto<CmcOhlcvHistoricalAssetV1Dto> {
+  @ApiProperty({ type: () => CmcOhlcvHistoricalAssetV1Dto })
+  @ValidateNested()
+  @Type(() => CmcOhlcvHistoricalAssetV1Dto)
+  @Expose()
+  data!: CmcOhlcvHistoricalAssetV1Dto;
+
+  @ApiProperty({ type: () => CmcStatusDto })
+  @ValidateNested()
+  @Type(() => CmcStatusDto)
+  @Expose()
+  status!: CmcStatusDto;
+}
+
+// OHLCV historical (v2) - same payload shape, different endpoint/version
+@Exclude()
+@ApiExtraModels(CmcOhlcvHistoricalAssetV1Dto, CmcStatusDto)
+export class CmcCryptoOhlcvHistoricalV2Dto extends CmcEnvelopeDto<CmcOhlcvHistoricalAssetV1Dto> {
   @ApiProperty({ type: () => CmcOhlcvHistoricalAssetV1Dto })
   @ValidateNested()
   @Type(() => CmcOhlcvHistoricalAssetV1Dto)

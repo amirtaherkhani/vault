@@ -1,14 +1,12 @@
-import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from 'src/config/config.type';
-import { ApiGatewayService } from 'src/common/api-gateway/api-gateway.service';
-import { ApiFunction } from 'src/common/api-gateway/types/api-gateway.type';
 import { BaseToggleableService } from 'src/common/base/base-toggleable.service';
-import { getCmcBaseUrl } from './cmc.helper';
 import { CMC_DEFAULT_FIAT_CURRENCY, CMC_ENABLE } from './types/cmc-const.type';
-import { ConfigGet, ConfigGetOrThrow } from '../../config/config.decorator';
+import { ConfigGet } from '../../config/config.decorator';
 import { RoleEnum } from 'src/roles/roles.enum';
 import { GroupPlainToInstance } from 'src/utils/transformers/class.transformer';
+import { CmcBaseService } from './services/cmc-base.service';
 
 // DTOs
 import { CmcKeyInfoDto } from './dto/cmc-info.dto';
@@ -39,34 +37,27 @@ import { CmcBlockchainStatisticsLatestDto } from './dto/cmc-blockchain.dto';
 import { CmcFearAndGreedHistoricalDto } from './dto/cmc-fear-and-greed.dto';
 import {
   CmcCryptoInfoV1Dto,
+  CmcCryptoInfoV2Dto,
   CmcCryptoListingsLatestV1Dto,
+  CmcCryptoListingsLatestV3Dto,
   CmcCryptoMapV1Dto,
   CmcCryptoMarketPairsLatestV1Dto,
+  CmcCryptoMarketPairsLatestV2Dto,
   CmcCryptoOhlcvHistoricalV1Dto,
+  CmcCryptoOhlcvHistoricalV2Dto,
   CmcCryptoOhlcvLatestV1Dto,
+  CmcCryptoOhlcvLatestV2Dto,
   CmcCryptoQuotesHistoricalV1Dto,
   CmcCryptoQuotesLatestV1Dto,
+  CmcCryptoQuotesLatestV3Dto,
   CmcTrendingGainersLosersV1Dto,
   CmcTrendingLatestV1Dto,
   CmcTrendingMostVisitedV1Dto,
 } from './dto/cmc-cryptocurrency.dto';
-import { CmcEnvironmentType } from './types/cmc-enum.type';
 
 @Injectable()
 export class CmcService extends BaseToggleableService implements OnModuleInit {
   static readonly displayName = 'CoinMarketCap';
-
-  private apiClient: Record<string, ApiFunction> = {};
-  private baseUrl = '';
-
-  @ConfigGet('cmc.envType', {
-    inferEnvVar: true,
-    defaultValue: CmcEnvironmentType.PRODUCTION,
-  })
-  private readonly envType!: CmcEnvironmentType;
-
-  @ConfigGetOrThrow('cmc.apiKey', { inferEnvVar: true })
-  private readonly apiKey!: string;
 
   @ConfigGet('cmc.defaultFiatCurrency', {
     inferEnvVar: true,
@@ -75,9 +66,8 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   private readonly defaultFiat!: string;
 
   constructor(
-    private readonly apiSdkService: ApiGatewayService,
+    private readonly baseService: CmcBaseService,
     private readonly configService: ConfigService<AllConfigType>,
-    @Inject('API_GATEWAY_CMC') apiClient?: Record<string, ApiFunction>,
   ) {
     super(
       CmcService.name,
@@ -91,7 +81,6 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
         tags: ['provider', 'crypto'],
       },
     );
-    if (apiClient) this.apiClient = apiClient;
   }
 
   async onModuleInit(): Promise<void> {
@@ -100,32 +89,17 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
       return;
     }
 
-    if (!this.apiClient || Object.keys(this.apiClient).length === 0) {
-      this.apiClient = this.apiSdkService.getClient('CMC');
-    }
-    if (!this.apiClient) {
-      this.logger.error('CMC API client is not initialized.');
+    if (!this.baseService.isReady()) {
+      this.logger.warn('CMC API client is not ready.');
       return;
     }
-
-    this.baseUrl = getCmcBaseUrl(this.envType);
-    if (this.baseUrl) {
-      this.apiSdkService.updateBaseUrl('CMC', this.baseUrl);
-      this.apiClient = this.apiSdkService.getClient('CMC');
-    }
-    this.apiSdkService.updateHeaders('CMC', {
-      Accept: 'application/json',
-      'X-CMC_PRO_API_KEY': this.apiKey,
-    });
-    // Refresh client reference so we use the rebuilt instance that includes the API key header
-    this.apiClient = this.apiSdkService.getClient('CMC');
 
     await this.checkConnection();
   }
 
   /** Returns true when the service is enabled and a client is available. */
   public isReady(): boolean {
-    return this.isEnabled && !!this.apiClient;
+    return this.isEnabled && this.baseService.isReady();
   }
 
   private async checkConnection(): Promise<void> {
@@ -141,7 +115,7 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   // Key / Plan usage
   // ---------------------------------------------------------------------------
   async getKeyInfo(): Promise<CmcKeyInfoDto> {
-    const payload = await this.apiClient.getKeyInfo();
+    const payload = await this.baseService.call('getKeyInfo');
     return GroupPlainToInstance(CmcKeyInfoDto, payload, [RoleEnum.admin]);
   }
 
@@ -161,7 +135,9 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
       dto.convert = this.defaultFiat; // Apply default fiat when neither is provided
     }
 
-    const payload = await this.apiClient.getGlobalMetrics({ query: dto });
+    const payload = await this.baseService.call('getGlobalMetrics', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcGlobalMetricsQuotesLatestDto, payload, [
       RoleEnum.admin,
     ]);
@@ -180,7 +156,7 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
       dto.convert = this.defaultFiat; // Apply default fiat when neither is provided
     }
 
-    const payload = await this.apiClient.getGlobalMetricsHistorical({
+    const payload = await this.baseService.call('getGlobalMetricsHistorical', {
       query: dto,
     });
     return GroupPlainToInstance(CmcGlobalMetricsQuotesHistoricalDto, payload, [
@@ -202,7 +178,9 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
       dto.convert = this.defaultFiat;
     }
 
-    const payload = await this.apiClient.priceConversionV1({ query: dto });
+    const payload = await this.baseService.call('priceConversionV1', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcToolsPriceConversionV1Dto, payload, [
       RoleEnum.admin,
     ]);
@@ -212,7 +190,9 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   // Fiat
   // ---------------------------------------------------------------------------
   async getFiatMap(q: CmcFiatMapQueryDto): Promise<CmcFiatMapDto> {
-    const payload = await this.apiClient.getFiatMap({ query: q ?? {} });
+    const payload = await this.baseService.call('getFiatMap', {
+      query: q ?? {},
+    });
     return GroupPlainToInstance(CmcFiatMapDto, payload, [RoleEnum.admin]);
   }
 
@@ -222,9 +202,12 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   async getBlockchainStatisticsLatest(
     q: CmcBlockchainStatisticsLatestQueryDto,
   ): Promise<CmcBlockchainStatisticsLatestDto> {
-    const payload = await this.apiClient.getBlockchainStatisticsLatest({
-      query: q ?? {},
-    });
+    const payload = await this.baseService.call(
+      'getBlockchainStatisticsLatest',
+      {
+        query: q ?? {},
+      },
+    );
     return GroupPlainToInstance(CmcBlockchainStatisticsLatestDto, payload, [
       RoleEnum.admin,
     ]);
@@ -236,7 +219,7 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   async getFearAndGreedHistorical(
     q: CmcFearAndGreedHistoricalQueryDto,
   ): Promise<CmcFearAndGreedHistoricalDto> {
-    const payload = await this.apiClient.getFearAndGreedHistorical({
+    const payload = await this.baseService.call('getFearAndGreedHistorical', {
       query: q ?? {},
     });
     return GroupPlainToInstance(CmcFearAndGreedHistoricalDto, payload, [
@@ -248,13 +231,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   // Cryptocurrency - Assets and lists
   // ---------------------------------------------------------------------------
   async getCryptoMap(q: CmcCryptoMapQueryDto): Promise<CmcCryptoMapV1Dto> {
-    const payload = await this.apiClient.getCryptoMap({ query: q ?? {} });
+    const payload = await this.baseService.call('getCryptoMap', {
+      query: q ?? {},
+    });
     return GroupPlainToInstance(CmcCryptoMapV1Dto, payload, [RoleEnum.admin]);
   }
 
   async getCryptoInfo(q: CmcCryptoInfoQueryDto): Promise<CmcCryptoInfoV1Dto> {
-    const payload = await this.apiClient.getCryptoInfo({ query: q ?? {} });
+    const payload = await this.baseService.call('getCryptoInfo', {
+      query: q ?? {},
+    });
     return GroupPlainToInstance(CmcCryptoInfoV1Dto, payload, [RoleEnum.admin]);
+  }
+
+  async getCryptoInfoV2(q: CmcCryptoInfoQueryDto): Promise<CmcCryptoInfoV2Dto> {
+    const payload = await this.baseService.call('getCryptoInfoV2', {
+      query: q ?? {},
+    });
+    return GroupPlainToInstance(CmcCryptoInfoV2Dto, payload, [RoleEnum.admin]);
   }
 
   async getCryptoListingsLatest(
@@ -263,10 +257,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getCryptoListingsLatest({
+    const payload = await this.baseService.call('getCryptoListingsLatest', {
       query: dto,
     });
     return GroupPlainToInstance(CmcCryptoListingsLatestV1Dto, payload, [
+      RoleEnum.admin,
+    ]);
+  }
+
+  async getCryptoListingsLatestV3(
+    q: CmcCryptoListingsLatestQueryDto,
+  ): Promise<CmcCryptoListingsLatestV3Dto> {
+    const dto: any = { ...(q ?? {}) };
+    if (!dto.convert) dto.convert = this.defaultFiat;
+
+    const payload = await this.baseService.call('getCryptoListingsLatestV3', {
+      query: dto,
+    });
+    return GroupPlainToInstance(CmcCryptoListingsLatestV3Dto, payload, [
       RoleEnum.admin,
     ]);
   }
@@ -280,8 +288,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getQuotesLatest({ query: dto });
+    const payload = await this.baseService.call('getQuotesLatest', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcCryptoQuotesLatestV1Dto, payload, [
+      RoleEnum.admin,
+    ]);
+  }
+
+  async getQuotesLatestV3(
+    q: CmcCryptoQuotesLatestV1QueryDto,
+  ): Promise<CmcCryptoQuotesLatestV3Dto> {
+    const dto: any = { ...(q ?? {}) };
+    if (!dto.convert) dto.convert = this.defaultFiat;
+
+    const payload = await this.baseService.call('getQuotesLatestV3', {
+      query: dto,
+    });
+    return GroupPlainToInstance(CmcCryptoQuotesLatestV3Dto, payload, [
       RoleEnum.admin,
     ]);
   }
@@ -292,7 +316,9 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getQuotesHistorical({ query: dto });
+    const payload = await this.baseService.call('getQuotesHistorical', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcCryptoQuotesHistoricalV1Dto, payload, [
       RoleEnum.admin,
     ]);
@@ -304,8 +330,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getOhlcvLatest({ query: dto });
+    const payload = await this.baseService.call('getOhlcvLatest', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcCryptoOhlcvLatestV1Dto, payload, [
+      RoleEnum.admin,
+    ]);
+  }
+
+  async getOhlcvLatestV2(
+    q: CmcCryptoOhlcvLatestV1QueryDto,
+  ): Promise<CmcCryptoOhlcvLatestV2Dto> {
+    const dto: any = { ...(q ?? {}) };
+    if (!dto.convert) dto.convert = this.defaultFiat;
+
+    const payload = await this.baseService.call('getOhlcvLatestV2', {
+      query: dto,
+    });
+    return GroupPlainToInstance(CmcCryptoOhlcvLatestV2Dto, payload, [
       RoleEnum.admin,
     ]);
   }
@@ -316,8 +358,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getOhlcvHistorical({ query: dto });
+    const payload = await this.baseService.call('getOhlcvHistorical', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcCryptoOhlcvHistoricalV1Dto, payload, [
+      RoleEnum.admin,
+    ]);
+  }
+
+  async getOhlcvHistoricalV2(
+    q: CmcCryptoOhlcvHistoricalV1QueryDto,
+  ): Promise<CmcCryptoOhlcvHistoricalV2Dto> {
+    const dto: any = { ...(q ?? {}) };
+    if (!dto.convert) dto.convert = this.defaultFiat;
+
+    const payload = await this.baseService.call('getOhlcvHistoricalV2', {
+      query: dto,
+    });
+    return GroupPlainToInstance(CmcCryptoOhlcvHistoricalV2Dto, payload, [
       RoleEnum.admin,
     ]);
   }
@@ -331,8 +389,24 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     const dto: any = { ...(q ?? {}) };
     if (!dto.convert) dto.convert = this.defaultFiat;
 
-    const payload = await this.apiClient.getMarketPairsLatest({ query: dto });
+    const payload = await this.baseService.call('getMarketPairsLatest', {
+      query: dto,
+    });
     return GroupPlainToInstance(CmcCryptoMarketPairsLatestV1Dto, payload, [
+      RoleEnum.admin,
+    ]);
+  }
+
+  async getMarketPairsLatestV2(
+    q: CmcCryptoMarketPairsLatestV1QueryDto,
+  ): Promise<CmcCryptoMarketPairsLatestV2Dto> {
+    const dto: any = { ...(q ?? {}) };
+    if (!dto.convert) dto.convert = this.defaultFiat;
+
+    const payload = await this.baseService.call('getMarketPairsLatestV2', {
+      query: dto,
+    });
+    return GroupPlainToInstance(CmcCryptoMarketPairsLatestV2Dto, payload, [
       RoleEnum.admin,
     ]);
   }
@@ -343,7 +417,9 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   async getTrendingLatest(
     q: CmcTrendingQueryDto,
   ): Promise<CmcTrendingLatestV1Dto> {
-    const payload = await this.apiClient.getTrendingLatest({ query: q ?? {} });
+    const payload = await this.baseService.call('getTrendingLatest', {
+      query: q ?? {},
+    });
     return GroupPlainToInstance(CmcTrendingLatestV1Dto, payload, [
       RoleEnum.admin,
     ]);
@@ -352,7 +428,7 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   async getTrendingMostVisited(
     q: CmcTrendingQueryDto,
   ): Promise<CmcTrendingMostVisitedV1Dto> {
-    const payload = await this.apiClient.getTrendingMostVisited({
+    const payload = await this.baseService.call('getTrendingMostVisited', {
       query: q ?? {},
     });
     return GroupPlainToInstance(CmcTrendingMostVisitedV1Dto, payload, [
@@ -363,7 +439,7 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   async getTrendingGainersLosers(
     q: CmcTrendingQueryDto,
   ): Promise<CmcTrendingGainersLosersV1Dto> {
-    const payload = await this.apiClient.getTrendingGainersLosers({
+    const payload = await this.baseService.call('getTrendingGainersLosers', {
       query: q ?? {},
     });
     return GroupPlainToInstance(CmcTrendingGainersLosersV1Dto, payload, [

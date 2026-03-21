@@ -5,10 +5,11 @@ import { EnableGuard } from 'src/common/guards/service-enabled.guard';
 import { CmcResponseAdapter } from './cmc-response.adapter';
 import { ProviderResponseRegistry } from '../../common/api-gateway/response/registries/provider-response.registry';
 import { ProvidersModule } from '../providers.module';
+import { CmcBaseService } from './services/cmc-base.service';
 
 @Module({
   imports: [ProvidersModule],
-  providers: [CmcService, EnableGuard, CmcResponseAdapter],
+  providers: [CmcBaseService, CmcService, EnableGuard, CmcResponseAdapter],
   controllers: [CmcController],
   exports: [CmcService],
 })

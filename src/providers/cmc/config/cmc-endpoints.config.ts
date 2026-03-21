@@ -40,10 +40,16 @@ export class CmcApiConfig extends ApiGatewayConfig {
     const cryptoBase = `/${vCrypto}${getCmcCategoryPath(CmcCategory.CRYPTOCURRENCY)}`;
     add('getCryptoMap', HttpMethod.GET, `${cryptoBase}/map`);
     add('getCryptoInfo', HttpMethod.GET, `${cryptoBase}/info`);
+    add('getCryptoInfoV2', HttpMethod.GET, `/v2/cryptocurrency/info`);
     add(
       'getCryptoListingsLatest',
       HttpMethod.GET,
       `${cryptoBase}/listings/latest`,
+    );
+    add(
+      'getCryptoListingsLatestV3',
+      HttpMethod.GET,
+      `/v3/cryptocurrency/listings/latest`,
     );
     add(
       'getCryptoListingsHistorical',
@@ -51,6 +57,11 @@ export class CmcApiConfig extends ApiGatewayConfig {
       `${cryptoBase}/listings/historical`,
     );
     add('getQuotesLatest', HttpMethod.GET, `${cryptoBase}/quotes/latest`);
+    add(
+      'getQuotesLatestV3',
+      HttpMethod.GET,
+      `/v3/cryptocurrency/quotes/latest`,
+    );
     add(
       'getQuotesHistorical',
       HttpMethod.GET,
@@ -61,8 +72,19 @@ export class CmcApiConfig extends ApiGatewayConfig {
       HttpMethod.GET,
       `${cryptoBase}/market-pairs/latest`,
     );
+    add(
+      'getMarketPairsLatestV2',
+      HttpMethod.GET,
+      `/v2/cryptocurrency/market-pairs/latest`,
+    );
     add('getOhlcvLatest', HttpMethod.GET, `${cryptoBase}/ohlcv/latest`);
     add('getOhlcvHistorical', HttpMethod.GET, `${cryptoBase}/ohlcv/historical`);
+    add('getOhlcvLatestV2', HttpMethod.GET, `/v2/cryptocurrency/ohlcv/latest`);
+    add(
+      'getOhlcvHistoricalV2',
+      HttpMethod.GET,
+      `/v2/cryptocurrency/ohlcv/historical`,
+    );
     add(
       'getPricePerformanceStatsLatest',
       HttpMethod.GET,
