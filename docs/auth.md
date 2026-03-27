@@ -222,7 +222,7 @@ Validation path:
 - `VERO_ENABLE_JWKS_VALIDATION=true`: validate via JWKS.
 - `VERO_ENABLE_JWKS_VALIDATION=false`: validate via `GET /me/profile`.
 
-More details: `docs/vero-login.md`.
+More details: `docs/providers/vero-provider.md`.
 
 ## Protected APIs And Guards
 
