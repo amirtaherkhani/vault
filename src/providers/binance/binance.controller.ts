@@ -142,13 +142,7 @@ export class BinanceController {
       'Binance provider health (REST + Socket.IO). ok=true only if both are healthy.',
   })
   async health(): Promise<BinanceHealthDto> {
-    const rest = await this.service.healthCheck();
-    const socket = await this.socketService.testConnectivity();
-    return {
-      ok: rest.ok && socket.ok,
-      rest,
-      socket,
-    };
+    return await this.service.health();
   }
 
   @Roles(RoleEnum.admin)

@@ -7,9 +7,9 @@ import {
 } from '@nestjs/common';
 import {
   GoRushCoreStatusResponseDto,
-  GorushInfoDto,
   GoRushVersionResponseDto,
 } from './dto/gorush-info.dto';
+import { GorushHealthDto } from './dto/gorush-health.dto';
 import {
   GoRushAppStatusResponseDto,
   GoRushMetricsJsonResponseDto,
@@ -60,7 +60,7 @@ export class GorushService
         configKey: 'gorush.enable',
         envKey: 'GORUSH_ENABLE',
         description: 'Gorush push notifications.',
-        tags: ['Alert', 'comminitucaion'],
+        tags: ['Alert', 'Communication'],
       },
     );
 
@@ -108,8 +108,8 @@ export class GorushService
   async checkConnection(): Promise<boolean> {
     try {
       const healthCheck = await this.checkHealth();
-      this.logger.log(`Checking connection... ${healthCheck.status}`);
-      if (healthCheck.status === HttpStatus.OK) {
+      this.logger.log(`Checking connection... ${healthCheck.httpStatus}`);
+      if (healthCheck.httpStatus === HttpStatus.OK) {
         this.logger.debug('Gorush server is reachable.');
         this.logger.log('Gorush service connected successfully.');
         return true;
@@ -255,37 +255,59 @@ export class GorushService
   /**
    * Check health status
    */
-  async checkHealth(): Promise<GorushInfoDto> {
+  async checkHealth(): Promise<GorushHealthDto> {
     try {
       const response: any = await this.callHealthEndpoint();
       this.logger.verbose(`Checking ${stringifyJson(response)}`);
       const now = Math.floor(Date.now() / 1000);
       if (response.statusCode === HttpStatus.OK) {
         return GroupPlainToInstance(
-          GorushInfoDto,
+          GorushHealthDto,
           {
-            status: HttpStatus.OK,
+            status: true,
+            enable: this.isEnabled,
+            realtime: false,
+            httpStatus: HttpStatus.OK,
             message: 'Gorush server is healthy',
+            details: { restApi: { httpStatus: HttpStatus.OK, message: 'ok' } },
             timestamp: now,
           },
           [RoleEnum.admin],
         );
       }
       return GroupPlainToInstance(
-        GorushInfoDto,
+        GorushHealthDto,
         {
-          status: HttpStatus.SERVICE_UNAVAILABLE,
+          status: false,
+          enable: this.isEnabled,
+          realtime: false,
+          httpStatus: HttpStatus.SERVICE_UNAVAILABLE,
           message: 'Gorush health check failed',
+          details: {
+            restApi: {
+              httpStatus: HttpStatus.SERVICE_UNAVAILABLE,
+              message: 'health check failed',
+            },
+          },
           timestamp: now,
         },
         [RoleEnum.admin],
       );
     } catch (error) {
       return GroupPlainToInstance(
-        GorushInfoDto,
+        GorushHealthDto,
         {
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
+          status: false,
+          enable: this.isEnabled,
+          realtime: false,
+          httpStatus: HttpStatus.INTERNAL_SERVER_ERROR,
           message: `Gorush Server not Available: ${error.message}`,
+          details: {
+            restApi: {
+              httpStatus: HttpStatus.INTERNAL_SERVER_ERROR,
+              message: error.message,
+            },
+          },
           timestamp: Math.floor(Date.now() / 1000),
         },
         [RoleEnum.admin],

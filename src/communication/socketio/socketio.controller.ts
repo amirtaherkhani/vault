@@ -63,7 +63,7 @@ export class SocketIoController {
   @ApiOperationRoles('Health/status (basic), Redis bootstrap flag', [
     RoleEnum.admin,
   ])
-  @Get('health')
+  @Get('healthz')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: HealthDto })
   @ApiUnauthorizedResponse({ description: 'Missing or invalid JWT.' })

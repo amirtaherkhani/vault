@@ -65,7 +65,7 @@ export class HomeController {
     return this.service.uptimeInfo();
   }
 
-  @Get('health')
+  @Get('healthz')
   @ApiOperation({
     summary: 'Get health status',
     description: 'Returns current health status and timestamp of the service',

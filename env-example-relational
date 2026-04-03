@@ -304,12 +304,12 @@ GORUSH_GRPC_PORT=9000
 ########################################
 CMC_ENABLE=false
 CMC_API_KEY=
-CMC_ENV_TYPE=sandbox
-CMC_TTL_MS=60000
-CMC_REQUEST_TIMEOUT_MS=10000
-CMC_MAX_RETRIES=3
-CMC_DEFAULT_FIAT_CURRENCY=USD
-CMC_DEFAULT_SYMBOLS=BTC,ETH,USDT
+CMC_ENV_TYPE=sandbox             # sandbox | production
+CMC_TTL_MS=60000                 # Cache TTL (ms)
+CMC_REQUEST_TIMEOUT_MS=10000     # HTTP request timeout (ms)
+CMC_MAX_RETRIES=3                # Retry count for failed calls
+CMC_DEFAULT_FIAT_CURRENCY=USD    # Default convert currency
+CMC_DEFAULT_SYMBOLS=BTC,ETH,USDT # Default symbols (CSV)
 
 ########################################
 

@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  OnModuleInit,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from '../../config/config.type';
 import { BaseToggleableService } from '../../common/base/base-toggleable.service';
@@ -55,6 +61,8 @@ import {
   BinanceExecutionRulesRequestDto,
   BinanceExchangeInfoRequestDto,
 } from './dto/binance-base.request.dto';
+import { BinanceHealthDto } from './dto/binance-health.dto';
+import { BinanceSocketService } from './binance.socket.service';
 
 @Injectable()
 export class BinanceService
@@ -78,6 +86,8 @@ export class BinanceService
   constructor(
     private readonly baseService: BinanceBaseService,
     private readonly configService: ConfigService<AllConfigType>,
+    @Inject(forwardRef(() => BinanceSocketService))
+    private readonly socketService: BinanceSocketService,
   ) {
     super(
       BinanceService.name,
@@ -114,6 +124,10 @@ export class BinanceService
 
   isReady(): boolean {
     return this.isEnabled && this.baseService.isReady();
+  }
+
+  public enabled(): boolean {
+    return this.isEnabled;
   }
 
   // ---------------------------------------------------------------------------
@@ -213,9 +227,25 @@ export class BinanceService
     return GroupPlainToInstance(BinanceChartSeriesRangeDto, series);
   }
 
-  async healthCheck(): Promise<{ ok: boolean; message: string }> {
+  async healthCheck(): Promise<{ status: boolean; message: string }> {
     const ok = await this.checkConnection();
-    return { ok, message: ok ? 'ok' : 'binance ping failed' };
+    return { status: ok, message: ok ? 'ok' : 'binance ping failed' };
+  }
+
+  async health(): Promise<BinanceHealthDto> {
+    const rest = await this.healthCheck();
+    const socket = await this.socketService.testConnectivity();
+    const payload = {
+      status: rest.status && socket.ok,
+      enable: this.isEnabled,
+      realtime: socket.ok,
+      details: {
+        restApi: { status: rest.status, message: rest.message },
+        socket: { status: socket.ok, message: socket.message },
+      },
+    } as BinanceHealthDto;
+
+    return GroupPlainToInstance(BinanceHealthDto, payload);
   }
 
   async findExecutionRules(

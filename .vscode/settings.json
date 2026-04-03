@@ -17,6 +17,7 @@
     "BLOCKEDBYSYSTEM",
     "dpage",
     "healthz",
+    "historybatched",
     "hygen",
     "infile",
     "klines",

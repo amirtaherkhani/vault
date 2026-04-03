@@ -234,6 +234,134 @@ export class CmcTrendingQueryDto {
 }
 
 // -----------------------------------------------------------------------------
+// Exchange
+// -----------------------------------------------------------------------------
+
+@Exclude()
+export class CmcExchangeMapQueryDto extends CmcPagingQueryDto {
+  @ApiPropertyOptional({
+    description: 'CSV of slugs to filter',
+    example: 'binance,kraken',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  slug?: string;
+
+  @ApiPropertyOptional({
+    description: 'Listing status filter (e.g., active,inactive)',
+    example: 'active',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  listing_status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sort field',
+    example: 'id',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  sort?: string;
+}
+
+@Exclude()
+export class CmcExchangeInfoQueryDto {
+  @ApiPropertyOptional({ description: 'CSV of exchange IDs', example: '270' })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  id?: string;
+
+  @ApiPropertyOptional({
+    description: 'CSV of exchange slugs',
+    example: 'binance,kraken',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  slug?: string;
+}
+
+@Exclude()
+export class CmcExchangeQuotesLatestQueryDto extends CmcExchangeInfoQueryDto {
+  @ApiPropertyOptional({
+    description: 'Convert results to these symbols (CSV)',
+    example: 'USD,EUR',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  convert?: string;
+
+  @ApiPropertyOptional({
+    description: 'Convert by currency IDs (CSV)',
+    example: '2781',
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  convert_id?: string;
+}
+
+@Exclude()
+export class CmcExchangeMarketPairsLatestQueryDto
+  extends CmcExchangeQuotesLatestQueryDto
+  implements Partial<CmcPagingQueryDto>
+{
+  @ApiPropertyOptional({
+    description: 'Pagination start (1-indexed)',
+    example: 1,
+    minimum: 1,
+  })
+  @Transform(optionalNumberTransformer)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Expose()
+  start?: number;
+
+  @ApiPropertyOptional({
+    description: 'Number of results to return',
+    example: 100,
+    minimum: 1,
+  })
+  @Transform(optionalNumberTransformer)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Expose()
+  limit?: number;
+}
+
+@Exclude()
+export class CmcExchangeListingsLatestQueryDto extends CmcExchangeInfoQueryDto {
+  @ApiPropertyOptional({
+    description: 'Start offset (1-indexed)',
+    example: 1,
+  })
+  @Transform(optionalNumberTransformer)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Expose()
+  start?: number;
+
+  @ApiPropertyOptional({ description: 'Limit', example: 100 })
+  @Transform(optionalNumberTransformer)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Expose()
+  limit?: number;
+}
+
+@Exclude()
+export class CmcExchangeQuotesHistoricalQueryDto extends CmcExchangeQuotesLatestQueryDto {}
+
+// -----------------------------------------------------------------------------
 // Global Metrics
 // -----------------------------------------------------------------------------
 
@@ -555,6 +683,16 @@ export class CmcCryptoOhlcvHistoricalV1QueryDto
     Partial<CmcTimeRangeQueryDto>,
     Partial<CmcCountQueryDto>
 {
+  @ApiPropertyOptional({
+    description: 'Time period granularity',
+    example: 'daily',
+    enum: ['daily', 'hourly'],
+  })
+  @IsOptional()
+  @IsString()
+  @Expose()
+  time_period?: string;
+
   @ApiPropertyOptional({
     description: 'Convert to these symbols (CSV)',
     example: 'USD',

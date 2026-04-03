@@ -1,9 +1,9 @@
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 
 // Your JWT token
 const token =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZSI6eyJpZCI6MiwibmFtZSI6IlVzZXIiLCJfX2VudGl0eSI6IlJvbGVFbnRpdHkifSwic2Vzc2lvbklkIjo1NywiaWF0IjoxNzQ5NjE1ODE5LCJleHAiOjE3NDk2MTYxMDN9.vUIeCQE34Xo_A1EAwWH6fKmduLyEVGiJOBVakr02N5o';
-const socket: Socket = io('http://localhost:3000', {
+const socket = io('http://localhost:3000', {
   auth: {
     token,
   },

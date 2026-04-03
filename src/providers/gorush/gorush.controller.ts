@@ -38,6 +38,7 @@ import {
   GorushInfoDto,
   GoRushVersionResponseDto,
 } from './dto/gorush-info.dto';
+import { GorushHealthDto } from './dto/gorush-health.dto';
 import { GORUSH_SDK_VERSION } from './types/gorush-const.type';
 import { EnableGuard } from 'src/common/guards/service-enabled.guard';
 import {
@@ -229,7 +230,7 @@ export class GorushController {
   })
   @HttpCode(HttpStatus.OK)
   @Get('healthz')
-  async checkHealth(): Promise<GorushInfoDto> {
+  async checkHealth(): Promise<GorushHealthDto> {
     return this.gorushService.checkHealth();
   }
 

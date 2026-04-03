@@ -2,7 +2,8 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
-class BinanceHealthItemDto {
+@Exclude()
+export class CmcHealthItemDto {
   @ApiProperty({ example: true })
   @IsBoolean()
   @Expose()
@@ -16,32 +17,29 @@ class BinanceHealthItemDto {
 }
 
 @Exclude()
-export class BinanceHealthDto {
+export class CmcHealthDto {
   @ApiProperty({ example: true, description: 'Overall provider status' })
+  @IsBoolean()
   @Expose()
   status!: boolean;
 
   @ApiProperty({ example: true, description: 'Provider enabled via config' })
+  @IsBoolean()
   @Expose()
   enable!: boolean;
 
   @ApiProperty({
-    example: true,
-    description: 'Realtime/socket connectivity status',
+    example: false,
+    description: 'Realtime/socket connectivity (if applicable)',
   })
+  @IsBoolean()
   @Expose()
   realtime!: boolean;
 
   @ApiProperty({
     description: 'Detailed checks',
-    example: {
-      restApi: { status: true, message: 'ok' },
-      socket: { status: true, message: 'ok' },
-    },
+    example: { restApi: { status: true, message: 'ok' } },
   })
   @Expose()
-  details!: {
-    restApi: BinanceHealthItemDto;
-    socket: BinanceHealthItemDto;
-  };
+  details!: { restApi: CmcHealthItemDto };
 }

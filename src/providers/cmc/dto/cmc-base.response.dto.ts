@@ -565,3 +565,68 @@ export class CmcAssetMetaBaseDto {
   @Expose()
   category?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Re-exports for base service (response DTOs)
+// ---------------------------------------------------------------------------
+export {
+  CmcCryptoInfoV1Dto,
+  CmcCryptoInfoV2Dto,
+  CmcCryptoListingsLatestV1Dto,
+  CmcCryptoListingsLatestV3Dto,
+  CmcCryptoMapV1Dto,
+  CmcCryptoMarketPairsLatestV1Dto,
+  CmcCryptoMarketPairsLatestV2Dto,
+  CmcCryptoOhlcvHistoricalV1Dto,
+  CmcCryptoOhlcvHistoricalV2Dto,
+  CmcCryptoOhlcvLatestV1Dto,
+  CmcCryptoOhlcvLatestV2Dto,
+  CmcCryptoQuotesHistoricalV1Dto,
+  CmcCryptoQuotesLatestV1Dto,
+  CmcCryptoQuotesLatestV3Dto,
+  CmcTrendingGainersLosersV1Dto,
+  CmcTrendingLatestV1Dto,
+  CmcTrendingMostVisitedV1Dto,
+} from './cmc-cryptocurrency.dto';
+
+export {
+  CmcExchangeInfoDto,
+  CmcExchangeMapDto,
+  CmcExchangeMarketPairsLatestDto,
+  CmcExchangeQuotesLatestDto,
+} from './cmc-exchange.dto';
+
+export {
+  CmcGlobalMetricsQuotesHistoricalDto,
+  CmcGlobalMetricsQuotesLatestDto,
+} from './cmc-global-metrics.dto';
+
+export { CmcFiatMapDto } from './cmc-fiat.dto';
+export { CmcFearAndGreedHistoricalDto } from './cmc-fear-and-greed.dto';
+export { CmcToolsPriceConversionV1Dto } from './cmc-tools.dto';
+export { CmcBlockchainStatisticsLatestDto } from './cmc-blockchain.dto';
+export { CmcKeyInfoDto } from './cmc-info.dto';
+
+export {
+  CmcCryptoListingsHistoricalDto,
+  CmcCryptoQuotesLatestV2Dto,
+  CmcCryptoQuotesHistoricalV2Dto,
+  CmcCryptoQuotesHistoricalV3Dto,
+  CmcPricePerformanceStatsLatestDto,
+  CmcPricePerformanceStatsLatestV2Dto,
+  CmcCategoriesDto,
+  CmcCategoryDto,
+  CmcAirdropsDto,
+  CmcAirdropDto,
+  CmcIndexCmc20LatestDto,
+  CmcIndexCmc20HistoricalDto,
+  CmcIndexCmc100LatestDto,
+  CmcIndexCmc100HistoricalDto,
+  CmcPostmanDto,
+  CmcFearAndGreedLatestDto,
+  CmcPriceConversionDto,
+  CmcPriceConversionV2Dto,
+  CmcExchangeListingsLatestDto,
+  CmcExchangeQuotesHistoricalDto,
+  CmcExchangeAssetsDto,
+} from './cmc-misc.dto';

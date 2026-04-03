@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import WebSocket from 'ws';
 import { Socket } from 'socket.io';
@@ -48,6 +48,7 @@ export class BinanceSocketService {
   constructor(
     private readonly logger: LoggerService,
     private readonly socketProvider: SocketServerProvider,
+    @Inject(forwardRef(() => BinanceService))
     private readonly binance: BinanceService,
     private readonly ws: WsConnectionManager,
     private readonly configService: ConfigService<AllConfigType>,

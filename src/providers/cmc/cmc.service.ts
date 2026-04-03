@@ -2,62 +2,50 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from 'src/config/config.type';
 import { BaseToggleableService } from 'src/common/base/base-toggleable.service';
-import { CMC_DEFAULT_FIAT_CURRENCY, CMC_ENABLE } from './types/cmc-const.type';
+import {
+  CMC_DEFAULT_FIAT_CURRENCY,
+  CMC_ENABLE,
+  CMC_TTL_MS,
+} from './types/cmc-const.type';
 import { ConfigGet } from '../../config/config.decorator';
+import { CmcBaseService } from './services/cmc-base.service';
+import { CacheService } from 'src/common/cache';
+import dayjs from 'dayjs';
 import { RoleEnum } from 'src/roles/roles.enum';
 import { GroupPlainToInstance } from 'src/utils/transformers/class.transformer';
-import { CmcBaseService } from './services/cmc-base.service';
-
-// DTOs
+import {
+  GlobalStatsDto,
+  HistoryBatchedResponseDto,
+  HistoryQueryDto,
+  HistoryResponseDto,
+  HistoryBatchedQueryDto,
+  MetadataQueryDto,
+  MetadataResponseDto,
+  PricesQueryDto,
+  PricesResponseDto,
+  QuotesHistoricalV2QueryDto,
+  QuotesHistoricalV2ResponseDto,
+} from './dto/cmc-client.dto';
+import { CmcCryptoOhlcvHistoricalV1Dto } from './dto/cmc-cryptocurrency.dto';
 import { CmcKeyInfoDto } from './dto/cmc-info.dto';
+import { buildQuotesHistoricalDto } from './helper/quotes-preset.helper';
 import {
-  CmcBlockchainStatisticsLatestQueryDto,
-  CmcCryptoInfoQueryDto,
-  CmcCryptoListingsLatestQueryDto,
-  CmcCryptoMapQueryDto,
-  CmcCryptoMarketPairsLatestV1QueryDto,
-  CmcCryptoOhlcvHistoricalV1QueryDto,
-  CmcCryptoOhlcvLatestV1QueryDto,
-  CmcCryptoQuotesHistoricalV1QueryDto,
-  CmcCryptoQuotesLatestV1QueryDto,
-  CmcFearAndGreedHistoricalQueryDto,
-  CmcFiatMapQueryDto,
-  CmcGlobalMetricsHistoricalQueryDto,
-  CmcGlobalMetricsQueryDto,
-  CmcPriceConversionV1QueryDto,
-  CmcTrendingQueryDto,
-} from './dto/cmc-base.query.dto';
-import {
-  CmcGlobalMetricsQuotesHistoricalDto,
-  CmcGlobalMetricsQuotesLatestDto,
-} from './dto/cmc-global-metrics.dto';
-import { CmcToolsPriceConversionV1Dto } from './dto/cmc-tools.dto';
-import { CmcFiatMapDto } from './dto/cmc-fiat.dto';
-import { CmcBlockchainStatisticsLatestDto } from './dto/cmc-blockchain.dto';
-import { CmcFearAndGreedHistoricalDto } from './dto/cmc-fear-and-greed.dto';
-import {
-  CmcCryptoInfoV1Dto,
-  CmcCryptoInfoV2Dto,
-  CmcCryptoListingsLatestV1Dto,
-  CmcCryptoListingsLatestV3Dto,
-  CmcCryptoMapV1Dto,
-  CmcCryptoMarketPairsLatestV1Dto,
-  CmcCryptoMarketPairsLatestV2Dto,
-  CmcCryptoOhlcvHistoricalV1Dto,
-  CmcCryptoOhlcvHistoricalV2Dto,
-  CmcCryptoOhlcvLatestV1Dto,
-  CmcCryptoOhlcvLatestV2Dto,
-  CmcCryptoQuotesHistoricalV1Dto,
-  CmcCryptoQuotesLatestV1Dto,
-  CmcCryptoQuotesLatestV3Dto,
-  CmcTrendingGainersLosersV1Dto,
-  CmcTrendingLatestV1Dto,
-  CmcTrendingMostVisitedV1Dto,
-} from './dto/cmc-cryptocurrency.dto';
+  mapGlobalStats,
+  mapMetadata,
+  mapPriceEntry,
+} from './infrastructure/persistence/relational/mappers/cmc.mapper';
+import { CmcHealthDto } from './dto/cmc-health.dto';
 
 @Injectable()
 export class CmcService extends BaseToggleableService implements OnModuleInit {
   static readonly displayName = 'CoinMarketCap';
+  private static readonly CACHE_KEY_PRICES = 'cmc:prices';
+  private static readonly CACHE_KEY_METADATA = 'cmc:metadata';
+  private static readonly CACHE_KEY_GLOBAL = 'cmc:global';
+  private static readonly CACHE_KEY_OHLCV_HISTORY = 'cmc:ohlcv:history';
+  private static readonly CACHE_KEY_OHLCV_HISTORY_BATCH =
+    'cmc:ohlcv:history:batched';
+  private static readonly CACHE_KEY_QUOTES_HIST_V2 = 'cmc:quotes:historical:v2';
 
   @ConfigGet('cmc.defaultFiatCurrency', {
     inferEnvVar: true,
@@ -65,9 +53,21 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
   })
   private readonly defaultFiat!: string;
 
+  @ConfigGet('cmc.ttlMs', {
+    inferEnvVar: true,
+    defaultValue: CMC_TTL_MS,
+  })
+  private readonly ttlMs!: number;
+
+  /** Cache TTL in seconds derived once from ttlMs */
+  private get ttlSeconds(): number {
+    return Math.max(1, Math.floor(this.ttlMs / 1000));
+  }
+
   constructor(
     private readonly baseService: CmcBaseService,
     private readonly configService: ConfigService<AllConfigType>,
+    private readonly cacheService: CacheService,
   ) {
     super(
       CmcService.name,
@@ -111,339 +111,271 @@ export class CmcService extends BaseToggleableService implements OnModuleInit {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Key / Plan usage
-  // ---------------------------------------------------------------------------
   async getKeyInfo(): Promise<CmcKeyInfoDto> {
-    const payload = await this.baseService.call('getKeyInfo');
+    const payload = await this.baseService.getKeyInfo();
     return GroupPlainToInstance(CmcKeyInfoDto, payload, [RoleEnum.admin]);
   }
 
-  // ---------------------------------------------------------------------------
-  // Global Metrics
-  // ---------------------------------------------------------------------------
-  async getGlobalMetricsLatest(
-    q: CmcGlobalMetricsQueryDto,
-  ): Promise<CmcGlobalMetricsQuotesLatestDto> {
-    const dto: any = { ...(q ?? {}) };
-
-    // CMC API rule: you cannot send both 'convert' and 'convert_id' at the same time.
-    // If 'convert_id' is provided, we remove 'convert' to avoid a 400 Bad Request.
-    if (dto.convert_id) {
-      delete dto.convert;
-    } else if (!dto.convert) {
-      dto.convert = this.defaultFiat; // Apply default fiat when neither is provided
+  async health(): Promise<CmcHealthDto> {
+    let restOk = false;
+    let restMessage: string | undefined;
+    try {
+      await this.baseService.getKeyInfo();
+      restOk = true;
+      restMessage = 'ok';
+    } catch (e: any) {
+      restOk = false;
+      restMessage = e?.message ?? 'connection failed';
     }
 
-    const payload = await this.baseService.call('getGlobalMetrics', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcGlobalMetricsQuotesLatestDto, payload, [
-      RoleEnum.admin,
-    ]);
+    const health: CmcHealthDto = {
+      status: restOk,
+      enable: this.isEnabled,
+      realtime: false, // no realtime channel for CMC
+      details: {
+        restApi: { status: restOk, message: restMessage },
+      },
+    };
+    return GroupPlainToInstance(CmcHealthDto, health, [RoleEnum.admin]);
   }
 
-  async getGlobalMetricsHistorical(
-    q: CmcGlobalMetricsHistoricalQueryDto,
-  ): Promise<CmcGlobalMetricsQuotesHistoricalDto> {
-    const dto: any = { ...(q ?? {}) };
-
-    // CMC API rule: you cannot send both 'convert' and 'convert_id' at the same time.
-    // If 'convert_id' is provided, we remove 'convert' to avoid a 400 Bad Request.
-    if (dto.convert_id) {
-      delete dto.convert;
-    } else if (!dto.convert) {
-      dto.convert = this.defaultFiat; // Apply default fiat when neither is provided
+  async getPrices(query: PricesQueryDto): Promise<PricesResponseDto> {
+    const symbolsRaw =
+      query.symbols
+        ?.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean) ?? [];
+    if (symbolsRaw.length !== 1) {
+      throw {
+        status: {
+          error_code: 400,
+          error_message: 'This endpoint accepts exactly one symbol.',
+        },
+      };
     }
+    const symbol = symbolsRaw[0];
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = `${CmcService.CACHE_KEY_PRICES}:${symbol}`;
 
-    const payload = await this.baseService.call('getGlobalMetricsHistorical', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcGlobalMetricsQuotesHistoricalDto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tools
-  // ---------------------------------------------------------------------------
-  async priceConversionV1(
-    q: CmcPriceConversionV1QueryDto,
-  ): Promise<CmcToolsPriceConversionV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-
-    if (dto.convert_id) {
-      delete dto.convert;
-    } else if (!dto.convert) {
-      dto.convert = this.defaultFiat;
-    }
-
-    const payload = await this.baseService.call('priceConversionV1', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcToolsPriceConversionV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Fiat
-  // ---------------------------------------------------------------------------
-  async getFiatMap(q: CmcFiatMapQueryDto): Promise<CmcFiatMapDto> {
-    const payload = await this.baseService.call('getFiatMap', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcFiatMapDto, payload, [RoleEnum.admin]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Blockchain
-  // ---------------------------------------------------------------------------
-  async getBlockchainStatisticsLatest(
-    q: CmcBlockchainStatisticsLatestQueryDto,
-  ): Promise<CmcBlockchainStatisticsLatestDto> {
-    const payload = await this.baseService.call(
-      'getBlockchainStatisticsLatest',
-      {
-        query: q ?? {},
+    const cached = await this.cacheService.cached<PricesResponseDto>(
+      { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+      { className: CmcService.name, handlerName: 'getPrices' },
+      [symbol],
+      async () => {
+        const payload = await this.baseService.getQuotesLatest({
+          symbol,
+          convert: this.defaultFiat,
+        });
+        const mapped = mapPriceEntry(payload, symbol, this.defaultFiat);
+        return GroupPlainToInstance(PricesResponseDto, mapped, [
+          RoleEnum.admin,
+        ]);
       },
     );
-    return GroupPlainToInstance(CmcBlockchainStatisticsLatestDto, payload, [
-      RoleEnum.admin,
-    ]);
+
+    return cached.value;
   }
 
-  // ---------------------------------------------------------------------------
-  // Fear & Greed
-  // ---------------------------------------------------------------------------
-  async getFearAndGreedHistorical(
-    q: CmcFearAndGreedHistoricalQueryDto,
-  ): Promise<CmcFearAndGreedHistoricalDto> {
-    const payload = await this.baseService.call('getFearAndGreedHistorical', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcFearAndGreedHistoricalDto, payload, [
-      RoleEnum.admin,
-    ]);
+  async getMetadata(query: MetadataQueryDto): Promise<MetadataResponseDto> {
+    const symbols =
+      query.symbols
+        ?.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean) ?? [];
+    if (symbols.length === 0) {
+      throw {
+        status: { error_code: 400, error_message: "'symbols' is required" },
+      };
+    }
+
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = `${CmcService.CACHE_KEY_METADATA}:${symbols
+      .sort()
+      .join(',')}`;
+
+    const cached = await this.cacheService.cached<MetadataResponseDto>(
+      { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+      { className: CmcService.name, handlerName: 'getMetadata' },
+      [symbols],
+      async () => {
+        const payload = await this.baseService.getCryptoInfo({
+          symbol: symbols.join(','),
+        });
+        const mapped = mapMetadata(payload);
+        return GroupPlainToInstance(MetadataResponseDto, mapped, [
+          RoleEnum.admin,
+        ]);
+      },
+    );
+
+    return cached.value;
   }
 
-  // ---------------------------------------------------------------------------
-  // Cryptocurrency - Assets and lists
-  // ---------------------------------------------------------------------------
-  async getCryptoMap(q: CmcCryptoMapQueryDto): Promise<CmcCryptoMapV1Dto> {
-    const payload = await this.baseService.call('getCryptoMap', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcCryptoMapV1Dto, payload, [RoleEnum.admin]);
+  async getGlobalStats(): Promise<GlobalStatsDto> {
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = CmcService.CACHE_KEY_GLOBAL;
+
+    const cached = await this.cacheService.cached<GlobalStatsDto>(
+      { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+      { className: CmcService.name, handlerName: 'getGlobalStats' },
+      [],
+      async () => {
+        const payload = await this.baseService.getGlobalMetricsLatest({
+          convert: this.defaultFiat,
+        });
+        const mapped = mapGlobalStats(payload, this.defaultFiat);
+        return GroupPlainToInstance(GlobalStatsDto, mapped, [RoleEnum.admin]);
+      },
+    );
+
+    return cached.value;
   }
 
-  async getCryptoInfo(q: CmcCryptoInfoQueryDto): Promise<CmcCryptoInfoV1Dto> {
-    const payload = await this.baseService.call('getCryptoInfo', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcCryptoInfoV1Dto, payload, [RoleEnum.admin]);
+  async getHistory(query: HistoryQueryDto): Promise<HistoryResponseDto> {
+    const {
+      symbol,
+      from,
+      to,
+      time_period,
+      interval = 'daily',
+      convert = this.defaultFiat,
+    } = query;
+    if (!symbol || !from || !to || !time_period) {
+      throw {
+        status: {
+          error_code: 400,
+          error_message:
+            "Required query params: 'symbol', 'from', 'to', and 'time_period' (daily|hourly)",
+        },
+      };
+    }
+
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = `${CmcService.CACHE_KEY_OHLCV_HISTORY}:${symbol}:${from}:${to}:${time_period}:${interval}:${convert}`;
+
+    const cached = await this.cacheService.cached<HistoryResponseDto>(
+      { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+      { className: CmcService.name, handlerName: 'getHistory' },
+      [symbol, from, to, time_period, interval, convert],
+      async () => {
+        const payload = await this.baseService.getOhlcvHistorical({
+          symbol,
+          time_start: from,
+          time_end: to,
+          time_period,
+          interval,
+          convert,
+        });
+        return payload;
+      },
+    );
+
+    return cached.value;
   }
 
-  async getCryptoInfoV2(q: CmcCryptoInfoQueryDto): Promise<CmcCryptoInfoV2Dto> {
-    const payload = await this.baseService.call('getCryptoInfoV2', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcCryptoInfoV2Dto, payload, [RoleEnum.admin]);
+  async getHistoryBatched(
+    query: HistoryBatchedQueryDto,
+  ): Promise<HistoryBatchedResponseDto> {
+    const {
+      symbol,
+      from,
+      to,
+      time_period,
+      interval = 'daily',
+      convert = this.defaultFiat,
+    } = query;
+    if (!symbol || !from || !to || !time_period) {
+      throw {
+        status: {
+          error_code: 400,
+          error_message:
+            'Required query parameters: symbol, from, to, and time_period (daily|hourly)',
+        },
+      };
+    }
+
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = `${CmcService.CACHE_KEY_OHLCV_HISTORY_BATCH}:${symbol}:${from}:${to}:${time_period}:${interval}:${convert}`;
+
+    const cached = await this.cacheService.cached<HistoryBatchedResponseDto>(
+      { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+      { className: CmcService.name, handlerName: 'getHistoryBatched' },
+      [symbol, from, to, time_period, interval, convert],
+      async () => {
+        const MAX_POINTS = 9999;
+        const items: any[] = [];
+        const start = dayjs(from);
+        const end = dayjs(to);
+        if (!start.isValid() || !end.isValid()) {
+          throw {
+            status: {
+              error_code: 400,
+              error_message: "Invalid date format (expected 'YYYY-MM-DD')",
+            },
+          };
+        }
+        const stepDays =
+          time_period === 'daily' ? MAX_POINTS : Math.floor(MAX_POINTS / 24);
+        let currentStart = start;
+        while (currentStart.isBefore(end) || currentStart.isSame(end, 'day')) {
+          const currentEnd = currentStart.add(stepDays, 'day');
+          const toDate = currentEnd.isBefore(end) ? currentEnd : end;
+          const batch = await this.baseService.getOhlcvHistorical({
+            symbol,
+            time_start: currentStart.format('YYYY-MM-DD'),
+            time_end: toDate.format('YYYY-MM-DD'),
+            time_period,
+            interval,
+            convert,
+          });
+
+          const quotes =
+            (batch as CmcCryptoOhlcvHistoricalV1Dto)?.data?.quotes ??
+            (batch as any)?.quotes ??
+            (batch as any);
+          if (Array.isArray(quotes)) {
+            items.push(...quotes);
+          } else if (quotes) {
+            items.push(quotes);
+          }
+          currentStart = toDate.add(1, 'day');
+        }
+        return items;
+      },
+    );
+
+    return cached.value;
   }
 
-  async getCryptoListingsLatest(
-    q: CmcCryptoListingsLatestQueryDto,
-  ): Promise<CmcCryptoListingsLatestV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
+  async getQuotesHistoricalV2(
+    query: QuotesHistoricalV2QueryDto,
+  ): Promise<QuotesHistoricalV2ResponseDto> {
+    if (!query.symbols && !query.ids) {
+      throw {
+        status: {
+          error_code: 400,
+          error_message: "Either 'symbols' or 'ids' required",
+        },
+      };
+    }
 
-    const payload = await this.baseService.call('getCryptoListingsLatest', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoListingsLatestV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
+    const ttlSeconds = this.ttlSeconds;
+    const cacheKey = `${CmcService.CACHE_KEY_QUOTES_HIST_V2}:${JSON.stringify(
+      query,
+    )}`;
 
-  async getCryptoListingsLatestV3(
-    q: CmcCryptoListingsLatestQueryDto,
-  ): Promise<CmcCryptoListingsLatestV3Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
+    const cached =
+      await this.cacheService.cached<QuotesHistoricalV2ResponseDto>(
+        { key: cacheKey, scope: 'global', ttl: ttlSeconds },
+        { className: CmcService.name, handlerName: 'getQuotesHistoricalV2' },
+        [query],
+        async () => {
+          const dto = buildQuotesHistoricalDto(query, this.defaultFiat);
+          const payload = await this.baseService.getQuotesHistoricalV2(dto);
+          return payload;
+        },
+      );
 
-    const payload = await this.baseService.call('getCryptoListingsLatestV3', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoListingsLatestV3Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Cryptocurrency - Quotes and OHLCV
-  // ---------------------------------------------------------------------------
-  async getQuotesLatest(
-    q: CmcCryptoQuotesLatestV1QueryDto,
-  ): Promise<CmcCryptoQuotesLatestV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getQuotesLatest', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoQuotesLatestV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getQuotesLatestV3(
-    q: CmcCryptoQuotesLatestV1QueryDto,
-  ): Promise<CmcCryptoQuotesLatestV3Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getQuotesLatestV3', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoQuotesLatestV3Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getQuotesHistorical(
-    q: CmcCryptoQuotesHistoricalV1QueryDto,
-  ): Promise<CmcCryptoQuotesHistoricalV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getQuotesHistorical', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoQuotesHistoricalV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getOhlcvLatest(
-    q: CmcCryptoOhlcvLatestV1QueryDto,
-  ): Promise<CmcCryptoOhlcvLatestV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getOhlcvLatest', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoOhlcvLatestV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getOhlcvLatestV2(
-    q: CmcCryptoOhlcvLatestV1QueryDto,
-  ): Promise<CmcCryptoOhlcvLatestV2Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getOhlcvLatestV2', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoOhlcvLatestV2Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getOhlcvHistorical(
-    q: CmcCryptoOhlcvHistoricalV1QueryDto,
-  ): Promise<CmcCryptoOhlcvHistoricalV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getOhlcvHistorical', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoOhlcvHistoricalV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getOhlcvHistoricalV2(
-    q: CmcCryptoOhlcvHistoricalV1QueryDto,
-  ): Promise<CmcCryptoOhlcvHistoricalV2Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getOhlcvHistoricalV2', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoOhlcvHistoricalV2Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Cryptocurrency - Market pairs
-  // ---------------------------------------------------------------------------
-  async getMarketPairsLatest(
-    q: CmcCryptoMarketPairsLatestV1QueryDto,
-  ): Promise<CmcCryptoMarketPairsLatestV1Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getMarketPairsLatest', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoMarketPairsLatestV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getMarketPairsLatestV2(
-    q: CmcCryptoMarketPairsLatestV1QueryDto,
-  ): Promise<CmcCryptoMarketPairsLatestV2Dto> {
-    const dto: any = { ...(q ?? {}) };
-    if (!dto.convert) dto.convert = this.defaultFiat;
-
-    const payload = await this.baseService.call('getMarketPairsLatestV2', {
-      query: dto,
-    });
-    return GroupPlainToInstance(CmcCryptoMarketPairsLatestV2Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Cryptocurrency - Trending
-  // ---------------------------------------------------------------------------
-  async getTrendingLatest(
-    q: CmcTrendingQueryDto,
-  ): Promise<CmcTrendingLatestV1Dto> {
-    const payload = await this.baseService.call('getTrendingLatest', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcTrendingLatestV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getTrendingMostVisited(
-    q: CmcTrendingQueryDto,
-  ): Promise<CmcTrendingMostVisitedV1Dto> {
-    const payload = await this.baseService.call('getTrendingMostVisited', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcTrendingMostVisitedV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
-  }
-
-  async getTrendingGainersLosers(
-    q: CmcTrendingQueryDto,
-  ): Promise<CmcTrendingGainersLosersV1Dto> {
-    const payload = await this.baseService.call('getTrendingGainersLosers', {
-      query: q ?? {},
-    });
-    return GroupPlainToInstance(CmcTrendingGainersLosersV1Dto, payload, [
-      RoleEnum.admin,
-    ]);
+    return cached.value;
   }
 }
